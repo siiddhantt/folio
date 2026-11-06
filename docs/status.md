@@ -20,11 +20,14 @@ Updated: 2026-11-06
 - Identified the difference between required PostgreSQL storage and the open retrieval-engine choice.
 - Installed and verified the selected skills and their provenance; see `docs/skills.md`.
 - Created a commentless configuration template. No usable credential is stored in the repository.
+- Published the initial source and documentation at [siiddhantt/folio](https://github.com/siiddhantt/folio).
+- Checked primary technical documentation and read practitioner guidance directly; the decision guide records the relevant sources and limits of the evidence.
+- Verified documentation links, requirement-ledger coverage, excluded local data/secrets, and installed skill integrity. No application test results are claimed.
 
 ## In progress
 
 - OpenAI API funding and credential setup remain unresolved. No live model calls have run.
-- Primary-source and practitioner research for parsing, retrieval, and evaluations.
+- Supported-document scope and subsequent design choices remain under discussion.
 
 ## Next decision
 
