@@ -62,7 +62,7 @@ Decision: reproducible local containerized services first. Docker Compose is the
 
 ## D05: Processing state and queue
 
-Status: open.
+Status: open. The [evidence and processing proposal](ingestion-design.md) compares a single document status with separate execution, availability, and coverage observations using a concrete report.
 
 Choose observable behavior before a library: what is accepted, what is queued, when evidence becomes available, which failures can retry, and what happens after a worker or broker restart.
 
@@ -75,6 +75,8 @@ Discuss the gap between committing a document and publishing its job: recoverabl
 ## D06: Parser and source model
 
 Status: Docling selected after the approved local comparison, with PDFs and English OCR; DOCX deferred. Detailed source contract remains open. See the [measured ingestion results](ingestion.md#results).
+
+The [source-model proposal](ingestion-design.md#what-to-store) compares page text, raw Docling coupling, and a small immutable Folio evidence model plus original/raw artifacts. Its revision identities, element model and publication rules remain proposed until accepted.
 
 | Option | Useful for | Limitations |
 | --- | --- | --- |

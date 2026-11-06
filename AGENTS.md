@@ -23,8 +23,9 @@ Folio helps people understand documents and verify answers against source eviden
 - Delegate complete, small user outcomes: the API, persistence, processing, and verification needed for one behavior.
 - Give each agent a bounded outcome, owned files, acceptance criteria, exclusions, and verification commands. Use separate worktrees when parallel code changes would conflict.
 - Keep one integrator responsible for contracts and scope. Parallelize independent research, fixtures, and review; sequence dependent slices.
-- Have an independent reviewer challenge the acceptance criteria and failure paths. Agent review complements executable checks and human judgment.
+- Have an independent reviewer challenge the acceptance criteria and failure paths. For code review, provide fresh context with the accepted contract and actual diff, rather than relying on the implementer's explanation. Agent review complements executable checks and human judgment.
 - Finish a slice with a working demonstration, a concise diff walkthrough, and an updated decision/AI-use record. Explain the data flow and one failure path so Siddhant can defend the result.
+- Keep one implementation increment active and use small passing checkpoints. Give the owner a reading order through actual files and explain where a behavior change belongs; do not let parallel coding outrun human understanding.
 
 ## Test-first development
 
@@ -49,6 +50,7 @@ Folio helps people understand documents and verify answers against source eviden
 ## Scope and dependencies
 
 - Start from the smallest complete document workflow. Add a library or service only for a demonstrated need and record the tradeoff.
+- Prefer cohesive feature modules and small public interfaces. Split files by responsibility or a distinct reason to change, not an arbitrary line count; extract reusable pieces when reuse or a real integration need exists. Avoid speculative base classes, registries, and forwarding layers.
 - Reuse maintained ingestion/OCR engines before writing parsing machinery. Compare actual source preservation, failure signals, and local resource use before widening supported formats.
 - Develop locally with Docker from the start. Reproducible containers do not by themselves establish production readiness; validate persistence, recovery, health, and resource bounds within the relevant slices.
 - Keep provider-specific types at boundaries. Small interfaces should reflect actual needs; do not build unused adapters or a universal framework.

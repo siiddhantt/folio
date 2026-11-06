@@ -31,6 +31,7 @@ Updated: 2026-11-06
 - Verified local credential presence, Git exclusion, and successful OpenRouter authentication using a read-only metadata request. No inference request was made.
 - Ran the approved offline Docker comparison: six identical synthetic fixtures, three attempts per parser, matching container limits. Independent output review found correct facts/OCR in both engines, stronger table structure in Docling, and undetected corruption in both. See `docs/ingestion.md` for measured time/memory and limitations.
 - Preserved parser diagnostics across adapter export failures with an observed failing-then-passing artifact test. No application correctness claim follows from the experiment checks.
+- Prepared an independently challenged evidence/processing proposal with concrete alternatives, failure scenarios, modular code direction and reviewable first-slice increments; see `docs/ingestion-design.md`. The user requested modularity, understandable agent delegation and reviewable code; those working preferences are recorded in `AGENTS.md`.
 
 ## In progress
 
@@ -39,7 +40,7 @@ Updated: 2026-11-06
 
 ## Next decision
 
-Define the source/evidence contract for the accepted Docling/PDF/English-OCR scope. Then settle input limits, grounded-answer behavior, processing-state/recovery details, and queue integration. Partial-content availability and local Docker operation are accepted.
+Discuss and accept or revise the evidence representation and processing-state proposal in `docs/ingestion-design.md`. Then settle input limits, grounded-answer behavior, processing recovery details, queue/storage/framework choices and initial test interfaces. Partial-content availability and local Docker operation are accepted.
 
 Recommendations not marked accepted in the decision guide remain proposals. No application implementation has begun.
 
