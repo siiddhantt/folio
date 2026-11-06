@@ -9,7 +9,8 @@ Each discussion should cover: the user's outcome, two or three realistic options
 - Name: Folio.
 - General-purpose document assistance, using fact-checking in reports/documents as initial examples. These examples do not constrain content domains.
 - Public source development; no public-service deployment implied.
-- OpenAI as the initial model provider.
+- OpenRouter as the initial API gateway. GPT-6 Luna is a preferred evaluation candidate; the exact runtime model and its quality remain to be validated.
+- Text-based PDFs first, with one selected PDF per conversation.
 - Small testable vertical slices, behavior tests first, explanations and human ownership throughout.
 - A commentless local `.env` for secrets and adjustable runtime configuration, excluded from Git. A safe `.env.example` describes supported names through examples; explain their meaning in documentation.
 
@@ -21,7 +22,7 @@ A persona gives us realistic questions to evaluate; it does not restrict the pro
 
 ## D02: Supported documents and evidence
 
-Status: open. This is the next decision.
+Status: text-based PDF accepted as the first supported format. Other formats and OCR are deferred. Extraction-coverage behavior, tables, languages, encrypted files, and numerical limits remain open.
 
 | Option | Benefit | Cost |
 | --- | --- | --- |
@@ -29,19 +30,21 @@ Status: open. This is the next decision.
 | PDF plus TXT/DOCX | Useful breadth for everyday documents | Different source locators; DOCX pagination is unstable without rendering. |
 | PDF including scans | Covers a common real-world gap | OCR, model assets, more processing time, and more failure/quality cases. |
 
-Recommendation: text-based PDF first unless representative documents show scans are essential. Confirm handling of tables, mixed scanned/text pages, password-protected files, languages, and partial extraction. Decide size/page/time limits after inspecting representative safe fixtures.
+Decision: start with text-based PDFs and add other formats later. This limits formats rather than subject matter. Confirm handling of tables, mixed scanned/text pages, password-protected files, languages, and partial extraction. Decide size/page/time limits after inspecting representative safe fixtures.
+
+Proposed extraction policy: if known missing meaningful content is detected, retain the original and a useful diagnostic, but do not present summaries or chat as available for the document. This policy awaits acceptance. A page with no text is not automatically a scan; it may be blank. Detection cannot prove that every passage was extracted correctly.
 
 Example: a PDF page says a report covers April-June. A correct answer should identify the period and show that passage. A photograph of the same page needs OCR before retrieval can see it.
 
 ## D03: Conversation scope and answer policy
 
-Status: open.
+Status: one selected PDF per conversation accepted. Answer and insufficient-evidence policies remain open.
 
 - One selected document: simplest scope and evidence verification; multi-turn questions still work.
 - A selected set: enables comparison but adds conflicts, cross-document citations, and more retrieval cases.
 - Entire library: convenient discovery, but ambiguity and unintended source mixing become harder to control.
 
-Recommendation: one document initially, with explicit document IDs in the retrieval boundary. Offer grounded answers, useful clarification, or an honest insufficient-evidence result. Decide whether any outside knowledge is allowed; proposed default is no outside factual claims.
+Decision: one document initially, with explicit document IDs in the retrieval boundary. Proposed answer policy: offer grounded answers, useful clarification, or an honest insufficient-evidence result, without adding outside factual claims. A larger collection of uploaded files must not broaden a conversation's scope.
 
 Example: "What about next year?" needs the prior question to identify the subject; it still needs document evidence for next year's answer.
 
@@ -123,13 +126,15 @@ Keep a narrow retrieval operation that accepts a question and permitted document
 
 ## D10: Generation, summaries, and frameworks
 
-Status: OpenAI selected; models, prompts, and orchestration remain open.
+Status: OpenRouter selected as the API gateway. GPT-6 Luna is a preferred evaluation candidate; model choice, prompts, and orchestration remain open. See [verified model notes](models.md).
 
 Options: direct SDK calls with explicit orchestration; a small LlamaIndex integration; a small LangChain integration. Compare source mapping, testability, dependencies, and how much control flow remains visible. No current need for an autonomous-agent runtime.
 
 Recommendation: keep retrieval, evidence formatting, generation, and validation understandable regardless of library. Preserve provider metadata behind a small boundary; do not implement unused providers.
 
 Discuss generation and embeddings separately. A generation-model change needs quality evaluation. An embedding-model or dimension change changes the vector space and can require re-embedding all indexed content.
+
+Model identity, input/evidence/history budgets, output reservation, and reasoning effort should be adjustable through validated configuration. A model's advertised capacity is a provider limit, not a recommended request size. Do not silently switch model aliases or provider routes during comparisons. See [configuration](configuration.md) for the proposed controls and their constraints.
 
 Agree summary length/focus and insight fields. For long documents compare a bounded full-document prompt with chunk summaries followed by synthesis. Record truncation/coverage; a fluent summary must not imply it read unseen pages.
 
@@ -167,7 +172,7 @@ Select multi-document chat, streaming, caching, tagging, comparison, and other o
 
 ## D14: Configuration and reproducibility
 
-Status: commentless `.env` accepted; concrete settings follow chosen components.
+Status: commentless `.env` and configurable model/token budgets accepted; concrete values follow design and verification. OpenRouter credential and base URL names are documented. No application loader exists yet.
 
 Keep secrets and adjustable deployment settings in the ignored local `.env`, with a commentless safe `.env.example`. Validate values at startup and document them in prose. Pin dependencies separately. Version prompt templates, schemas, and evaluation data in source rather than putting whole prompts into environment variables.
 
@@ -175,13 +180,14 @@ Potential settings include model IDs, service URLs, file limits, processing time
 
 ## Proposed slice order after decisions
 
-1. Upload one supported document, process it, and inspect its content/status/summary, including a useful failure result and stored processing measurements.
-2. Ask one question and inspect its source evidence, including an unanswerable question and a scope-boundary check.
-3. Continue and revisit a conversation, preserving context, citations, and failure semantics.
-4. Recover interrupted/repeated work and expose complete document/processing metrics; finish reproducible setup and demonstration.
-5. Add one selected optional user benefit, if it earns its scope.
+1. Upload one supported document, process it, and inspect its extracted content and source locations, including a useful failure result and stored processing measurements. No model call is needed for this slice.
+2. Produce and inspect a persisted summary and agreed insights, including coverage and provider-failure behavior.
+3. Ask one question and inspect its source evidence, including an unanswerable question and a scope-boundary check.
+4. Continue and revisit a conversation, preserving context, citations, and failure semantics.
+5. Recover interrupted/repeated work and expose complete document/processing metrics; finish reproducible setup and demonstration.
+6. Add one selected optional user benefit, if it earns its scope.
 
-Each slice contains its own contract tests, implementation, integration verification, review, and explanation. Slice 4 deepens failure recovery; earlier slices must not rely on knowingly broken status, retries, or persistence.
+Each slice contains its own contract tests, implementation, integration verification, review, and explanation. Slice 5 deepens failure recovery; earlier slices must not rely on knowingly broken status, retries, or persistence. This is a proposed sequence: settle each slice's behavior and dependencies before implementing it.
 
 ## Evidence for discussions
 

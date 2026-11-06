@@ -10,6 +10,8 @@ Folio is a general-purpose document assistant: upload documents, understand thei
 
 Accepted direction: use fact-checking in reports and ordinary documents as initial examples. This is a starting point for testing, not an industry restriction or a fixed document schema. Folio should not assume that every document is a contract, policy, or research paper.
 
+Accepted initial boundaries: text-based PDFs, with one selected PDF per conversation. Other formats and multi-document conversations remain later options. Extraction coverage, table handling, and file limits need their own explicit behavior decisions.
+
 Proposed first journey:
 
 1. A person uploads a supported document and immediately receives an identifier and processing status.
@@ -29,7 +31,7 @@ The first journey can be verified through APIs. A visual interface is a separate
 | R02 | Asynchronous document processing | Parsing, analysis, and indexing happen through a task queue. Status and processing history remain inspectable after the HTTP request ends. Recovery guarantees are decided explicitly. |
 | R03 | Document retrieval | Retrieve document metadata, processing state, and the permitted original/extracted content through documented APIs. List/filter/pagination semantics remain open. |
 | R04 | Summaries and AI insights | Persist a useful summary and an agreed insights representation linked to the document. An output that failed must not appear successful. Insight types and long-document strategy remain open. |
-| R05 | Start a chat session | Create a conversation with an explicit document scope. The initial scope is proposed as one document; a selected set is an alternative. |
+| R05 | Start a chat session | Create a conversation bound to one selected PDF. Follow-up questions and evidence retrieval preserve that document scope. |
 | R06 | Ask a grounded question | Retrieve evidence and produce a contextual answer with resolvable citations. Agree the behavior for absent, conflicting, or ambiguous evidence. |
 | R07 | Chat history | Store and retrieve ordered user/assistant turns and their source context/citations. Specify persistence behavior when a model call fails. |
 | R08 | Multi-turn context | Resolve a follow-up using relevant conversation context without changing the permitted document scope or treating a previous answer as independent evidence. |
@@ -38,7 +40,7 @@ The first journey can be verified through APIs. A visual interface is a separate
 | R11 | Durable data structures | Store document metadata/status, summaries/insights, conversations, messages/context/citations, processing history/metrics, and system performance observations. |
 | R12 | Usable APIs and failure behavior | Provide coherent request/response models, useful errors, and API documentation. Unsupported operations and limits should be explicit. |
 | R13 | Reproducible operation | Provide working backend source, setup/configuration instructions, and an architecture explanation alongside the implementation. |
-| R14 | Demonstration | Maintain a reproducible document-chat walkthrough and a video demonstrating actual working behavior when available. Use safe fixtures. |
+| R14 | Demonstration | Provide a reproducible document-chat walkthrough and a video demonstrating actual working behavior. The video remains required and has not yet been produced. Use safe fixtures. |
 | R15 | Transparent AI development | Maintain a concise AI-use record, design rationale, and versioned prompts with explanations of their goals and tradeoffs. |
 
 ## Engineering constraints and choices
@@ -49,7 +51,7 @@ The first journey can be verified through APIs. A visual interface is a separate
 | PostgreSQL | Foundation constraint for persistent data. Local service versus hosted service remains open. |
 | Task queue | Foundation constraint. Celery with Redis, RQ, or a justified equivalent; choose after the recovery contract. |
 | File processing library | Foundation constraint. Choose according to the accepted file formats and evidence requirements. |
-| AI provider | OpenAI accepted as the initial provider. Generation and embedding model identifiers, budgets, and supported capabilities remain open. |
+| AI access | OpenRouter accepted as the initial API gateway. GPT-6 Luna is the preferred evaluation candidate, not a validated final model choice. Generation and embedding model identifiers, budgets, and supported capabilities remain open. |
 | Embeddings | OpenAI embeddings or a local sentence-transformer are options. Choose and version the embedding space; a model change can require re-embedding. |
 | File storage | Local filesystem or S3-compatible storage are options. Deployment and access boundaries drive the selection. |
 | RAG library | LangChain or LlamaIndex is a recommended option. Direct SDK orchestration is also considered; explain why if selected. No requirement for an autonomous-agent runtime. |
@@ -70,7 +72,7 @@ These are recommendations awaiting acceptance alongside the relevant design deci
 - Keep selected document scope in every evidence query. Uploaded text cannot broaden scope, grant permissions, or override application instructions.
 - Treat previous answers as conversation context, not source evidence. Questions requiring missing evidence should produce a useful limitation or clarification.
 - Distinguish citation existence, correct source location, and actual support for a claim. All three matter.
-- Distinguish ready-to-search status from optional analysis completion if those operations can succeed independently.
+- Distinguish ready-to-search status from separate summary/insight completion if those operations can succeed independently. Summaries and insights remain core capabilities.
 - Define database/queue publication and crash recovery behavior. Do not promise exactly-once execution merely because a queue is present.
 
 ## Optional capability ledger
