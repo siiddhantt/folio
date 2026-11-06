@@ -1,0 +1,12 @@
+{
+  "library_id": "sid-agent-skills-v1",
+  "skill": "error-discovery",
+  "files": {
+    "agents/openai.yaml": "141458204a6ca6f496690f2ed77d7c934999628f6485008cc50a1dbd67f50aee",
+    "review-loop.md": "4c500d0fc6fbeba9bbd8d4858e7e14c848b8ea8cd2a6bdef5c854b668943286a",
+    "SKILL.md": "e125c9b764b7aa658ea8c9104fb2856b67b40c0604e73d5bfe142e0dd5d10149",
+    "UPSTREAM-LICENSE.txt": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+    "UPSTREAM.json": "55c66e0d940935b8078fdb3cf27fd07a829c915c1c570965daf86c40a054ad54"
+  },
+  "commit": "80d5f7b0127c7572ed9e9339937adbfd7240ffeb"
+}

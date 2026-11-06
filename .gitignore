@@ -1,0 +1,34 @@
+# Credentials and machine settings
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+.local/
+
+# Runtime content and generated artifacts
+tmp/
+data/
+uploads/
+artifacts/
+output/
+*.log
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Frontend and editors
+node_modules/
+dist/
+.next/
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

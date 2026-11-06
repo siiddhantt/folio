@@ -1,0 +1,13 @@
+{
+  "repository": "https://github.com/ai-evals-course/evals-skills",
+  "commit": "80d5f7b0127c7572ed9e9339937adbfd7240ffeb",
+  "path": "skills/error-discovery",
+  "license": "Apache-2.0",
+  "reviewed_on": "2026-11-06",
+  "modifications": "Added provenance and license files; agents/openai.yaml disables implicit invocation and carries a modification notice. Workflow instructions are unchanged.",
+  "upstream_files": {
+    "SKILL.md": "e125c9b764b7aa658ea8c9104fb2856b67b40c0604e73d5bfe142e0dd5d10149",
+    "agents/openai.yaml": "c81cd1d86a317fcefbf0cba9efa20a7bf993c66fbd6ca1f70e3d48ac5777fd56",
+    "review-loop.md": "4c500d0fc6fbeba9bbd8d4858e7e14c848b8ea8cd2a6bdef5c854b668943286a"
+  }
+}

@@ -1,0 +1,203 @@
+# Folio decision guide
+
+Updated: 2026-11-06. All recommendations below are proposals unless marked accepted.
+
+Each discussion should cover: the user's outcome, two or three realistic options, what each costs, a recommendation, an example, and evidence that could change the recommendation. Resolve dependent questions in order rather than approving the whole stack at once.
+
+## Accepted direction
+
+- Name: Folio.
+- General-purpose document assistance, using fact-checking in reports/documents as initial examples. These examples do not constrain content domains.
+- Public source development; no public-service deployment implied.
+- OpenAI as the initial model provider.
+- Small testable vertical slices, behavior tests first, explanations and human ownership throughout.
+- A commentless local `.env` for secrets and adjustable runtime configuration, excluded from Git. A safe `.env.example` describes supported names through examples; explain their meaning in documentation.
+
+## D01: First useful outcome
+
+Accepted direction: understand documents and answer questions with checkable source evidence. The initial examples involve reports and ordinary documents.
+
+A persona gives us realistic questions to evaluate; it does not restrict the product's schema or branding. We have not conducted customer interviews and must not present assumptions as research findings.
+
+## D02: Supported documents and evidence
+
+Status: open. This is the next decision.
+
+| Option | Benefit | Cost |
+| --- | --- | --- |
+| Text-based PDF first | Stable page references, focused parser/quality checks | Scans and other formats are not supported initially. |
+| PDF plus TXT/DOCX | Useful breadth for everyday documents | Different source locators; DOCX pagination is unstable without rendering. |
+| PDF including scans | Covers a common real-world gap | OCR, model assets, more processing time, and more failure/quality cases. |
+
+Recommendation: text-based PDF first unless representative documents show scans are essential. Confirm handling of tables, mixed scanned/text pages, password-protected files, languages, and partial extraction. Decide size/page/time limits after inspecting representative safe fixtures.
+
+Example: a PDF page says a report covers April-June. A correct answer should identify the period and show that passage. A photograph of the same page needs OCR before retrieval can see it.
+
+## D03: Conversation scope and answer policy
+
+Status: open.
+
+- One selected document: simplest scope and evidence verification; multi-turn questions still work.
+- A selected set: enables comparison but adds conflicts, cross-document citations, and more retrieval cases.
+- Entire library: convenient discovery, but ambiguity and unintended source mixing become harder to control.
+
+Recommendation: one document initially, with explicit document IDs in the retrieval boundary. Offer grounded answers, useful clarification, or an honest insufficient-evidence result. Decide whether any outside knowledge is allowed; proposed default is no outside factual claims.
+
+Example: "What about next year?" needs the prior question to identify the subject; it still needs document evidence for next year's answer.
+
+## D04: Runtime, storage, and access
+
+Status: open.
+
+Options: local single-user operation; authenticated private service; public multi-user service. The last option adds access control, quotas, retention, and abuse/spending concerns. Publishing source code does not select it.
+
+Recommendation: reproducible local services first. Compare local file storage with S3-compatible storage based on the runtime and worker's access. Define retention and deletion before claiming user data can be removed. Shared development tooling does not determine the application's deployment target.
+
+## D05: Processing state and queue
+
+Status: open.
+
+Choose observable behavior before a library: what is accepted, what is queued, when evidence becomes available, which failures can retry, and what happens after a worker or broker restart.
+
+Options: RQ + Redis for a small job workflow; Celery + Redis for richer task/retry/routing controls. Neither removes the need for durable application state. In-process HTTP background work alone is not the proposed processing queue.
+
+Recommendation: select the simpler queue that meets the recovery contract. Persist attempts/status. Make repeated execution safe: rerunning a job should not duplicate chunks or overwrite a newer document state.
+
+Discuss the gap between committing a document and publishing its job: recoverable pending records with reconciliation versus a transactional outbox. Do not claim exactly-once delivery. Define summary failure independently from retrieval readiness if partial success is allowed.
+
+## D06: Parser and source model
+
+Status: open; depends on D02.
+
+| Option | Useful for | Limitations |
+| --- | --- | --- |
+| pypdf | Simple text extraction page by page | No OCR; reading order and complex layouts need checking. |
+| pdfplumber | Text PDFs with page geometry and table inspection | No OCR; table extraction is not universally reliable. |
+| Docling | Structured layouts, tables, OCR, richer provenance | More dependencies/model assets and processing resources. |
+
+Recommendation: compare a lightweight parser against Docling only when the chosen document boundary needs its capabilities. Use the same small fixture set. Preserve document identity, physical PDF page, text span, and parser version during extraction; optionally retain bounding boxes for a future source viewer.
+
+Do not equate empty text with definitive evidence of a scan. Report insufficient extraction and inspect page coverage. Do not flatten tables without checking whether row/column meaning survives.
+
+## D07: Chunking
+
+Status: open.
+
+Chunking divides extracted text into pieces that retrieval can return and the model can read.
+
+Options: fixed token windows with overlap; paragraph/section-aware token-bounded pieces; structured parser chunks when a richer parser is selected.
+
+Recommendation: start with paragraph-aware pieces under a token limit, retaining all source spans. Compare a fixed-window baseline before claiming improvement. Choose size/overlap from evidence; avoid magic values presented as universal best practice.
+
+Example: a condition at the end of page 2 may qualify a claim on page 3. Splitting them can lose meaning; joining them must retain both source locators. Large chunks add context but consume tokens and can dilute the relevant passage.
+
+## D08: Retrieval strategy
+
+Status: open.
+
+| Option | Strength | Weakness |
+| --- | --- | --- |
+| Lexical search | Exact words, identifiers, and numbers | Can miss paraphrases. |
+| Dense embeddings | Similar meanings despite different wording | Similarity does not guarantee factual relevance or exact identifiers. |
+| Hybrid retrieval | Combines candidate lists from both | More moving parts and parameters to evaluate. |
+
+Recommendation: establish lexical and dense baselines on the same human-reviewed questions, then choose the smallest approach that meets agreed needs. Postgres full-text search is available without a separate search service. Fusion/reranking should earn their cost through observed errors.
+
+Measure whether expected evidence appears among the retrieved results. Do not use a universal cosine threshold as a truth detector. Decide candidate count, reranking, adjacent-span expansion, and evidence budget only after inspecting misses.
+
+## D09: Retrieval storage
+
+Status: open. PostgreSQL is fixed; pgvector is not.
+
+| Option | Why choose it | What we take on |
+| --- | --- | --- |
+| PostgreSQL + pgvector | One data system for metadata, evidence, and vectors | Extension dependency and index/query tuning. |
+| PostgreSQL + Qdrant | Dedicated vector/hybrid retrieval and independent scaling | Two data systems, synchronization, stale indexes, and coordinated deletion. |
+| Postgres numeric arrays + exact scoring | Tiny baseline where extensions are unavailable | Custom dimension validation/scoring, data movement, and scaling work. |
+
+Recommendation: pgvector with exact search for the initial small corpus, if supported by the chosen environment. This avoids a second service while leaving a measured migration path. It is a recommendation, not an accepted choice.
+
+Exact versus approximate search is a separate decision. pgvector supports both. Exact nearest-neighbor recall means the mathematical nearest vectors were found, not that they contain the right answer. Add approximate indexes only after relevant latency/recall measurements.
+
+Keep a narrow retrieval operation that accepts a question and permitted document scope and returns evidence plus provenance. Implement one backend first. Qdrant remains possible later, but migration still needs reindexing, consistency checks, and evaluation; an interface does not make it free.
+
+## D10: Generation, summaries, and frameworks
+
+Status: OpenAI selected; models, prompts, and orchestration remain open.
+
+Options: direct SDK calls with explicit orchestration; a small LlamaIndex integration; a small LangChain integration. Compare source mapping, testability, dependencies, and how much control flow remains visible. No current need for an autonomous-agent runtime.
+
+Recommendation: keep retrieval, evidence formatting, generation, and validation understandable regardless of library. Preserve provider metadata behind a small boundary; do not implement unused providers.
+
+Discuss generation and embeddings separately. A generation-model change needs quality evaluation. An embedding-model or dimension change changes the vector space and can require re-embedding all indexed content.
+
+Agree summary length/focus and insight fields. For long documents compare a bounded full-document prompt with chunk summaries followed by synthesis. Record truncation/coverage; a fluent summary must not imply it read unseen pages.
+
+A response should distinguish answer, evidence references, and insufficient-evidence/clarification outcomes. Check that references belong to supplied evidence; separately evaluate whether the cited passages support the claims.
+
+## D11: Quality, tests, and budgets
+
+Status: method accepted; concrete fixtures and thresholds open.
+
+Start with a small manually checked set: ordinary factual questions, an exact identifier, a table, a boundary-spanning answer, missing information, a follow-up, a misleading embedded instruction, and an unreadable/unsupported file.
+
+Software tests: one observable behavior at a time; fail first, then implement and simplify. Include genuine persistence/retry/scope boundaries. Avoid exact prose assertions for model answers, tests of helper call order, and a second copy of the implementation as the expected result.
+
+Live evaluations: inspect extraction, retrieval, answer support, citation correctness, abstention, and conversation behavior separately. Record versions and latency/usage. Establish a held-out set before tuning. A small sample finds errors but does not justify a general accuracy claim.
+
+Agree a maximum live-evaluation spend, a per-document limit, and a response budget before running paid calls. Account credits are not the same as a product budget. Report unknown costs and unavailable usage fields rather than inventing them. Calibrate any later model judge against human labels.
+
+## D12: API shape, performance, and monitoring
+
+Status: open; follows the user/state contracts.
+
+Decide resource routes and response models for documents, processing attempts, conversations, messages, insights, statistics, and processing metrics. Define pagination/order, not-ready responses, invalid input, provider timeout, and retry semantics. API errors should help the caller act.
+
+Persist enough information to explain slow and failed work. Compare simple database-derived metrics with additional instrumentation only as needed. Choose health/readiness checks that reflect the dependencies actually used. Agree latency targets on specified hardware/data before optimizing.
+
+Keep operational logs useful while avoiding raw private documents and secrets. Include correlation identifiers; decide retention and redaction.
+
+## D13: Interface and optional growth
+
+Status: open, after the core journey.
+
+Options: documented API walkthrough; minimal upload/status/chat/source UI; richer dashboard. Recommendation: prove the API journey first, then consider a minimal interface if it improves source verification.
+
+Select multi-document chat, streaming, caching, tagging, comparison, and other optional work from the requirements ledger individually. Evaluate cache invalidation, interrupted streams, versioning, and access scope before implementation.
+
+## D14: Configuration and reproducibility
+
+Status: commentless `.env` accepted; concrete settings follow chosen components.
+
+Keep secrets and adjustable deployment settings in the ignored local `.env`, with a commentless safe `.env.example`. Validate values at startup and document them in prose. Pin dependencies separately. Version prompt templates, schemas, and evaluation data in source rather than putting whole prompts into environment variables.
+
+Potential settings include model IDs, service URLs, file limits, processing timeouts, chunking parameters, retrieval limits, log level, and usage budgets. Add each only when its behavior exists; do not fill the file with speculative flags. Values affecting embeddings/indexing require a compatible rebuild or explicit rejection.
+
+## Proposed slice order after decisions
+
+1. Upload one supported document, process it, and inspect its content/status/summary, including a useful failure result and stored processing measurements.
+2. Ask one question and inspect its source evidence, including an unanswerable question and a scope-boundary check.
+3. Continue and revisit a conversation, preserving context, citations, and failure semantics.
+4. Recover interrupted/repeated work and expose complete document/processing metrics; finish reproducible setup and demonstration.
+5. Add one selected optional user benefit, if it earns its scope.
+
+Each slice contains its own contract tests, implementation, integration verification, review, and explanation. Slice 4 deepens failure recovery; earlier slices must not rely on knowingly broken status, retries, or persistence.
+
+## Evidence for discussions
+
+- [FastAPI background work](https://fastapi.tiangolo.com/tutorial/background-tasks/#caveat)
+- [Celery tasks and retries](https://docs.celeryq.dev/en/stable/userguide/tasks.html), [RQ failures/retries](https://python-rq.org/docs/exceptions/), [Redis persistence](https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/)
+- [pypdf extraction](https://pypdf.readthedocs.io/en/stable/user/extract-text.html), [pdfplumber](https://github.com/jsvine/pdfplumber), [Docling source model](https://docling-project.github.io/docling/concepts/docling_document/)
+- [pgvector](https://github.com/pgvector/pgvector), [Qdrant hybrid queries](https://qdrant.tech/documentation/search/hybrid-queries/), [PostgreSQL text search](https://www.postgresql.org/docs/current/textsearch-intro.html)
+- [LlamaIndex citation engine](https://developers.llamaindex.ai/python/framework-api-reference/query_engine/citation/)
+- [RAG evaluation workflow](https://github.com/ai-evals-course/evals-skills/blob/main/skills/evaluate-rag/SKILL.md), [AI evaluation FAQ](https://hamel.dev/blog/posts/evals-faq/)
+- [Test-first agent workflow](https://simonwillison.net/guides/agentic-engineering-patterns/red-green-tdd/)
+
+These sources explain capabilities and tradeoffs. They do not establish one universally agreed architecture or substitute for Folio-specific evidence.
+
+Practitioner posts read directly on 2026-11-06 reinforce two useful habits:
+
+- [Hamel Husain on task-specific evaluations](https://x.com/HamelHusain/status/2118383681031254059): measure the actual system and keep its evaluation cases maintained. This supports realistic document/question fixtures rather than borrowing a generic model leaderboard as a quality claim.
+- [Boris Cherny on verification loops](https://x.com/bcherny/status/2007179861115511237): give a coding agent a concrete way to check its result. This supports executable acceptance checks and working demonstrations; it does not establish a universal productivity multiplier.
+
+These are practitioner recommendations, not a formal standard or agreement on a particular vector database or framework.

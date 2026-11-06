@@ -1,0 +1,12 @@
+{
+  "repository": "https://github.com/ai-evals-course/evals-skills",
+  "commit": "80d5f7b0127c7572ed9e9339937adbfd7240ffeb",
+  "path": "skills/evaluate-rag",
+  "license": "Apache-2.0",
+  "reviewed_on": "2026-11-06",
+  "modifications": "Added UPSTREAM.json and UPSTREAM-LICENSE.txt only; workflow content unchanged.",
+  "upstream_files": {
+    "SKILL.md": "e22a7bff31a73a9a82722c771326acf13121622a8caca6221fcbea111c9bf88d",
+    "agents/openai.yaml": "ba53b0727a83dc2d0a5657e20ef4904d7cfbc18b4f072888020e2687d41b4376"
+  }
+}

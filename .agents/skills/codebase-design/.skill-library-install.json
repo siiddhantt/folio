@@ -1,0 +1,13 @@
+{
+  "library_id": "sid-agent-skills-v1",
+  "skill": "codebase-design",
+  "files": {
+    "agents/openai.yaml": "edebc9e4fcfe102114012575eaa9600b9b5fd08c311664f389c36e7bc717740f",
+    "DEEPENING.md": "f3dd099ce99289bd213914d8ee3e2429b78309c3957ca4583f7659551b1d53c1",
+    "DESIGN-IT-TWICE.md": "c222ab5a82e0405672eb9062d62496139a08828e45d07fc5f18e4952c10fac1a",
+    "SKILL.md": "2c20617f87ec8af6a434859f381b2f061a69b530444e74eb39e78bb016a6d1e2",
+    "UPSTREAM-LICENSE.txt": "0e7ac423bf2c6e223b7c5b156f8cf72da49d748e56a1641402c31f22ad07dbb5",
+    "UPSTREAM.json": "a86207e5c4d6bd0a4e80c1acc1847d1ffe15aecc3cee2bf9151a21090b8f363c"
+  },
+  "commit": "4ae2317ddb22b046e26455e4f9c9b3aaaf62212d"
+}
