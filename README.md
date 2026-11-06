@@ -16,6 +16,7 @@ Requirements and design decisions are under discussion. Application code and a r
 - [Agent instructions](AGENTS.md): collaboration, verification, and development boundaries.
 - [Skills](docs/skills.md): selected workflows, pinned upstream sources, and licenses.
 - [Configuration](docs/configuration.md): supported environment values and their meaning.
+- [Ingestion investigation](docs/ingestion.md): parser research, local comparison, and source-preservation findings.
 - [AI use](AI_USAGE.md): how agents contribute and how their work is checked.
 
 Development proceeds through small vertical slices. Each slice should deliver a complete observable behavior, meaningful verification, and an explanation of its design.

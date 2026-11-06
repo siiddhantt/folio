@@ -12,8 +12,11 @@ Updated: 2026-11-06
 - Maintain reviewed, pinned skills and durable repository guidance.
 - General-purpose document assistance, using facts in reports/documents as initial examples rather than a domain restriction.
 - Commentless, Git-ignored local `.env` with a safe configuration template.
-- Text-based PDFs first, with one selected PDF per conversation.
+- PDFs with native text and English OCR, using Docling; one selected PDF per conversation. DOCX and other formats are deferred.
 - Configurable generation model and token budgets, with model-specific validation and quality checks when values change.
+- Preserve usable partial extraction with explicit coverage warnings in document results, summaries, and answers.
+- Local Docker development from the start; hosting remains a separate decision.
+- Select ingestion capabilities from observed source preservation, diagnostics, and local resource use; the Docling/LiteParse comparison is complete.
 
 ## Completed
 
@@ -26,17 +29,19 @@ Updated: 2026-11-06
 - Checked primary technical documentation and read practitioner guidance directly; the decision guide records the relevant sources and limits of the evidence.
 - Verified documentation links, requirement-ledger coverage, excluded local data/secrets, and installed skill integrity. No application test results are claimed.
 - Verified local credential presence, Git exclusion, and successful OpenRouter authentication using a read-only metadata request. No inference request was made.
+- Ran the approved offline Docker comparison: six identical synthetic fixtures, three attempts per parser, matching container limits. Independent output review found correct facts/OCR in both engines, stronger table structure in Docling, and undetected corruption in both. See `docs/ingestion.md` for measured time/memory and limitations.
+- Preserved parser diagnostics across adapter export failures with an observed failing-then-passing artifact test. No application correctness claim follows from the experiment checks.
 
 ## In progress
 
 - Live model quality, request budgets, and runtime configuration remain unverified. Successful credential authentication does not establish model quality or an agreed application spending budget.
-- Extraction-coverage policy, runtime boundary, and subsequent design choices remain under discussion.
+- Docling and PDFs with English OCR are selected. The detailed source contract, table behavior, encrypted-file policy, input/resource limits, and representative OCR quality checks remain open; DOCX is deferred.
 
 ## Next decision
 
-Resolve detected incomplete extraction (D02), local versus hosted operation (D04), and grounded-answer behavior (D03). The initial format and one-document scope are accepted. Then define processing behavior before selecting parser and search components.
+Define the source/evidence contract for the accepted Docling/PDF/English-OCR scope. Then settle input limits, grounded-answer behavior, processing-state/recovery details, and queue integration. Partial-content availability and local Docker operation are accepted.
 
-All architectural recommendations in the decision guide remain proposals until explicitly accepted. No application implementation has begun.
+Recommendations not marked accepted in the decision guide remain proposals. No application implementation has begun.
 
 ## Handoff discipline
 

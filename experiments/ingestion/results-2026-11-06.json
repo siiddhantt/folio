@@ -1,0 +1,301 @@
+{
+  "date": "2026-11-06",
+  "scope": "Six synthetic fixtures; three attempts per parser/file. No general accuracy or throughput claim.",
+  "limits": {
+    "cpu_quota": 4,
+    "memory_bytes": 6442450944,
+    "additional_swap_bytes": 0,
+    "network": "none"
+  },
+  "method": {
+    "execution": "Sequential containers, one persistent converter per engine, sorted filenames.",
+    "warm_median": "Median of attempts 2 and 3; no OS cache eviction; per-file conversion, excluding setup/downloads/serialization.",
+    "memory": "Whole-container cgroup-v1 high-water usage, including children and charged cache; not per-document RSS.",
+    "threads": {
+      "docling_compute": 1,
+      "liteparse_ocr_workers": 2,
+      "liteparse_openmp": 2
+    },
+    "fixture_generation_versions": {
+      "reportlab": "4.4.9",
+      "pypdf": "6.10.0",
+      "python-docx": "1.2.0"
+    },
+    "review": "AI-generated fixtures rendered and inspected; a separate agent checked outputs against the source facts and structure. Not a blinded human benchmark."
+  },
+  "fixtures": [
+    {
+      "file": "damaged.pdf",
+      "bytes": 2499,
+      "sha256": "4b6363a9770a0aa4ff8729f1f46362ae693fc92218822d5a961bfa2f69ead1c2"
+    },
+    {
+      "file": "document.docx",
+      "bytes": 36929,
+      "sha256": "a36f7af5c689208d3c83f1496cdeb5c19865a1323a4c0dc33b09ff5d8494faac"
+    },
+    {
+      "file": "mixed.pdf",
+      "bytes": 40880,
+      "sha256": "b9680403c11e80f8b591b629c184bf05b0441fab5741029ab6da85b6c6aeb151"
+    },
+    {
+      "file": "scanned.pdf",
+      "bytes": 40241,
+      "sha256": "940b8be494c86e7c5016c7b52c5b8dfebb003e89d91b58d09bd2adc009c7d72e"
+    },
+    {
+      "file": "table.pdf",
+      "bytes": 2535,
+      "sha256": "1e463cf5cdbc17e7bba686a5f761eb363143c81a7474b6f461b330e2036aed1c"
+    },
+    {
+      "file": "text.pdf",
+      "bytes": 2804,
+      "sha256": "9ac0e7d67a90b9219e4ce5952b46259a380c6911eb2d5942279d59f68fdd74a4"
+    }
+  ],
+  "parsers": {
+    "liteparse": {
+      "version": "2.18.0",
+      "status_semantics": "Adapter-derived success means no reported parser errors or missing returned pages; it is not a native completeness guarantee.",
+      "image": {
+        "id": "sha256:99e08d2ce35590c2466cb31546d8f9623a69888530565d539d0f08e3ab514072",
+        "repo_digests": [
+          "folio-liteparse@sha256:99e08d2ce35590c2466cb31546d8f9623a69888530565d539d0f08e3ab514072"
+        ],
+        "architecture": "amd64",
+        "os": "linux"
+      },
+      "runner_sha256": "192936d648d77d4f5428f4d10369c99a16958d7399c7f962ff665ffc948bd45e",
+      "container_exit_code": 0,
+      "container_memory_peak": {
+        "peak_bytes": 433004544,
+        "source": "/sys/fs/cgroup/memory/memory.max_usage_in_bytes"
+      },
+      "startup": {
+        "import_seconds": 0.029282872000067073,
+        "constructor_seconds": 0.002630369999906179,
+        "runner_to_ready_seconds": 0.5749992029998339,
+        "excludes": "Python interpreter bootstrap before this script starts"
+      },
+      "documents": [
+        {
+          "filename": "damaged.pdf",
+          "conversion_seconds": [
+            0.24457813000003625,
+            0.19267627499993978,
+            0.18117869699995026
+          ],
+          "warm_median_seconds": 0.18692748599994502,
+          "reported_statuses": [
+            "success",
+            "success",
+            "success"
+          ]
+        },
+        {
+          "filename": "document.docx",
+          "conversion_seconds": [
+            0.8774060220000592,
+            0.6500743130000046,
+            0.6707749030001651
+          ],
+          "warm_median_seconds": 0.6604246080000848,
+          "reported_statuses": [
+            "success",
+            "success",
+            "success"
+          ]
+        },
+        {
+          "filename": "mixed.pdf",
+          "conversion_seconds": [
+            0.2131286410001394,
+            0.20718468799987022,
+            0.20802805799985435
+          ],
+          "warm_median_seconds": 0.2076063729998623,
+          "reported_statuses": [
+            "success",
+            "success",
+            "success"
+          ]
+        },
+        {
+          "filename": "scanned.pdf",
+          "conversion_seconds": [
+            0.13731910299998162,
+            0.13826105900011498,
+            0.141189304999898
+          ],
+          "warm_median_seconds": 0.1397251820000065,
+          "reported_statuses": [
+            "success",
+            "success",
+            "success"
+          ]
+        },
+        {
+          "filename": "table.pdf",
+          "conversion_seconds": [
+            0.14695925699993495,
+            0.14717864999988706,
+            0.1449018220000653
+          ],
+          "warm_median_seconds": 0.14604023599997618,
+          "reported_statuses": [
+            "success",
+            "success",
+            "success"
+          ]
+        },
+        {
+          "filename": "text.pdf",
+          "conversion_seconds": [
+            0.22364940600004957,
+            0.22448337699984222,
+            0.23217339299981177
+          ],
+          "warm_median_seconds": 0.228328384999827,
+          "reported_statuses": [
+            "success",
+            "success",
+            "success"
+          ]
+        }
+      ]
+    },
+    "docling": {
+      "version": "2.148.0",
+      "image": {
+        "id": "sha256:e70be8bc3308ccf9ab3cd1e3becd2a759f2f5553462b21ba21d8d4161a22afab",
+        "repo_digests": [
+          "folio-docling@sha256:e70be8bc3308ccf9ab3cd1e3becd2a759f2f5553462b21ba21d8d4161a22afab"
+        ],
+        "architecture": "amd64",
+        "os": "linux"
+      },
+      "runner_sha256": "be1d48aded82f5925d5c5b5be6028660c69efc68dc5735750e03ecbb102f35a6",
+      "container_exit_code": 0,
+      "container_memory_peak": {
+        "peak_bytes": 1553829888,
+        "source": "/sys/fs/cgroup/memory/memory.max_usage_in_bytes"
+      },
+      "startup": {
+        "converter_import_and_construction_seconds": 3.210749303000057,
+        "note": "First conversion additionally includes lazy model loading; startup scopes differ from LiteParse."
+      },
+      "documents": [
+        {
+          "filename": "damaged.pdf",
+          "conversion_seconds": [
+            6.992635801999995,
+            4.013488521999989,
+            4.002576934999979
+          ],
+          "warm_median_seconds": 4.008032728499984,
+          "reported_statuses": [
+            "success",
+            "success",
+            "success"
+          ]
+        },
+        {
+          "filename": "document.docx",
+          "conversion_seconds": [
+            0.023607457000025533,
+            0.022480265000012878,
+            0.024200250999911077
+          ],
+          "warm_median_seconds": 0.023340257999961977,
+          "reported_statuses": [
+            "success",
+            "success",
+            "success"
+          ]
+        },
+        {
+          "filename": "mixed.pdf",
+          "conversion_seconds": [
+            4.718122672000163,
+            4.554852569000104,
+            4.678510802999881
+          ],
+          "warm_median_seconds": 4.616681685999993,
+          "reported_statuses": [
+            "success",
+            "success",
+            "success"
+          ]
+        },
+        {
+          "filename": "scanned.pdf",
+          "conversion_seconds": [
+            1.9599268409999695,
+            1.9327590679999958,
+            2.005151812999884
+          ],
+          "warm_median_seconds": 1.9689554404999399,
+          "reported_statuses": [
+            "success",
+            "success",
+            "success"
+          ]
+        },
+        {
+          "filename": "table.pdf",
+          "conversion_seconds": [
+            4.065440244999991,
+            4.0152225819999785,
+            3.9924450650000836
+          ],
+          "warm_median_seconds": 4.003833823500031,
+          "reported_statuses": [
+            "success",
+            "success",
+            "success"
+          ]
+        },
+        {
+          "filename": "text.pdf",
+          "conversion_seconds": [
+            4.263324589000149,
+            3.9826322869998876,
+            3.9367807020000782
+          ],
+          "warm_median_seconds": 3.959706494499983,
+          "reported_statuses": [
+            "success",
+            "success",
+            "success"
+          ]
+        }
+      ]
+    }
+  },
+  "findings": {
+    "both": [
+      "Expected prose/OCR facts preserved on correct physical PDF pages.",
+      "Neighboring readable pages survived damaged page 2; neither exposed its corruption as a structured page error.",
+      "Expected content and source structure stable across all three attempts."
+    ],
+    "docling": [
+      "Both PDF tables retained exact headers and row/column associations.",
+      "Native DOCX retained text/table structure and element references, without invented physical pages.",
+      "Structured PDF table boxes and cell boxes use different declared coordinate origins; preserve these.",
+      "OCR orientation and empty-confidence warnings were logged despite structured success; expected scan facts survived."
+    ],
+    "liteparse": [
+      "Ruled-table header remained separate from structured data rows.",
+      "Borderless table remained spatial page text, without a structured table; flattened blocks lose row associations.",
+      "DOCX locations belong to a temporary LibreOffice rendering that the adapter does not retain."
+    ]
+  },
+  "build_notes": [
+    "Initial Docling snapshot-mirror build was interrupted after repeated download stalls; ordinary Debian mirrors succeeded.",
+    "Docling used a code-only derived layer after a red/green adapter fix preserved parser diagnostics on export failure; dependencies/models unchanged.",
+    "Earlier LiteParse trial omitted container peak due to an incorrect cgroup-v2 path; final comparison reran both with v1/v2-aware capture.",
+    "Fresh builds are version-constrained but not fully hash-locked; actual image identities and local detailed environment manifests are retained."
+  ]
+}

@@ -10,12 +10,16 @@ Folio is a general-purpose document assistant: upload documents, understand thei
 
 Accepted direction: use fact-checking in reports and ordinary documents as initial examples. This is a starting point for testing, not an industry restriction or a fixed document schema. Folio should not assume that every document is a contract, policy, or research paper.
 
-Accepted initial boundaries: text-based PDFs, with one selected PDF per conversation. Other formats and multi-document conversations remain later options. Extraction coverage, table handling, and file limits need their own explicit behavior decisions.
+Accepted initial boundaries: one selected PDF per conversation, with Docling processing native text and English OCR for scanned content. The local comparison informed this selection. DOCX, other formats, and multi-document conversations remain later options. Clean English scans were verified; noisy/rotated scans require further examples before quality claims.
+
+Accepted extraction policy: preserve and use recoverable content when part of a document fails. Show known coverage limitations with document results, summaries, and answers. A summary of available content must not imply complete-document coverage. If no usable evidence remains, report that clearly; do not generate unsupported factual answers.
+
+Accepted runtime: local development with Docker from the start, followed by a separate hosting decision.
 
 Proposed first journey:
 
 1. A person uploads a supported document and immediately receives an identifier and processing status.
-2. They can see whether processing is pending, in progress, complete, or failed.
+2. They can see processing progress, usable partial results, and known warnings or failures.
 3. They read a summary and inspect stored document information.
 4. They start a conversation about that document and ask a factual question.
 5. They inspect the passage supporting the answer, ask a follow-up, and revisit the conversation later.
@@ -48,9 +52,9 @@ The first journey can be verified through APIs. A visual interface is a separate
 | Item | Status |
 | --- | --- |
 | Python backend | Foundation constraint. Framework choice open; FastAPI recommended. |
-| PostgreSQL | Foundation constraint for persistent data. Local service versus hosted service remains open. |
+| PostgreSQL | Foundation constraint for persistent data. Start locally in Docker; hosting remains a later decision. |
 | Task queue | Foundation constraint. Celery with Redis, RQ, or a justified equivalent; choose after the recovery contract. |
-| File processing library | Foundation constraint. Choose according to the accepted file formats and evidence requirements. |
+| File processing library | Docling selected after local comparison; PDF native text and English OCR. Source contract, resource/input limits, and wider quality checks remain open. |
 | AI access | OpenRouter accepted as the initial API gateway. GPT-6 Luna is the preferred evaluation candidate, not a validated final model choice. Generation and embedding model identifiers, budgets, and supported capabilities remain open. |
 | Embeddings | OpenAI embeddings or a local sentence-transformer are options. Choose and version the embedding space; a model change can require re-embedding. |
 | File storage | Local filesystem or S3-compatible storage are options. Deployment and access boundaries drive the selection. |
@@ -59,7 +63,7 @@ The first journey can be verified through APIs. A visual interface is a separate
 | Tests | Pytest is the preferred Python candidate. Meaningful behavior checks precede application code. |
 | Retrieval store | Open decision. pgvector, a separate vector service, or a deliberately small exact baseline are alternatives. A named vector database is not a foundation constraint. |
 
-Version numbers are intentionally not selected yet. Use supported versions and lock them when dependencies are introduced; do not use historic model/library names as an unexamined implementation choice.
+The comparison pins Docling 2.148.0. Application dependency versions otherwise remain open; use supported versions and lock them when introduced. Do not use historic model/library names as an unexamined implementation choice.
 
 ## Proposed reliability and evidence contract
 
@@ -67,7 +71,7 @@ These are recommendations awaiting acceptance alongside the relevant design deci
 
 - Preserve document identity, content version/hash, source locators, parser version, and processing attempt information.
 - Preserve physical PDF page references; for unpaginated formats, use honest section/paragraph locators rather than invented page numbers.
-- Detect empty or inadequate extraction, including partially unreadable documents. Decide whether to fail or report partial availability; never silently imply complete coverage.
+- Accepted: retain usable partial extraction with explicit known-coverage warnings. Distinguish no usable content from a partially usable document. Detection cannot prove complete semantic recovery; never silently imply complete coverage.
 - Bound retries, timeouts, input sizes, and generated output. Repeated work must not duplicate final document data.
 - Keep selected document scope in every evidence query. Uploaded text cannot broaden scope, grant permissions, or override application instructions.
 - Treat previous answers as conversation context, not source evidence. Questions requiring missing evidence should produce a useful limitation or clarification.
@@ -102,14 +106,14 @@ Every item is accounted for. Deferred means intentionally outside the initial co
 
 ## Unknowns to resolve in order
 
-1. Supported inputs: formats, scans, tables, languages, encrypted documents, file/page limits.
+1. Refine the accepted Docling/PDF/English-OCR boundary: source structure, table handling, encryption, file/page/time limits, and representative OCR quality cases. DOCX remains deferred.
 2. Scope and user experience: one document or a set, source inspection, ambiguity, missing/partial evidence.
-3. Runtime boundary: local/private/public access, retention/deletion, storage, and available resources.
+3. Local Docker details: retention/deletion, storage, available resources, and a later private/public hosting boundary.
 4. Processing and recovery contract: stage states, safe retries, queue publication failures, and partial success.
 5. Parser, provenance, chunking, retrieval strategy/store, and generation/summary strategy.
 6. Representative fixtures, quality criteria, response/processing latency expectations, and an explicit live-evaluation budget.
 
-Authentication, multi-tenancy, OCR, deployment, billing features, and exact numerical limits are not silently assumed. They must be chosen or explicitly deferred.
+Authentication, multi-tenancy, hosting, billing features, additional OCR languages/capabilities, and exact numerical limits are not silently assumed. They must be chosen or explicitly deferred.
 
 ## Quality evidence
 

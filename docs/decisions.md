@@ -10,7 +10,9 @@ Each discussion should cover: the user's outcome, two or three realistic options
 - General-purpose document assistance, using fact-checking in reports/documents as initial examples. These examples do not constrain content domains.
 - Public source development; no public-service deployment implied.
 - OpenRouter as the initial API gateway. GPT-6 Luna is a preferred evaluation candidate; the exact runtime model and its quality remain to be validated.
-- Text-based PDFs first, with one selected PDF per conversation.
+- PDFs with native text and English OCR, with one selected PDF per conversation. Docling is the selected parser; DOCX and other formats remain deferred.
+- Preserve usable partial extraction with explicit coverage warnings; do not globally block summaries/chat when recoverable evidence exists.
+- Develop locally with Docker from the start. Validate Docling and LiteParse on the same fixtures before deciding parser and expanded-format support.
 - Small testable vertical slices, behavior tests first, explanations and human ownership throughout.
 - A commentless local `.env` for secrets and adjustable runtime configuration, excluded from Git. A safe `.env.example` describes supported names through examples; explain their meaning in documentation.
 
@@ -22,7 +24,7 @@ A persona gives us realistic questions to evaluate; it does not restrict the pro
 
 ## D02: Supported documents and evidence
 
-Status: text-based PDF accepted as the first supported format. Other formats and OCR are deferred. Extraction-coverage behavior, tables, languages, encrypted files, and numerical limits remain open.
+Status: PDF native text plus English OCR accepted after the local comparison. DOCX/other formats remain deferred. Usable partial extraction with coverage warnings is accepted; detailed table handling, additional languages, encryption, and numerical limits remain open.
 
 | Option | Benefit | Cost |
 | --- | --- | --- |
@@ -30,9 +32,11 @@ Status: text-based PDF accepted as the first supported format. Other formats and
 | PDF plus TXT/DOCX | Useful breadth for everyday documents | Different source locators; DOCX pagination is unstable without rendering. |
 | PDF including scans | Covers a common real-world gap | OCR, model assets, more processing time, and more failure/quality cases. |
 
-Decision: start with text-based PDFs and add other formats later. This limits formats rather than subject matter. Confirm handling of tables, mixed scanned/text pages, password-protected files, languages, and partial extraction. Decide size/page/time limits after inspecting representative safe fixtures.
+Decision: accept PDFs with native text and English OCR, using Docling; add other formats later. This limits formats rather than subject matter. The comparison verified clean English scans and mixed pages. Noisy/rotated/handwritten inputs need further quality examples. Decide detailed table behavior, encrypted inputs, and size/page/time limits before the first application slice.
 
-Proposed extraction policy: if known missing meaningful content is detected, retain the original and a useful diagnostic, but do not present summaries or chat as available for the document. This policy awaits acceptance. A page with no text is not automatically a scan; it may be blank. Detection cannot prove that every passage was extracted correctly.
+Accepted extraction policy: retain the original, recoverable content, and known diagnostics; allow summaries and chat over that content with explicit coverage warnings. A question about a readable passage can still be answered with its citation. A summary must describe itself as covering the available content. If information is not found while coverage is incomplete, do not claim that it is absent from the original document. If no usable content exists, return a useful unavailable result. A page with no text is not automatically a scan; it may be blank. Detection cannot prove that every passage was extracted correctly.
+
+Proposed reprocessing design: preserve processing revisions and source locators so later OCR can add missing content without silently rewriting old citation evidence. Exact state names, revision storage, atomic index replacement, and summary refresh behavior remain design choices.
 
 Example: a PDF page says a report covers April-June. A correct answer should identify the period and show that passage. A photograph of the same page needs OCR before retrieval can see it.
 
@@ -50,11 +54,11 @@ Example: "What about next year?" needs the prior question to identify the subjec
 
 ## D04: Runtime, storage, and access
 
-Status: open.
+Status: local development with Docker accepted. Hosting and access controls for any hosted service remain separate decisions.
 
-Options: local single-user operation; authenticated private service; public multi-user service. The last option adds access control, quotas, retention, and abuse/spending concerns. Publishing source code does not select it.
+Later runtime options: authenticated private service or public multi-user service. Public multi-user operation adds access control, quotas, retention, and abuse/spending concerns. Publishing source code does not select it.
 
-Recommendation: reproducible local services first. Compare local file storage with S3-compatible storage based on the runtime and worker's access. Define retention and deletion before claiming user data can be removed. Shared development tooling does not determine the application's deployment target.
+Decision: reproducible local containerized services first. Docker Compose is the proposed local service runner. Compare local volumes with S3-compatible storage based on the runtime and worker's access. Define retention and deletion before claiming user data can be removed. Containers need bounded resources, durable volumes, health checks, and tested restart behavior; packaging alone is not a production-readiness claim.
 
 ## D05: Processing state and queue
 
@@ -70,15 +74,17 @@ Discuss the gap between committing a document and publishing its job: recoverabl
 
 ## D06: Parser and source model
 
-Status: open; depends on D02.
+Status: Docling selected after the approved local comparison, with PDFs and English OCR; DOCX deferred. Detailed source contract remains open. See the [measured ingestion results](ingestion.md#results).
 
 | Option | Useful for | Limitations |
 | --- | --- | --- |
-| pypdf | Simple text extraction page by page | No OCR; reading order and complex layouts need checking. |
-| pdfplumber | Text PDFs with page geometry and table inspection | No OCR; table extraction is not universally reliable. |
-| Docling | Structured layouts, tables, OCR, richer provenance | More dependencies/model assets and processing resources. |
+| Docling | Structured layouts, tables, OCR, richer provenance and partial-result diagnostics | Local model assets and processing resources; verify output and source granularity. |
+| LiteParse | Native spatial extraction, OCR, page diagnostics, layout/table blocks, optional Office conversion | Spatial reconstruction has limits; Office conversion and OCR need their dependencies and provenance checks. |
+| Managed parsing | Outsourced parser execution and richer document models | Additional service, per-use costs, data transfer, and provider-specific failure contracts. |
 
-Recommendation: compare a lightweight parser against Docling only when the chosen document boundary needs its capabilities. Use the same small fixture set. Preserve document identity, physical PDF page, text span, and parser version during extraction; optionally retain bounding boxes for a future source viewer.
+Decision: use one Docling integration, informed by identical synthetic fixtures under matching Docker limits. Preserve document identity, physical PDF page, text span, parser version, and known diagnostics; inspect bounding boxes and table associations. Use existing OCR/layout machinery. A parser does not own Folio's conversation scope, durable processing history, or answer policy.
+
+Result: both recovered the expected text/OCR facts; Docling preserved both tables' headers and cell relationships while LiteParse would require additional reconstruction. Docling used more time and memory for these PDFs. Both missed the damaged page as a structured error. Use the selected single engine without dual-parser routing. English OCR is accepted; DOCX source inspection is deferred. Six small synthetic fixtures are not general accuracy or production-performance evidence.
 
 Do not equate empty text with definitive evidence of a scan. Report insufficient extraction and inspect page coverage. Do not flatten tables without checking whether row/column meaning survives.
 
