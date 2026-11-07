@@ -119,7 +119,7 @@ Some ancestry IDs are deliberately repeated to support same-document/file compos
 
 Why JSONB cells? Folio currently retrieves/cites a table as evidence. A single table payload preserves cells, headers, spans and optional geometry without many reconstruction joins. If cell-level updates, SQL analytics or individually constrained cell citations become requirements, normalize into `table_cells(revision_id, element_id, row_index, column_index, ...)`. Element/page identity already has relational guarantees; JSON cell coordinates do not magically inherit them.
 
-Current access paths include composite unique indexes for document/file/request ancestry, `requests_file`, partial `attempts_pending_dispatch` and `attempts_expired`, `evidence_reading_order(revision_id, reading_order, element_id)`, `locations_page` and `receipts_request`. Do not assume a separate request-state index exists. Primary/unique constraints create indexes; foreign keys do not automatically index their referencing columns. The [reading guide](system-design-walkthrough.md) explains how to inspect actual plans.
+Current access paths include composite unique indexes for document/file/request ancestry, `requests_file`, partial `attempts_pending_dispatch` and `attempts_expired`, the unique `(revision_id, reading_order)` index, `locations_page` and `receipts_request`. Migration 003 removes the redundant older evidence-order index. Do not assume a separate request-state index exists. Primary/unique constraints create indexes; foreign keys do not automatically index their referencing columns. The [reading guide](system-design-walkthrough.md) explains how to inspect actual plans.
 
 ## Example evidence response
 

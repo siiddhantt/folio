@@ -61,11 +61,11 @@ It skips conflicting row locks, not all possible blocking, and does not promise 
 [PostgreSQL's locking clause](https://www.postgresql.org/docs/18/sql-select.html#SQL-FOR-UPDATE-SHARE).
 
 **Indexes answer access patterns; they do not replace those correctness rules.** Think of an index as an ordered way to find rows without examining every row.
-The migration's `evidence_reading_order` index is ordered by `(revision_id, reading_order, element_id)`.
-It groups one extraction's evidence together, then orders it by reading position and element ID.
+The unique `(revision_id, reading_order)` constraint creates an index in that column order.
+It groups one extraction's evidence together, then orders it by reading position.
 That matches “show the first 50 elements in revision R1.” It can also help a lookup constrained only by revision.
 It is not automatically the best index for “find this reading position across every revision.”
-Migration 002 also makes `(revision_id, reading_order)` unique, so pagination cannot skip tied reading positions. Index usefulness and uniqueness are separate design questions.
+Migration 002 made reading positions unique, so pagination cannot skip ties. Migration 003 then removed the older, redundant three-column index. This is a concrete example of checking which indexes a constraint already supplies before maintaining another one. Element lookup has its own primary-key index on `(revision_id, element_id)`.
 
 For a B-tree `(a, b, c)`, leading equality conditions and then the first range condition usually narrow the scanned interval most effectively.
 Later conditions can still filter inside the index. The order of predicates written in SQL does not reorder the index.
@@ -105,7 +105,7 @@ WHERE revision_id = (
     ORDER BY created_at DESC, id DESC
     LIMIT 1
 )
-ORDER BY reading_order, element_id
+ORDER BY reading_order
 LIMIT 50;
 ```
 

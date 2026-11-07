@@ -54,7 +54,7 @@ def revision_evidence(database, revision_id, after_order=-1, limit=50):
         elements = connection.execute(
             """SELECT element_id,kind,reading_order,parent_element_id,text,table_data
             FROM source_elements WHERE revision_id=%s AND reading_order>%s
-            ORDER BY reading_order,element_id LIMIT %s""",
+            ORDER BY reading_order LIMIT %s""",
             (revision_id, after_order, limit + 1),
         ).fetchall()
         revision["next_after_order"] = (

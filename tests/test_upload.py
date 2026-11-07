@@ -38,7 +38,10 @@ def test_processed_pdf_publishes_inspectable_evidence(tmp_path):
             elements=[
                 Element(
                     "p1", "paragraph", 0, None, "Revenue was 48 million.", None, None, [Location(1)]
-                )
+                ),
+                Element(
+                    "p2", "paragraph", 1, None, "Renewal is October 12.", None, None, [Location(1)]
+                ),
             ],
             diagnostics=[],
             parser_status="success",
@@ -61,6 +64,14 @@ def test_processed_pdf_publishes_inspectable_evidence(tmp_path):
         evidence = client.get(f"/revisions/{status['revision_id']}/evidence").json()
         assert evidence["elements"][0]["text"] == "Revenue was 48 million."
         assert evidence["elements"][0]["locations"][0]["page_no"] == 1
+        page = client.get(f"/revisions/{status['revision_id']}/evidence?limit=1").json()
+        assert [e["element_id"] for e in page["elements"]] == ["p1"]
+        following = client.get(
+            f"/revisions/{status['revision_id']}/evidence",
+            params={"limit": 1, "after_order": page["next_after_order"]},
+        ).json()
+        assert [e["element_id"] for e in following["elements"]] == ["p2"]
+        assert following["next_after_order"] is None
 
 
 @pytest.mark.integration
