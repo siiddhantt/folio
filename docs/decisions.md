@@ -12,7 +12,8 @@ Each discussion should cover: the user's outcome, two or three realistic options
 - OpenRouter as the initial API gateway. GPT-6 Luna is a preferred evaluation candidate; the exact runtime model and its quality remain to be validated.
 - PDFs with native text and English OCR, with one selected PDF per conversation. Docling is the selected parser; DOCX and other formats remain deferred.
 - Preserve usable partial extraction with explicit coverage warnings; do not globally block summaries/chat when recoverable evidence exists.
-- Develop locally with Docker from the start. Validate Docling and LiteParse on the same fixtures before deciding parser and expanded-format support.
+- Develop locally with Docker Compose. The completed Docling/LiteParse comparison informed parser selection.
+- Accepted November 7: the complete first ingestion slice uses FastAPI, PostgreSQL, RQ/Redis and a shared local artifact volume, with the schema, idempotency, retry/ownership rules, bounds and test interfaces in the [system design](ingestion-system.md). Retrieval and generation remain separate decisions.
 - Small testable vertical slices, behavior tests first, explanations and human ownership throughout.
 - A commentless local `.env` for secrets and adjustable runtime configuration, excluded from Git. A safe `.env.example` describes supported names through examples; explain their meaning in documentation.
 
@@ -24,7 +25,7 @@ A persona gives us realistic questions to evaluate; it does not restrict the pro
 
 ## D02: Supported documents and evidence
 
-Status: PDF native text plus English OCR accepted after the local comparison. DOCX/other formats remain deferred. Usable partial extraction with coverage warnings is accepted; detailed table handling, additional languages, encryption, and numerical limits remain open.
+Status: PDF native text plus English OCR accepted after the local comparison. On November 7, the owner accepted structured table evidence, physical-page provenance, terminal rejection of encrypted PDFs and the initial input/execution bounds. DOCX/other formats and additional OCR languages remain deferred.
 
 | Option | Benefit | Cost |
 | --- | --- | --- |
@@ -32,11 +33,11 @@ Status: PDF native text plus English OCR accepted after the local comparison. DO
 | PDF plus TXT/DOCX | Useful breadth for everyday documents | Different source locators; DOCX pagination is unstable without rendering. |
 | PDF including scans | Covers a common real-world gap | OCR, model assets, more processing time, and more failure/quality cases. |
 
-Decision: accept PDFs with native text and English OCR, using Docling; add other formats later. This limits formats rather than subject matter. The comparison verified clean English scans and mixed pages. Noisy/rotated/handwritten inputs need further quality examples. Decide detailed table behavior, encrypted inputs, and size/page/time limits before the first application slice.
+Decision: accept PDFs with native text and English OCR, using Docling; add other formats later. This limits formats rather than subject matter. Preserve table cells, headers, spans and supplied page locations. Initial bounds are 25 MiB and 100 pages, with parser/job/lease limits defined in the [system design](ingestion-system.md#accepted-initial-operating-bounds). The comparison verified clean English scans and mixed pages; noisy/rotated/handwritten inputs still need quality examples.
 
 Accepted extraction policy: retain the original, recoverable content, and known diagnostics; allow summaries and chat over that content with explicit coverage warnings. A question about a readable passage can still be answered with its citation. A summary must describe itself as covering the available content. If information is not found while coverage is incomplete, do not claim that it is absent from the original document. If no usable content exists, return a useful unavailable result. A page with no text is not automatically a scan; it may be blank. Detection cannot prove that every passage was extracted correctly.
 
-Proposed reprocessing design: preserve processing revisions and source locators so later OCR can add missing content without silently rewriting old citation evidence. Exact state names, revision storage, atomic index replacement, and summary refresh behavior remain design choices.
+Accepted internal provenance: immutable file versions, extraction revisions and source locators preserve old evidence. Reprocessing/replacement APIs, atomic index replacement, conversation revision binding and summary refresh remain future decisions; the schema alone does not implement those features.
 
 Example: a PDF page says a report covers April-June. A correct answer should identify the period and show that passage. A photograph of the same page needs OCR before retrieval can see it.
 
@@ -54,33 +55,27 @@ Example: "What about next year?" needs the prior question to identify the subjec
 
 ## D04: Runtime, storage, and access
 
-Status: local development with Docker accepted. Hosting and access controls for any hosted service remain separate decisions.
+Status: local Docker Compose and a shared artifact named volume accepted November 7. Hosting and access controls for any hosted service remain separate decisions.
 
 Later runtime options: authenticated private service or public multi-user service. Public multi-user operation adds access control, quotas, retention, and abuse/spending concerns. Publishing source code does not select it.
 
-Decision: reproducible local containerized services first. Docker Compose is the proposed local service runner. Compare local volumes with S3-compatible storage based on the runtime and worker's access. Define retention and deletion before claiming user data can be removed. Containers need bounded resources, durable volumes, health checks, and tested restart behavior; packaging alone is not a production-readiness claim.
+Decision: reproducible local containerized services first, with separate PostgreSQL, Redis and artifact volumes. Local API and workers share opaque immutable artifact keys. Multi-host workers would need shared storage such as S3 and a tested migration. Retention/deletion and online cleanup remain unimplemented. Packaging alone is not a production-readiness claim.
 
 ## D05: Processing state and queue
 
-Status: open. The [evidence and processing proposal](ingestion-design.md) compares a single document status with separate execution, availability, and coverage observations using a concrete report.
+Status: accepted November 7. RQ/Redis transports work; PostgreSQL owns durable intent, attempts and the single bounded retry policy. Execution outcome, evidence availability and coverage observations are distinct.
 
-Choose observable behavior before a library: what is accepted, what is queued, when evidence becomes available, which failures can retry, and what happens after a worker or broker restart.
+The dispatcher recovers committed due work; an isolated Linux worker claims an authorized attempt before loading Docling. Publication and failure updates check the attempt, ownership token and lease. HTTP receipt uniqueness protects replay; a unique request-to-revision constraint protects publication. No exactly-once execution claim follows.
 
-Options: RQ + Redis for a small job workflow; Celery + Redis for richer task/retry/routing controls. Neither removes the need for durable application state. In-process HTTP background work alone is not the proposed processing queue.
-
-Recommendation: select the simpler queue that meets the recovery contract. Persist attempts/status. Make repeated execution safe: rerunning a job should not duplicate chunks or overwrite a newer document state.
-
-Concrete recommendation after source review: RQ + Redis for execution/delivery, with PostgreSQL owning durable work and the single retry policy. Use an isolated Linux worker, a recoverable dispatcher and claim/publication checks. Celery and a PostgreSQL-native queue remain alternatives with different costs; see the [system proposal](ingestion-system.md).
-
-Discuss the gap between committing a document and publishing its job: recoverable pending records with reconciliation versus a transactional outbox. Do not claim exactly-once delivery. Define summary failure independently from retrieval readiness if partial success is allowed.
+RQ was selected for the initial small workflow. Celery offers richer routing/pools; a PostgreSQL-native queue can combine enqueue with application transactions but needs its own native-parser isolation plan. See the [accepted system design](ingestion-system.md) for tradeoffs, bounds and failure behavior, and [status](status.md) for checks actually completed. Summary and retrieval stage states will be decided with those features.
 
 ## D06: Parser and source model
 
-Status: Docling selected after the approved local comparison, with PDFs and English OCR; DOCX deferred. Detailed source contract remains open. See the [measured ingestion results](ingestion.md#results).
+Status: Docling selected after the approved local comparison, with PDFs and English OCR; DOCX deferred. The small Folio evidence model, original/raw artifacts and diagnostic envelope were accepted November 7. See the [measured ingestion results](ingestion.md#results).
 
-The [source-model proposal](ingestion-design.md#what-to-store) compares page text, raw Docling coupling, and a small immutable Folio evidence model plus original/raw artifacts. Its revision identities, element model and publication rules remain proposed until accepted.
+The [source-model rationale](ingestion-design.md#what-to-store) compares page text, raw Docling coupling, and the selected immutable Folio evidence model plus original/raw artifacts. Source mapping stays within the parser boundary.
 
-The [concrete schema](ingestion-system.md#relational-schema) separates logical documents, immutable file versions, extraction revisions, requests/attempts and source locations. It proposes normalized relationships with explicitly bounded JSONB payloads, rather than claiming fully relational table-cell storage.
+The [implemented schema](ingestion-system.md#relational-schema) separates logical documents, immutable file versions, extraction revisions, requests/attempts and source locations. Relationships are normalized; table payloads, configuration and diagnostics use JSONB. Individual table cells are not relational rows.
 
 | Option | Useful for | Limitations |
 | --- | --- | --- |
@@ -154,7 +149,7 @@ A response should distinguish answer, evidence references, and insufficient-evid
 
 ## D11: Quality, tests, and budgets
 
-Status: method accepted; concrete fixtures and thresholds open.
+Status: behavior-first method and the three first-ingestion test interfaces accepted November 7. Synthetic PDF fixtures exercise the HTTP/persistence flow, parser contract and processing/recovery boundary. Completed checks are recorded in [status](status.md); live retrieval/generation quality criteria and budgets remain open.
 
 Start with a small manually checked set: ordinary factual questions, an exact identifier, a table, a boundary-spanning answer, missing information, a follow-up, a misleading embedded instruction, and an unreadable/unsupported file.
 
@@ -166,9 +161,9 @@ Agree a maximum live-evaluation spend, a per-document limit, and a response budg
 
 ## D12: API shape, performance, and monitoring
 
-Status: open; follows the user/state contracts.
+Status: the first-ingestion API and stored attempt measurements were accepted November 7 and implemented. Summary/chat resources, global statistics and broader performance targets remain open.
 
-Decide resource routes and response models for documents, processing attempts, conversations, messages, insights, statistics, and processing metrics. Define pagination/order, not-ready responses, invalid input, provider timeout, and retry semantics. API errors should help the caller act.
+Current routes cover upload, document metadata/original, request/attempt status and paginated revision evidence. Status uses one consistent database snapshot; unique reading order supports evidence pagination. Remaining conversation, insight and aggregate APIs need their own acceptance criteria. API errors should help the caller act.
 
 Persist enough information to explain slow and failed work. Compare simple database-derived metrics with additional instrumentation only as needed. Choose health/readiness checks that reflect the dependencies actually used. Agree latency targets on specified hardware/data before optimizing.
 
@@ -184,22 +179,22 @@ Select multi-document chat, streaming, caching, tagging, comparison, and other o
 
 ## D14: Configuration and reproducibility
 
-Status: commentless `.env` and configurable model/token budgets accepted; concrete values follow design and verification. OpenRouter credential and base URL names are documented. No application loader exists yet.
+Status: commentless `.env` and configurable model/token budgets accepted. The ingestion loader validates accepted bounds and service settings; exact model/token budgets remain open. See [config.py](../src/folio/config.py). OpenRouter settings are documented for future model-backed work, not consumed by this ingestion slice.
 
 Keep secrets and adjustable deployment settings in the ignored local `.env`, with a commentless safe `.env.example`. Validate values at startup and document them in prose. Pin dependencies separately. Version prompt templates, schemas, and evaluation data in source rather than putting whole prompts into environment variables.
 
 Potential settings include model IDs, service URLs, file limits, processing timeouts, chunking parameters, retrieval limits, log level, and usage budgets. Add each only when its behavior exists; do not fill the file with speculative flags. Values affecting embeddings/indexing require a compatible rebuild or explicit rejection.
 
-## Proposed slice order after decisions
+## Slice order and remaining decisions
 
-1. Upload one supported document, process it, and inspect its extracted content and source locations, including a useful failure result and stored processing measurements. No model call is needed for this slice.
+1. Accepted, implemented and checked: upload one supported document, process it, and inspect persisted evidence, sources, warnings and attempt history. Idempotency, retry and interruption behavior belong in this slice; [status](status.md) records operational probe limits. The owner walkthrough remains part of the checkpoint. No model call is needed.
 2. Produce and inspect a persisted summary and agreed insights, including coverage and provider-failure behavior.
 3. Ask one question and inspect its source evidence, including an unanswerable question and a scope-boundary check.
 4. Continue and revisit a conversation, preserving context, citations, and failure semantics.
-5. Recover interrupted/repeated work and expose complete document/processing metrics; finish reproducible setup and demonstration.
+5. Extend recovery across the later model-backed stages and expose aggregate document/processing metrics; finish the complete demonstration.
 6. Add one selected optional user benefit, if it earns its scope.
 
-Each slice contains its own contract tests, implementation, integration verification, review, and explanation. Slice 5 deepens failure recovery; earlier slices must not rely on knowingly broken status, retries, or persistence. This is a proposed sequence: settle each slice's behavior and dependencies before implementing it.
+Each slice contains its own contract tests, implementation, integration verification, review, and explanation. The remaining order is proposed: settle each slice's behavior and dependencies before implementing it. Do not defer basic persistence or recovery correctness to slice 5.
 
 ## Evidence for discussions
 

@@ -26,6 +26,7 @@ Folio helps people understand documents and verify answers against source eviden
 - Have an independent reviewer challenge the acceptance criteria and failure paths. For code review, provide fresh context with the accepted contract and actual diff, rather than relying on the implementer's explanation. Agent review complements executable checks and human judgment.
 - Finish a slice with a working demonstration, a concise diff walkthrough, and an updated decision/AI-use record. Explain the data flow and one failure path so Siddhant can defend the result.
 - Keep one implementation increment active and use small passing checkpoints. Give the owner a reading order through actual files and explain where a behavior change belongs; do not let parallel coding outrun human understanding.
+- Teach the relevant system concept at each checkpoint using the actual query or failure path: transactions, indexes, locks, leases and scaling limits. Explain why an index exists and how to measure it; give a small owner exercise rather than assuming prior system-design knowledge.
 
 ## Test-first development
 

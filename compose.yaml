@@ -1,0 +1,86 @@
+name: folio
+
+x-settings: &settings
+  FOLIO_DATABASE_URL: postgresql://folio:folio@postgres:5432/folio
+  FOLIO_REDIS_URL: redis://redis:6379/0
+  FOLIO_ARTIFACT_ROOT: /data
+  FOLIO_MAX_UPLOAD_BYTES: ${FOLIO_MAX_UPLOAD_BYTES:-26214400}
+  FOLIO_MAX_PAGES: ${FOLIO_MAX_PAGES:-100}
+  FOLIO_PARSER_TIMEOUT_SECONDS: ${FOLIO_PARSER_TIMEOUT_SECONDS:-240}
+  FOLIO_JOB_TIMEOUT_SECONDS: ${FOLIO_JOB_TIMEOUT_SECONDS:-300}
+  FOLIO_WORKER_MONITOR_SECONDS: ${FOLIO_WORKER_MONITOR_SECONDS:-10}
+  FOLIO_LEASE_SECONDS: ${FOLIO_LEASE_SECONDS:-420}
+  FOLIO_MAX_ATTEMPTS: ${FOLIO_MAX_ATTEMPTS:-3}
+  FOLIO_RETRY_DELAYS_SECONDS: ${FOLIO_RETRY_DELAYS_SECONDS:-[15,60]}
+  FOLIO_RETRY_JITTER_SECONDS: ${FOLIO_RETRY_JITTER_SECONDS:-5}
+  FOLIO_RECOVERY_INTERVAL_SECONDS: ${FOLIO_RECOVERY_INTERVAL_SECONDS:-15}
+  FOLIO_DISPATCH_GRACE_SECONDS: ${FOLIO_DISPATCH_GRACE_SECONDS:-30}
+  FOLIO_BATCH_SIZE: ${FOLIO_BATCH_SIZE:-20}
+  FOLIO_BOOTSTRAP_FAILURE_LIMIT: ${FOLIO_BOOTSTRAP_FAILURE_LIMIT:-3}
+
+services:
+  postgres:
+    image: postgres:18@sha256:e3d24f6906d0760bf4da0dae872415391ededefad23fd471c47dc53b0ddf3c42
+    environment:
+      POSTGRES_USER: folio
+      POSTGRES_PASSWORD: folio
+      POSTGRES_DB: folio
+    volumes: ["postgres-data:/var/lib/postgresql"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U folio -d folio"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+  redis:
+    image: redis:8@sha256:1f88291b4c57bdf249f02eb085a8669889b2d2954e91d4de5118a5da6b78dd53
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
+    volumes: ["redis-data:/data"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+  migrate:
+    image: folio-api:local
+    build: {context: ., dockerfile: docker/api.Dockerfile}
+    environment: *settings
+    command: ["python", "-m", "folio", "migrate"]
+    depends_on:
+      postgres: {condition: service_healthy}
+  api:
+    image: folio-api:local
+    build: {context: ., dockerfile: docker/api.Dockerfile}
+    environment: *settings
+    ports: ["127.0.0.1:${FOLIO_PORT:-8000}:8000"]
+    volumes: ["artifacts:/data"]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  dispatcher:
+    image: folio-api:local
+    environment: *settings
+    command: ["python", "-m", "folio", "dispatch"]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
+  worker:
+    image: folio-worker:local
+    build: {context: ., dockerfile: docker/worker.Dockerfile, target: worker}
+    environment: *settings
+    volumes: ["artifacts:/data"]
+    cpus: 4
+    mem_limit: 6g
+    memswap_limit: 6g
+    stop_grace_period: 30s
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
+
+volumes:
+  postgres-data:
+  redis-data:
+  artifacts:

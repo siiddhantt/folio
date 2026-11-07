@@ -1,0 +1,29 @@
+[project]
+name = "folio"
+version = "0.1.0"
+description = "Understand documents and inspect their evidence."
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "fastapi==0.162.1",
+  "uvicorn==0.54.0",
+  "psycopg[binary,pool]==3.3.8",
+  "redis==8.1.0",
+  "rq==3.0.0",
+  "pydantic-settings==2.16.2",
+  "python-multipart==0.0.33",
+]
+
+[dependency-groups]
+dev = ["pytest==9.2.0", "httpx==0.28.1", "ruff==0.17.4", "reportlab==5.1.0", "pypdf==7.0.0"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+markers = ["parser: requires the Docling worker image", "integration: requires PostgreSQL and Redis", "supervision: opt-in native-hang process cleanup check"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]

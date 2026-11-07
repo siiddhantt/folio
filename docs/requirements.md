@@ -1,6 +1,6 @@
 # Folio requirements agreement
 
-Status: draft for discussion. Updated: 2026-11-06.
+Status: first ingestion slice accepted November 7; later capabilities retain open design choices. Updated: 2026-11-07.
 
 This agreement separates product outcomes, engineering constraints, proposed behavior, and optional capabilities. A proposed detail is not accepted merely because it appears here.
 
@@ -14,9 +14,9 @@ Accepted initial boundaries: one selected PDF per conversation, with Docling pro
 
 Accepted extraction policy: preserve and use recoverable content when part of a document fails. Show known coverage limitations with document results, summaries, and answers. A summary of available content must not imply complete-document coverage. If no usable evidence remains, report that clearly; do not generate unsupported factual answers.
 
-Accepted runtime: local development with Docker from the start, followed by a separate hosting decision.
+Accepted runtime and first slice: local Docker Compose with FastAPI, PostgreSQL, RQ/Redis and a shared artifact volume. The November 7 acceptance covers immutable source/evidence storage, request idempotency, durable work and ownership checks, bounded retries, initial input/resource limits and three test interfaces. See the [system contract](ingestion-system.md) and [verified status](status.md). Hosting remains separate.
 
-Proposed first journey:
+Target core journey, delivered in stages:
 
 1. A person uploads a supported document and immediately receives an identifier and processing status.
 2. They can see processing progress, usable partial results, and known warnings or failures.
@@ -31,16 +31,16 @@ The first journey can be verified through APIs. A visual interface is a separate
 
 | ID | Capability | Observable acceptance criterion to refine before implementation |
 | --- | --- | --- |
-| R01 | Intelligent upload and ingestion | Accept a declared supported file, persist an identity and metadata, return promptly, and reject unsupported/invalid input with a useful error. File validation rules and limits remain open. |
-| R02 | Asynchronous document processing | Parsing, analysis, and indexing happen through a task queue. Status and processing history remain inspectable after the HTTP request ends. Recovery guarantees are decided explicitly. |
-| R03 | Document retrieval | Retrieve document metadata, processing state, and the permitted original/extracted content through documented APIs. List/filter/pagination semantics remain open. |
+| R01 | Intelligent upload and ingestion | First slice implemented: bounded PDF upload, immutable original and metadata, idempotent acceptance and useful invalid-input errors. Initial limits are 25 MiB and 100 physical pages; encrypted PDFs are terminal unsupported inputs. |
+| R02 | Asynchronous document processing | Extraction runs through RQ/Redis with durable PostgreSQL intent and bounded recovery. Analysis and indexing will join the asynchronous workflow when implemented. Request/attempt history remains inspectable. |
+| R03 | Document retrieval | First slice exposes metadata, processing state, original bytes and paginated revision evidence. Library listing/filtering and later search remain open. |
 | R04 | Summaries and AI insights | Persist a useful summary and an agreed insights representation linked to the document. An output that failed must not appear successful. Insight types and long-document strategy remain open. |
 | R05 | Start a chat session | Create a conversation bound to one selected PDF. Follow-up questions and evidence retrieval preserve that document scope. |
 | R06 | Ask a grounded question | Retrieve evidence and produce a contextual answer with resolvable citations. Agree the behavior for absent, conflicting, or ambiguous evidence. |
 | R07 | Chat history | Store and retrieve ordered user/assistant turns and their source context/citations. Specify persistence behavior when a model call fails. |
 | R08 | Multi-turn context | Resolve a follow-up using relevant conversation context without changing the permitted document scope or treating a previous answer as independent evidence. |
 | R09 | Document statistics API | Return real persisted document counts/status totals and agreed aggregate information. Do not substitute a static dashboard. |
-| R10 | Processing metrics API | Expose agreed durations, failures, attempts, and processing history with clear units and definitions. Failed attempts are observable. |
+| R10 | Processing metrics API | Request status exposes attempts, failures and measured parser duration. That duration includes admission, imports/setup, conversion and mapping, not queue wait or publication. Aggregate metrics and later stages remain unfinished. |
 | R11 | Durable data structures | Store document metadata/status, summaries/insights, conversations, messages/context/citations, processing history/metrics, and system performance observations. |
 | R12 | Usable APIs and failure behavior | Provide coherent request/response models, useful errors, and API documentation. Unsupported operations and limits should be explicit. |
 | R13 | Reproducible operation | Provide working backend source, setup/configuration instructions, and an architecture explanation alongside the implementation. |
@@ -51,33 +51,25 @@ The first journey can be verified through APIs. A visual interface is a separate
 
 | Item | Status |
 | --- | --- |
-| Python backend | Foundation constraint. Framework choice open; FastAPI recommended. |
+| Python backend | FastAPI accepted November 7 and implemented. |
 | PostgreSQL | Foundation constraint for persistent data. Start locally in Docker; hosting remains a later decision. |
-| Task queue | Foundation constraint. Celery with Redis, RQ, or a justified equivalent; choose after the recovery contract. |
-| File processing library | Docling selected after local comparison; PDF native text and English OCR. Source contract, resource/input limits, and wider quality checks remain open. |
+| Task queue | RQ/Redis accepted November 7. PostgreSQL owns processing intent, attempts and the single retry policy. |
+| File processing library | Docling selected after local comparison; PDF native text and English OCR. Structured evidence, diagnostics and initial bounds are accepted; wider quality checks remain open. |
 | AI access | OpenRouter accepted as the initial API gateway. GPT-6 Luna is the preferred evaluation candidate, not a validated final model choice. Generation and embedding model identifiers, budgets, and supported capabilities remain open. |
 | Embeddings | OpenAI embeddings or a local sentence-transformer are options. Choose and version the embedding space; a model change can require re-embedding. |
-| File storage | Local filesystem or S3-compatible storage are options. Deployment and access boundaries drive the selection. |
+| File storage | Shared local Docker named volume accepted for opaque immutable originals/results. S3 is a future multi-host option, not an implemented backend. |
 | RAG library | LangChain or LlamaIndex is a recommended option. Direct SDK orchestration is also considered; explain why if selected. No requirement for an autonomous-agent runtime. |
-| API documentation | Required product documentation; generated OpenAPI/Swagger or another usable form. |
-| Tests | Pytest is the preferred Python candidate. Meaningful behavior checks precede application code. |
+| API documentation | FastAPI OpenAPI documents current ingestion routes. Future capabilities need their own contracts. |
+| Tests | Pytest behavior checks use real persistence/queue and offline parser fixtures. Accepted seams are HTTP-to-evidence, parser output and processing/recovery. |
 | Retrieval store | Open decision. pgvector, a separate vector service, or a deliberately small exact baseline are alternatives. A named vector database is not a foundation constraint. |
 
-The comparison pins Docling 2.148.0. Application dependency versions otherwise remain open; use supported versions and lock them when introduced. Do not use historic model/library names as an unexamined implementation choice.
+The comparison and application pin Docling 2.148.0. Application dependencies are locked when introduced. Later model/library choices require explicit evaluation; the ingestion dependency selection does not settle retrieval or generation.
 
-## Proposed reliability and evidence contract
+## Reliability and evidence contract
 
-These are recommendations awaiting acceptance alongside the relevant design decision.
+Accepted for ingestion: retain immutable originals, source identities/hashes, parser configuration, physical PDF pages, structured table meaning and attempt history. Publish usable evidence with known coverage warnings; zero usable content is unavailable. Detection cannot prove complete semantic recovery. Enforce accepted upload/page/time/resource bounds and retries. A PostgreSQL transaction publishes a complete revision; filesystem and Redis operations remain separate. Repeated delivery must not duplicate publication, and a stale worker must not overwrite newer work.
 
-- Preserve document identity, content version/hash, source locators, parser version, and processing attempt information.
-- Preserve physical PDF page references; for unpaginated formats, use honest section/paragraph locators rather than invented page numbers.
-- Accepted: retain usable partial extraction with explicit known-coverage warnings. Distinguish no usable content from a partially usable document. Detection cannot prove complete semantic recovery; never silently imply complete coverage.
-- Bound retries, timeouts, input sizes, and generated output. Repeated work must not duplicate final document data.
-- Keep selected document scope in every evidence query. Uploaded text cannot broaden scope, grant permissions, or override application instructions.
-- Treat previous answers as conversation context, not source evidence. Questions requiring missing evidence should produce a useful limitation or clarification.
-- Distinguish citation existence, correct source location, and actual support for a claim. All three matter.
-- Distinguish ready-to-search status from separate summary/insight completion if those operations can succeed independently. Summaries and insights remain core capabilities.
-- Define database/queue publication and crash recovery behavior. Do not promise exactly-once execution merely because a queue is present.
+Accepted conversation scope is one selected PDF. Proposed later answer rules still need refinement: treat previous answers as context rather than evidence, preserve document scope in retrieval, distinguish valid citation IDs from actual support, and explain absent/ambiguous evidence. Uploaded text cannot grant permissions or override application instructions. Summary, search and insight stages should report their own outcomes; their exact contracts and output budgets remain open.
 
 ## Optional capability ledger
 
@@ -99,21 +91,19 @@ Every item is accounted for. Deferred means intentionally outside the initial co
 | O12 | Broader test coverage | Grow with actual behaviors and failures. Core behavior verification begins in the first slice; no arbitrary coverage target. |
 | O13 | AI cost tracking and optimization | Lightweight usage measurement proposed; elaborate optimization deferred. Record unknown costs honestly. |
 | O14 | Rate limiting and quotas | Decide with exposure and spending boundary. Required before an unrestricted public model-backed endpoint. |
-| O15 | User-visible document version history | Deferred; internal content/version provenance still needed for reliable citations. |
+| O15 | User-visible document version history | Deferred; internal immutable file/extraction provenance is implemented. Replacement/reprocessing APIs are not. |
 | O16 | Batch processing optimizations | Deferred until measured workload justifies them. |
-| O17 | Detailed logs/tracing/observability | Minimal diagnostic events proposed; elaborate tooling deferred. Core metrics/history remain R09-R11. |
-| O18 | Health and monitoring endpoints | Lightweight health/readiness proposed; choose checks that reflect actual dependencies. |
+| O17 | Detailed logs/tracing/observability | Attempt errors, diagnostics and delivery logging exist; elaborate tracing remains deferred. Aggregate metrics/history remain R09-R11. |
+| O18 | Health and monitoring endpoints | Current health checks API/database availability. It does not certify parser accuracy, queue health or end-to-end readiness. Broader monitoring remains open. |
 
 ## Unknowns to resolve in order
 
-1. Refine the accepted Docling/PDF/English-OCR boundary: source structure, table handling, encryption, file/page/time limits, and representative OCR quality cases. DOCX remains deferred.
-2. Scope and user experience: one document or a set, source inspection, ambiguity, missing/partial evidence.
-3. Local Docker details: retention/deletion, storage, available resources, and a later private/public hosting boundary.
-4. Processing and recovery contract: stage states, safe retries, queue publication failures, and partial success.
-5. Parser, provenance, chunking, retrieval strategy/store, and generation/summary strategy.
-6. Representative fixtures, quality criteria, response/processing latency expectations, and an explicit live-evaluation budget.
+1. Summary/insight usefulness and grounded-answer behavior for ambiguity, missing evidence and partial extraction, within the accepted one-PDF scope.
+2. Chunking, retrieval strategy/store, generation/summary strategy and revision binding for those stages.
+3. Representative questions, wider OCR quality cases, latency expectations and an explicit live-evaluation budget.
+4. Retention/deletion, backpressure, total storage limits and any later private/public hosting boundary.
 
-Authentication, multi-tenancy, hosting, billing features, additional OCR languages/capabilities, and exact numerical limits are not silently assumed. They must be chosen or explicitly deferred.
+Authentication, multi-tenancy, hosting, billing features, additional OCR languages and new workload limits are not silently assumed. Initial ingestion bounds are accepted starting policies, not measured capacity guarantees.
 
 ## Quality evidence
 

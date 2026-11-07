@@ -1,8 +1,8 @@
 # Evidence and processing design
 
-Discussion proposal, November 6, 2026. Docling, PDFs with English OCR, one PDF per conversation, local Docker, and usable partial extraction are accepted. The contracts below remain proposals; no application implementation has started.
+Design rationale, updated November 7, 2026. The owner accepted the complete first ingestion slice: PDF native text/English OCR, partial evidence, source representation, processing ownership, local storage, queue, initial bounds and test interfaces. The application now implements that boundary; [status](status.md) records verified behavior and its limits.
 
-The [November 7 system design](ingestion-system.md) makes this proposal concrete: recommended queue/storage, end-to-end requests, relational schema, structured output, idempotency and failure recovery. Where it refines details, use that newer proposal for discussion.
+The [system design](ingestion-system.md) records the concrete accepted flow, schema, API shape, idempotency and recovery. Later retrieval, summaries and conversations remain separate slices.
 
 ## A running example
 
@@ -25,7 +25,7 @@ Someone asks, "How many people were in Operations in 2026?" The evidence needs t
 | Raw Docling result as the application model | Keeps the parser's rich representation with little mapping | Retrieval, citations, and callers must understand the parser's schema and changing item references. |
 | Small Folio evidence model, plus original and raw result | Keeps source references and table meaning stable while concentrating parser integration | A modest, explicit mapping step must be maintained and tested. |
 
-Recommend the third option. Use a concrete Docling module and a small data contract for observed needs; no universal document schema or parser registry. Docling already supplies content items, hierarchy, reading order, and available provenance. Preserve those relationships when mapping rather than concatenating the `texts` and `tables` arrays. [Docling document model](https://docling-project.github.io/docling/concepts/docling_document/).
+Selected: the third option, with a concrete Docling module and a small evidence contract. Docling supplies content items, hierarchy, reading order and available provenance. The mapper follows each supplied tree's order; it does not invent interleaving between body content and page furniture or merely concatenate `texts` and `tables`. [Docling document model](https://docling-project.github.io/docling/concepts/docling_document/).
 
 Store these concepts; they do not imply a class hierarchy or a database table for every row:
 
@@ -34,7 +34,7 @@ Store these concepts; they do not imply a class hierarchy or a database table fo
 | Original document | Document ID, original PDF bytes/storage key, content hash, filename, media type, size and physical page count when known. The hash identifies bytes; duplicate-upload behavior is a separate policy. |
 | Extraction revision | An immutable saved result linked to that document/hash: parser/package/model configuration, configuration fingerprint, normalization schema version, creation time and raw Docling artifact reference. |
 | Source elements | Text, heading/list/caption roles, structured tables, reading order and heading context. IDs are unique within a revision. Keep table cells, row/column positions, spans and header roles. |
-| Source locations | One or more physical page references per element, source boxes and their coordinate origins/page dimensions when supplied. Keep source item references for diagnostics; do not fabricate missing precision. |
+| Source locations | Physical page references per published element, supplied element boxes normalized to top-left PDF points, and page dimensions. Raw results retain provider geometry, including table-cell boxes. Do not fabricate missing precision. |
 | Page observations and diagnostics | Pages with recovered content, pages with no recovered content, explicit failures and limitations. An empty page has an unknown cause unless another signal establishes it. Preserve document-wide errors without inventing page numbers. |
 | Processing request and attempts | Durable work intent, status, attempt identity, times, retry eligibility, errors, resource observations when measured, and the attempt currently allowed to publish. |
 
@@ -44,7 +44,7 @@ The original PDF is the source of truth. Extracted text is an imperfect represen
 
 Retrieval chunks are later, derived search units. They point back to these source elements. Changing chunk size or embedding model should not silently rewrite old citation evidence. Chunking and embedding configuration belong to a later index revision, not the extraction identity.
 
-Retain the original and raw parser result in managed artifact storage and store queryable metadata/elements in PostgreSQL. Local Docker volumes are the proposed starting artifact storage; an S3 adapter is not needed before hosting requires it. Table payloads can remain structured data rather than becoming a relational row for every cell. Exact schema and storage selection follow agreement on behavior.
+Originals and raw parser results are retained in the shared local artifact volume; queryable metadata/elements are stored in PostgreSQL. Failed extraction also retains a diagnostic envelope when it can be written, even without a raw document. Table cells remain structured JSONB rather than separate relational rows. S3 is a later deployment option, not an implemented adapter.
 
 ## Processing state
 
@@ -53,7 +53,7 @@ Retain the original and raw parser result in managed artifact storage and store 
 | One document status such as ready/partial/failed | A simple field for callers | Cannot explain failed reprocessing with still-usable evidence, or successful extraction with a failed summary, without accumulating combinations. |
 | Execution status plus evidence availability and diagnostics | Explains what happened and what remains usable independently | Callers interpret a few explicit fields; a display label can be derived from them. |
 
-Recommend the second option. Initially introduce extraction execution and evidence availability only. Indexing, summaries and insights gain their own stage results when implemented, each tied to its input extraction revision.
+Selected: the second option. The initial application exposes extraction execution, evidence availability and diagnostics. Indexing, summaries and insights need their own stage results when implemented, each tied to its input extraction revision.
 
 An extraction attempt follows:
 
@@ -75,9 +75,9 @@ The state names above describe execution, not completeness:
 - `succeeded`: a usable extraction revision was durably published. It can still contain coverage warnings.
 - `failed`: the attempt ended without publishing usable evidence. An earlier published revision, if any, stays available. If the parser returns normally with zero usable content, preserve its reported success alongside Folio's `no_usable_content` outcome. Retry eligibility follows the reason, not the word `failed`.
 
-A retry creates a new attempt linked to the same request, preserving the earlier failed record. Retry timing and maximum attempts are configuration decisions, not assumed infinite retries. State-transition history records events needed for processing metrics; no event-sourcing framework is proposed.
+A retry creates a new attempt linked to the same request, preserving the failed record. Accepted defaults allow three attempts, with 15/60-second retry delays plus persisted jitter for eligible failures. Attempt rows store outcomes and timestamps; this is not a separate event log or event-sourcing framework.
 
-Proposed minimum usable evidence: at least one nonempty text/table element with an attributable physical PDF page. Retain other recovered material and missing-location diagnostics for inspection; do not invent locators or discard useful located elements because some are missing. This is a checkability rule, not an accuracy score: no minimum confidence, character count or complete-document threshold. Confirm this criterion with the first test examples.
+Accepted minimum usable evidence: at least one nonempty text/table element with an attributable physical PDF page. Every published element must meet that rule. Unlocated material stays in the raw result with a diagnostic; it does not discard useful located elements. This is a checkability rule, not an accuracy score: no minimum confidence, character count or complete-document threshold.
 
 For the example, the observable result is: execution succeeded; evidence available; pages 1-3 have recovered elements; page 4 has no recovered content and an unknown cause. This is neither a complete-extraction certificate nor a numerical accuracy score. A user-facing label can say "Available with warnings."
 
@@ -85,7 +85,7 @@ Once search and summaries exist, extraction availability alone does not imply ch
 
 ## Crash recovery and publication
 
-For one ingestion job type, recommend durable pending work plus a small recovery routine. A generic event/outbox framework or workflow engine is an alternative if more complex delivery requirements emerge; it adds concepts we do not currently need.
+The selected design uses durable pending work plus a small dispatcher/recovery loop for one ingestion job type. A generic event/outbox framework or workflow engine would add concepts not currently needed.
 
 1. Store the original PDF durably and commit its document record, work request and first pending attempt before returning acceptance.
 2. Try to dispatch that request through the selected queue. If dispatch or the request process fails, recovery can discover the pending request and try again. Database intent alone is insufficient without this recovery path.
@@ -99,26 +99,23 @@ When a parser returns a useful partial result, it can be published after validat
 
 The first slice need not expose a user-facing reprocess operation. Its data model should allow a later revision R2 without mutating R1. Retain old revisions while references depend on them. Before enabling reprocessing, decide replacement of a usable but less informative candidate and conversation/index revision binding. More characters alone do not establish improved quality; never silently merge pages from different attempts.
 
-Queue selection may supply some durable-intent/recovery primitives directly. Use the selected library's facilities where they satisfy this contract, rather than duplicating them in application machinery.
+RQ supplies delivery/execution and parent supervision; PostgreSQL supplies application intent, ownership and bounded retries. The dispatcher uses RQ job state to distinguish healthy queued work from lost/terminal delivery. Those responsibilities are intentionally separate.
 
 ## Modular implementation direction
 
 Prefer feature-focused modules with small interfaces and related behavior kept together. File length is a review signal, not a target. Split when responsibilities or reasons to change diverge; avoid one-line forwarding modules and speculative shared abstractions.
 
-An illustrative first-slice map, not a scaffold to generate upfront:
+Current modules under [src/folio](../src/folio), in request-to-result order:
 
-```text
-folio/
-  documents/
-    types.py         evidence and execution contracts
-    ingestion.py     upload and processing use cases
-    docling.py       parser invocation and source mapping
-    repository.py   PostgreSQL persistence and publication transactions
-    routes.py       HTTP inputs, outputs and errors
-  storage.py        managed original/result artifacts
-  worker.py         queue entry point calling the ingestion use case
-  app.py            construction and dependency wiring
-```
+| Boundary | Modules |
+| --- | --- |
+| HTTP and acceptance | `api.py`, `acceptance.py`, `storage.py` |
+| Durable schema and queries | `database.py`, `migrations/`, `queries.py` |
+| Delivery and execution | `dispatcher.py`, `__main__.py`, `processing.py` |
+| Ownership and final outcomes | `ownership.py`, `publication.py`, `recovery.py` |
+| Parser integration and evidence | `parsing/parser.py`, `parsing/evidence.py` |
+
+The [learning guide](system-design-walkthrough.md) links each file to the question it answers.
 
 HTTP handlers and queue tasks stay thin. Docling types stay in the parser module. Transactional rules belong together in persistence, not repeated across handlers. Use ordinary functions/data structures first; introduce reusable interfaces where an actual variation or independently testable external integration warrants them. Add the settings, migrations and tests required by each behavior as it is built, without generating future chat/search packages.
 
@@ -128,13 +125,13 @@ Keep one implementation increment active. Parallelize independent research and r
 
 For every meaningful behavior: agree its observable result, observe one useful failing test, implement enough to pass, independently review and simplify, then demonstrate it. A small passing commit is a review checkpoint. The next increment should remain easy to explain in one request-to-result walkthrough.
 
-Proposed increments inside the first upload-to-evidence slice:
+Accepted increments inside the first upload-to-evidence slice:
 
 1. Upload one text PDF, process it asynchronously, and retrieve persisted evidence/source references and attempt timing.
 2. Preserve the same flow for the report's table, OCR page and unknown no-content page, including honest warnings.
 3. Verify no-usable-content behavior and recovery after duplicate delivery, dispatch failure and worker interruption. These safeguards are part of finishing this slice, not a distant reliability phase.
 
-Proposed test interfaces, to agree before writing tests:
+Accepted test interfaces, with current checks reported in [status](status.md):
 
 | Interface | What its checks catch | What they do not establish |
 | --- | --- | --- |
@@ -154,4 +151,4 @@ This workflow adapts primary practitioner evidence:
 
 ## Decisions still needed
 
-Confirm the evidence representation, execution/availability separation and intended review checkpoints. Then settle input/page/time/resource bounds, encrypted-file behavior, queue/storage/framework choices, and the exact initial test interfaces. Later retrieval, summaries and model-budget choices remain separate discussions. No application implementation is authorized merely by this proposal being documented.
+Agree useful summary/insight output, grounded-answer behavior, chunking/retrieval, index and conversation revision binding, and live model budgets before those slices. Wider OCR quality, deletion, storage/admission backpressure and any hosted-service boundary need separate evidence and policy. The accepted ingestion slice does not silently settle these choices.

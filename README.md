@@ -2,11 +2,41 @@
 
 Understand your documents. Check the evidence.
 
-Folio is being designed to turn uploaded documents into useful summaries and conversations with verifiable source references. Its central promise is a traceable path from a question to the passages supporting an answer.
+Folio turns uploaded PDFs into inspectable evidence: text, tables, physical-page references,
+and visible extraction limitations. Summaries and grounded conversations will build on that evidence.
 
 ## Current state
 
-Requirements and design decisions are under discussion. Application code and a runnable service are not yet available. Proposed features and architecture are not claims of implemented behavior.
+The first ingestion slice runs locally in Docker. FastAPI accepts a PDF, PostgreSQL records
+durable work, RQ/Redis delivers it, and a Docling worker publishes evidence. Native text and
+English OCR are supported; encrypted inputs receive a clear error. Recoverable partial
+content remains available. Summaries, chat, embeddings and a visual interface are not implemented.
+
+## Run locally
+
+With Docker Compose installed, build the pinned parser/model image, then start Folio:
+
+```sh
+docker build -t folio-docling:2.148.0 experiments/ingestion/docling
+docker compose up --build -d --wait
+```
+
+The first parser build downloads model assets and can take several minutes. Processing uses
+those bundled assets locally; no inference API key is needed for ingestion.
+
+Open [interactive API documentation](http://localhost:8000/docs). Upload one PDF using
+`POST /documents`, a fresh `Idempotency-Key` header and the `file` field. Follow the returned
+`status_url`, then inspect `/revisions/{revision_id}/evidence` when processing succeeds.
+The same key and same input replay the original IDs; changed input with that key returns `409`.
+
+```sh
+uv sync --locked
+uv run python scripts/smoke.py
+```
+
+The smoke check uses only committed synthetic PDFs. [Development and verification](docs/development.md)
+explains the tests, fault exercises and limitations. Copy `.env.example` to `.env` only when
+creating a new configuration; preserve an existing local file. `.env` is ignored by Git.
 
 ## Design and development
 
@@ -17,9 +47,12 @@ Requirements and design decisions are under discussion. Application code and a r
 - [Skills](docs/skills.md): selected workflows, pinned upstream sources, and licenses.
 - [Configuration](docs/configuration.md): supported environment values and their meaning.
 - [Ingestion investigation](docs/ingestion.md): parser research, local comparison, and source-preservation findings.
-- [Ingestion system proposal](docs/ingestion-system.md): upload flow, queue/storage choices, schema, retries, and the first implementation slice.
+- [Ingestion system design](docs/ingestion-system.md): upload flow, queue/storage choices, schema, retries, and the first implementation slice.
+- [Code and system-design walkthrough](docs/system-design-walkthrough.md): transactions, indexes, worker coordination and scaling through actual source files.
 - [AI use](AI_USAGE.md): how agents contribute and how their work is checked.
 
 Development proceeds through small vertical slices. Each slice should deliver a complete observable behavior, meaningful verification, and an explanation of its design.
 
-Runtime setup instructions, examples, and a document-chat demonstration will be added with working code. Credentials and user documents do not belong in source control.
+Only the API is exposed, on localhost. Runtime files and database state live in Docker volumes.
+This is a single-host setup with local development credentials; it does not provide authentication,
+off-machine backup, online artifact cleanup or a measured production capacity guarantee.

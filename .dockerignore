@@ -1,0 +1,12 @@
+.git
+.env
+.env.*
+.venv
+tmp
+data
+uploads
+artifacts
+.agents
+**/__pycache__
+.pytest_cache
+.ruff_cache
