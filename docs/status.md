@@ -1,6 +1,6 @@
 # Folio status
 
-Updated: 2026-11-06
+Updated: 2026-11-07
 
 ## Accepted direction
 
@@ -32,6 +32,7 @@ Updated: 2026-11-06
 - Ran the approved offline Docker comparison: six identical synthetic fixtures, three attempts per parser, matching container limits. Independent output review found correct facts/OCR in both engines, stronger table structure in Docling, and undetected corruption in both. See `docs/ingestion.md` for measured time/memory and limitations.
 - Preserved parser diagnostics across adapter export failures with an observed failing-then-passing artifact test. No application correctness claim follows from the experiment checks.
 - Prepared an independently challenged evidence/processing proposal with concrete alternatives, failure scenarios, modular code direction and reviewable first-slice increments; see `docs/ingestion-design.md`. The user requested modularity, understandable agent delegation and reviewable code; those working preferences are recorded in `AGENTS.md`.
+- Prepared a concrete first-slice system proposal covering RQ/Redis, PostgreSQL authority, local artifacts, normalized relationships, idempotency and recovery; see `docs/ingestion-system.md`. These dependency/schema/limit recommendations are not yet recorded as accepted.
 
 ## In progress
 
@@ -40,7 +41,7 @@ Updated: 2026-11-06
 
 ## Next decision
 
-Discuss and accept or revise the evidence representation and processing-state proposal in `docs/ingestion-design.md`. Then settle input limits, grounded-answer behavior, processing recovery details, queue/storage/framework choices and initial test interfaces. Partial-content availability and local Docker operation are accepted.
+Review the concrete first-slice flow, queue/storage/schema recommendations, initial bounds and test interfaces in `docs/ingestion-system.md`. Grounded-answer behavior, retrieval/indexing and generation follow separately. Partial-content availability and local Docker operation are accepted.
 
 Recommendations not marked accepted in the decision guide remain proposals. No application implementation has begun.
 

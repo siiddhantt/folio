@@ -2,6 +2,8 @@
 
 Discussion proposal, November 6, 2026. Docling, PDFs with English OCR, one PDF per conversation, local Docker, and usable partial extraction are accepted. The contracts below remain proposals; no application implementation has started.
 
+The [November 7 system design](ingestion-system.md) makes this proposal concrete: recommended queue/storage, end-to-end requests, relational schema, structured output, idempotency and failure recovery. Where it refines details, use that newer proposal for discussion.
+
 ## A running example
 
 Consider a four-page operating report:

@@ -1,6 +1,6 @@
 # Folio decision guide
 
-Updated: 2026-11-06. All recommendations below are proposals unless marked accepted.
+Updated: 2026-11-07. All recommendations below are proposals unless marked accepted.
 
 Each discussion should cover: the user's outcome, two or three realistic options, what each costs, a recommendation, an example, and evidence that could change the recommendation. Resolve dependent questions in order rather than approving the whole stack at once.
 
@@ -70,6 +70,8 @@ Options: RQ + Redis for a small job workflow; Celery + Redis for richer task/ret
 
 Recommendation: select the simpler queue that meets the recovery contract. Persist attempts/status. Make repeated execution safe: rerunning a job should not duplicate chunks or overwrite a newer document state.
 
+Concrete recommendation after source review: RQ + Redis for execution/delivery, with PostgreSQL owning durable work and the single retry policy. Use an isolated Linux worker, a recoverable dispatcher and claim/publication checks. Celery and a PostgreSQL-native queue remain alternatives with different costs; see the [system proposal](ingestion-system.md).
+
 Discuss the gap between committing a document and publishing its job: recoverable pending records with reconciliation versus a transactional outbox. Do not claim exactly-once delivery. Define summary failure independently from retrieval readiness if partial success is allowed.
 
 ## D06: Parser and source model
@@ -77,6 +79,8 @@ Discuss the gap between committing a document and publishing its job: recoverabl
 Status: Docling selected after the approved local comparison, with PDFs and English OCR; DOCX deferred. Detailed source contract remains open. See the [measured ingestion results](ingestion.md#results).
 
 The [source-model proposal](ingestion-design.md#what-to-store) compares page text, raw Docling coupling, and a small immutable Folio evidence model plus original/raw artifacts. Its revision identities, element model and publication rules remain proposed until accepted.
+
+The [concrete schema](ingestion-system.md#relational-schema) separates logical documents, immutable file versions, extraction revisions, requests/attempts and source locations. It proposes normalized relationships with explicitly bounded JSONB payloads, rather than claiming fully relational table-cell storage.
 
 | Option | Useful for | Limitations |
 | --- | --- | --- |
