@@ -84,6 +84,12 @@ and open/download actions remain available. Normal worker operation was restored
 
 Then agree summary/insight behavior and grounded-answer policy, followed by chunking, retrieval, indexing and model budgets. Summaries, chat/history, global statistics, the final document-chat demonstration/video and selected optional capabilities remain unfinished; see the [requirements ledger](requirements.md).
 
+Current discussion: [a size-aware summary slice](summaries.md), with source-linked
+preparation before model calls, complete-input or hierarchical processing, and
+saved-result reuse. This remains a proposal. Trigger, output format, provider
+route, quality thresholds and spending limits are not selected. No summary or
+embedding implementation or live model evaluation has begun.
+
 Noisy/rotated/handwritten OCR needs representative quality evidence. Hosting, authentication, admission backpressure, storage quotas, deletion and online artifact cleanup remain separate work. Local container persistence is not a backup or production-readiness claim.
 
 ## Handoff discipline

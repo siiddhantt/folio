@@ -165,6 +165,13 @@ alternative is a question-to-source search slice first, useful if retrieval
 quality is the immediate priority. Neither ordering selects a model, vector
 store, chunk policy or paid-call budget.
 
+The [summary proposal](summaries.md) clarifies that source preparation comes
+before generation. Compare a bounded complete-input call against section notes
+and synthesis; embeddings are not required for either. It records input coverage,
+durable reuse, uncertain provider outcomes and an illustrative token-cost
+comparison. The automatic-versus-user-triggered policy and all numerical budgets
+remain open.
+
 A response should distinguish answer, evidence references, and insufficient-evidence/clarification outcomes. Check that references belong to supplied evidence; separately evaluate whether the cited passages support the claims.
 
 ## D11: Quality, tests, and budgets

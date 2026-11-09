@@ -31,4 +31,6 @@ Model-assisted software tests and live AI evaluations serve different purposes. 
 
 | 2026-11-09 | Recorded the owner's approval of the revised visual direction and independently reviewed summary-versus-retrieval slice boundaries | Existing persistence and the pushed UI checkpoint were checked. Pinned Docling chunker source was inspected for table handling and provenance limits; no chunks were generated or quality evaluated. Cited-summary-first remains a proposal pending the owner's choice. No application behavior changed or model calls occurred. |
 
+| 2026-11-09 | Compared complete-input, hierarchical and refinement summarization; independently challenged coverage, caching, retry costs and latency | Primary library/provider documentation and current Luna catalog rates were checked. Recorded a proposed size-aware summary design and clearly illustrative token costs. Preparation precedes generation; embeddings remain separate. No application code, paid calls or measured model-quality/latency results were introduced. Trigger and budgets remain owner decisions. |
+
 For later slices, record the task, relevant constraints, agent contribution, checks run, defects caught, and the decision retained by the human owner. Keep entries brief and factual; do not publish raw conversations, secrets, or private document contents.
