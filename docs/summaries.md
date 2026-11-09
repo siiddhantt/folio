@@ -53,6 +53,28 @@ understanding of figures when only their text was recovered.
 
 ## Reuse, resource limits and failure boundaries
 
+### One workflow, two possible triggers
+
+Automatic generation after extraction and an explicit user request should enter
+the same summary-request operation. Trigger origin is metadata, not a different
+generation path or a new result identity. For the same revision and summary
+specification, return the saved result, return existing work status, or atomically
+accept one new run. A manual request must not bypass cost or concurrency limits.
+
+Before accepting model work, reuse or prepare the source manifest, plan the
+bounded calls and reserve the permitted budget. Concurrent callers cannot both
+claim the same remaining allowance. A run that cannot be admitted stays visibly
+unavailable for that reason; do not secretly truncate its input. At execution,
+apply the same limits to subsequent groups, synthesis and retries.
+
+Recommendation: automatic generation as the default product behavior, with
+manual actions using the same operation to request or resume eligible work.
+Application-wide and per-document settings are sufficient initially. Accounts,
+billing and subscription plans are deferred; a future plan can supply limits to
+this admission decision without creating a separate summary engine. Changing a
+model/prompt configuration should not silently regenerate old documents merely
+because somebody opens them.
+
 - Persist summaries and intermediate notes with the extraction revision and
   preparation, prompt, schema, model/route and generation-setting versions.
   Matching completed work is served from PostgreSQL without another model call.
@@ -70,7 +92,9 @@ understanding of figures when only their text was recovered.
 
 The proposed default is automatic generation after extraction within an agreed
 cost limit; user-triggered generation is the alternative that avoids spending on
-unused summaries. Neither is selected yet. Provider prompt/response caching is
+unused summaries. The owner requested a shared path and asked how future budget
+policy would fit; automatic behavior is still the recommendation rather than a
+confirmed choice. Provider prompt/response caching is
 optional additional optimization, not Folio's durable reuse mechanism. OpenRouter
 documents that simultaneous identical response-cache misses both run and are
 billed, so provider caching does not replace the in-flight guard.
