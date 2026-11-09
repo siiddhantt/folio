@@ -1,6 +1,6 @@
 # Folio status
 
-Updated: 2026-11-07
+Updated: 2026-11-09
 
 ## Accepted direction
 
@@ -11,6 +11,13 @@ The complete first ingestion slice was accepted on November 7: FastAPI, PostgreS
 Docling processes PDF native text and English OCR. Usable partial evidence remains available with known coverage warnings. Encrypted PDFs receive a terminal unsupported-input result. DOCX and other formats are deferred. One selected PDF per conversation remains the later conversation boundary.
 
 OpenRouter is the selected initial model gateway; GPT-6 Luna is an evaluation candidate. Exact generation/embedding models, retrieval strategy, vector storage and live-call budgets remain open. Configuration uses a commentless ignored `.env` and a safe template.
+
+Accepted November 9: a minimal upload/document-detail/source interface with React,
+TypeScript and Vite; light/dark typography; reusable feature components; and a
+server-gated development view of actual processing history. The [interface contract](interface.md)
+defines the scope. Runtime screens contain no built-in sample documents or simulated outcomes.
+The owner refined the visual direction to customized shadcn controls, neutral
+light/dark surfaces, a single sans-serif family and minimal visible copy.
 
 ## Implemented and checked
 
@@ -27,13 +34,51 @@ OpenRouter is the selected initial model gateway; GPT-6 Luna is an evaluation ca
 
 [The native-hang probe](../tests/test_supervision.py) passed in 60.639 seconds with a one-second job timeout and one-second monitor interval. It verified the parent's kill path and disappearance of the workhorse and its same-process-group child. This tests supervision behavior with shortened settings, not the default 300-second timeout or every possible native failure.
 
-The accepted ingestion path and these verification exercises are implemented. Final review and the owner walkthrough still close the increment; the full document-chat product is not complete.
+The accepted ingestion path, independent implementation review and these verification exercises are complete. A fresh focused source review on November 9 found no blocking defect for a minimal local upload/status/evidence interface. It inspected the current ingestion contracts, implementation, tests and final index change; it did not rerun the suites. Docker's engine was unavailable during that checkpoint, so no fresh runtime result is claimed. The owner walkthrough still closes the increment; the full document-chat product is not complete.
+
+Current observability includes durable attempt history, timestamps, errors, parser duration,
+evidence/coverage diagnostics and recorded lifecycle/stage events. A default-off development
+endpoint exposes safe configuration and identity metadata. API and fresh worker processes
+configure correlated application logging explicitly. Recorded observations can have gaps;
+there is no reliable page-level progress or distributed tracing collector. PostgreSQL-backed
+request status owns the product outcome: an RQ execution can finish normally after recording
+an extraction failure.
 
 The [reading guide](system-design-walkthrough.md) connects the current modules to transactions, indexes, ownership and scaling. Reproduction commands belong in the [README](../README.md); parser and queue test boundaries are described in the [ingestion design](ingestion-design.md#reviewable-slices-and-agent-use).
 
 ## Next decisions and remaining scope
 
-After the first slice's verification and owner walkthrough, agree summary/insight behavior and grounded-answer policy, then chunking, retrieval, indexing and model budgets. Summaries, chat/history, global statistics, the final document-chat demonstration/video and selected optional capabilities remain unfinished; see the [requirements ledger](requirements.md).
+The accepted minimal interface is implemented and checked in the local Docker stack.
+It shows actual processing/retry outcomes, extracted text/tables, known gaps and source-page
+links. A durable document URL survives reload. Embedded PDF preview loads after usable
+extraction; open/download remain available throughout. A document library is not included.
+The [hands-on walkthrough](interface-walkthrough.md) follows a chosen PDF through the UI,
+Network panel and persisted execution history.
+
+The November 9 interface increment passed 21 fast backend checks against isolated
+PostgreSQL/Redis services and seven browser checks against the Docker-served app.
+Browser checks cover upload/reload, partial coverage, table/source links, real
+stage history, diagnostic resilience, uncertain-response replay and a narrow
+encrypted-PDF failure screen with persisted theme. The diagnostic check injects
+a response shape; it is not a parser-quality evaluation. Existing parser and
+supervision suites were not rerun because their implementation did not change.
+Type checking, production builds, formatting and the public-file check passed.
+
+Independent review corrected a dispatch timestamp that changed without a new
+enqueue, code-less diagnostic handling, and an unsupported queue-recovery label.
+A subprocess check caught suppressed lifecycle logs in fresh API/worker processes.
+The browser checks also led to gating embedded preview on successful extraction;
+an encrypted native viewer had interfered with narrow-screen interaction.
+
+After the visual revision, all seven browser checks passed again. A manually
+uploaded public nine-page technical report was accepted with the worker stopped,
+then processed successfully after its normal restart. The UI exposed real events,
+loaded a second evidence page and updated the original-page link. This validates
+the workflow, not the semantic accuracy of all extracted content. Native PDF
+rendering varies by browser; page pixels were not validated in the in-app viewer,
+and open/download actions remain available. Normal worker operation was restored.
+
+Then agree summary/insight behavior and grounded-answer policy, followed by chunking, retrieval, indexing and model budgets. Summaries, chat/history, global statistics, the final document-chat demonstration/video and selected optional capabilities remain unfinished; see the [requirements ledger](requirements.md).
 
 Noisy/rotated/handwritten OCR needs representative quality evidence. Hosting, authentication, admission backpressure, storage quotas, deletion and online artifact cleanup remain separate work. Local container persistence is not a backup or production-readiness claim.
 

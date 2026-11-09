@@ -1,6 +1,6 @@
 # Folio requirements agreement
 
-Status: first ingestion slice accepted November 7; later capabilities retain open design choices. Updated: 2026-11-07.
+Status: ingestion accepted November 7; minimal interface and development inspection accepted November 9. Later capabilities retain open design choices. Updated: 2026-11-09.
 
 This agreement separates product outcomes, engineering constraints, proposed behavior, and optional capabilities. A proposed detail is not accepted merely because it appears here.
 
@@ -25,7 +25,7 @@ Target core journey, delivered in stages:
 5. They inspect the passage supporting the answer, ask a follow-up, and revisit the conversation later.
 6. When a document or question cannot be handled, Folio explains the limitation clearly.
 
-The first journey can be verified through APIs. A visual interface is a separate capability decision. General-purpose means the content domain is flexible; it does not promise every file format, language, or document task.
+The first journey is verified through APIs. On November 9, a minimal upload/detail/source interface and development inspection view were accepted; see the [interface contract](interface.md). General-purpose means the content domain is flexible; it does not promise every file format, language, or document task.
 
 ## Core capabilities
 
@@ -83,7 +83,7 @@ Every item is accounted for. Deferred means intentionally outside the initial co
 | O04 | Automatic categorization and tagging | Deferred; avoid imposing a domain-specific taxonomy. |
 | O05 | Sentiment analysis or deeper key-insight extraction | Deferred extension; define basic insights under R04 independently. |
 | O06 | Comparative analysis across documents | Deferred; requires multi-document provenance and conflict handling. |
-| O07 | Simple frontend/dashboard | Optional; decide after the API journey is coherent. React/Next.js are candidates, not locked choices. |
+| O07 | Simple frontend/dashboard | Minimal upload/detail/evidence/source UI accepted November 9 with React, TypeScript and Vite. Light/dark appearance included; library and richer dashboard deferred. |
 | O08 | Real-time processing/chat updates | Deferred; polling is an initial option. SSE/WebSocket require a stated need. |
 | O09 | Smart embedding/response caching | Deferred; define invalidation and scope keys before enabling. |
 | O10 | Vector database integration | Proposed pgvector starting option; Qdrant and other services remain alternatives. |
@@ -93,7 +93,7 @@ Every item is accounted for. Deferred means intentionally outside the initial co
 | O14 | Rate limiting and quotas | Decide with exposure and spending boundary. Required before an unrestricted public model-backed endpoint. |
 | O15 | User-visible document version history | Deferred; internal immutable file/extraction provenance is implemented. Replacement/reprocessing APIs are not. |
 | O16 | Batch processing optimizations | Deferred until measured workload justifies them. |
-| O17 | Detailed logs/tracing/observability | Attempt errors, diagnostics and delivery logging exist; elaborate tracing remains deferred. Aggregate metrics/history remain R09-R11. |
+| O17 | Detailed logs/tracing/observability | Real stage events, correlated metadata logging and gated development inspection accepted November 9. A full tracing stack remains deferred. Aggregate metrics/history remain R09-R11. |
 | O18 | Health and monitoring endpoints | Current health checks API/database availability. It does not certify parser accuracy, queue health or end-to-end readiness. Broader monitoring remains open. |
 
 ## Unknowns to resolve in order

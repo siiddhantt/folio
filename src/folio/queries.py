@@ -2,7 +2,8 @@ def request_status(database, request_id):
     with database.transaction() as connection:
         connection.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY")
         request = connection.execute(
-            """SELECT id AS request_id,document_id,file_version_id,state,created_at,finished_at
+            """SELECT id AS request_id,document_id,file_version_id,state,authorized_attempt_id,
+            created_at,finished_at
             FROM ingestion_requests WHERE id=%s""",
             (request_id,),
         ).fetchone()

@@ -2,6 +2,7 @@ from uuid import uuid4
 
 from psycopg.types.json import Jsonb
 
+from folio.observability import record_event
 from folio.ownership import locked_attempt, owns
 
 
@@ -109,4 +110,5 @@ def publish(database, claim, extraction, raw_artifact):
             "UPDATE documents SET active_revision_id=%s WHERE id=%s AND current_request_id=%s",
             (revision_id, request["document_id"], request["id"]),
         )
+        record_event(conn, request["id"], attempt["id"], "published", revision_id=str(revision_id))
         return revision_id

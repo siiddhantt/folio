@@ -10,6 +10,8 @@ from starlette.formparsers import MultiPartException
 from folio.acceptance import accept_pdf
 from folio.config import Settings
 from folio.database import Database
+from folio.development import inspect_request
+from folio.observability import configure_logging
 from folio.queries import document_metadata, original_file, request_status, revision_evidence
 from folio.storage import Artifacts, UploadError
 
@@ -42,6 +44,7 @@ class UploadLimit:
 
 
 def create_app(settings: Settings | None = None):
+    configure_logging()
     settings = settings or Settings()
     database, artifacts = Database(settings.database_url), Artifacts(settings.artifact_root)
 
@@ -63,6 +66,22 @@ def create_app(settings: Settings | None = None):
         with database.transaction() as connection:
             connection.execute("SELECT 1")
         return {"status": "ok"}
+
+    @app.get("/capabilities")
+    def capabilities():
+        return {
+            "max_upload_bytes": settings.max_upload_bytes,
+            "max_pages": settings.max_pages,
+            "development_mode": settings.development_mode,
+        }
+
+    if settings.development_mode:
+
+        @app.get("/development/ingestion-requests/{request_id}")
+        def development(
+            request_id: UUID, after_id: int = Query(0, ge=0), limit: int = Query(100, ge=1, le=200)
+        ):
+            return required(inspect_request(database, request_id, after_id, limit))
 
     @app.post(
         "/documents",
@@ -102,12 +121,14 @@ def create_app(settings: Settings | None = None):
         return required(document_metadata(database, document_id))
 
     @app.get("/documents/{document_id}/original")
-    def original(document_id: UUID):
+    def original(document_id: UUID, inline: bool = False):
         stored = required(original_file(database, document_id))
         return FileResponse(
             artifacts.path(stored["storage_key"]),
             media_type="application/pdf",
             filename=stored["original_filename"],
+            content_disposition_type="inline" if inline else "attachment",
+            headers={"X-Content-Type-Options": "nosniff"},
         )
 
     @app.get("/revisions/{revision_id}/evidence")

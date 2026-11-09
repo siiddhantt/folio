@@ -1,10 +1,12 @@
 import errno
 import logging
+from time import perf_counter
 
 import psycopg
 
 from folio.config import Settings
 from folio.database import Database
+from folio.observability import configure_logging, log_event, observe
 from folio.ownership import claim_attempt
 from folio.publication import publish
 from folio.recovery import finish_failure
@@ -14,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 def process_attempt(request_id, attempt_id, *, settings=None, parser=None):
+    configure_logging()
     settings = settings or Settings()
     database = Database(settings.database_url)
     database.open()
@@ -21,6 +24,7 @@ def process_attempt(request_id, attempt_id, *, settings=None, parser=None):
         claim = claim_attempt(database, request_id, attempt_id)
         if claim is None:
             return {"outcome": "ignored"}
+        log_event("processing_started", claim.request_id, claim.attempt_id)
         artifacts = Artifacts(settings.artifact_root)
         from folio.parsing.evidence import ExtractionError
 
@@ -37,8 +41,24 @@ def process_attempt(request_id, attempt_id, *, settings=None, parser=None):
                 from folio.parsing import parse_pdf
 
                 parser = parse_pdf
-            extraction = parser(artifacts.verify(claim.file), claim.config)
+            started = perf_counter()
+            path = artifacts.verify(claim.file)
+            observe(database, claim, "source_verified", duration_seconds=perf_counter() - started)
+            observe(database, claim, "parse_started")
+            started = perf_counter()
+            extraction = parser(path, claim.config)
+            observe(
+                database,
+                claim,
+                "parse_completed",
+                duration_seconds=perf_counter() - started,
+                pages=len(extraction.pages),
+                elements=len(extraction.elements),
+                parser_status=extraction.parser_status,
+            )
+            started = perf_counter()
             raw = artifacts.save_result(extraction.raw)
+            observe(database, claim, "raw_result_saved", duration_seconds=perf_counter() - started)
             revision_id = publish(database, claim, extraction, raw)
         except ExtractionError as exc:
             diagnostic = None
@@ -53,7 +73,12 @@ def process_attempt(request_id, attempt_id, *, settings=None, parser=None):
                     }
                 )
             except (OSError, ValueError, TypeError, MemoryError) as export_error:
-                logger.warning("Diagnostic artifact unavailable: %s", type(export_error).__name__)
+                logger.warning(
+                    "Diagnostic artifact unavailable request_id=%s attempt_id=%s error=%s",
+                    claim.request_id,
+                    claim.attempt_id,
+                    type(export_error).__name__,
+                )
             finish_failure(
                 database, claim, exc.code, exc.message, exc.retryable, exc.parser_status, diagnostic
             )
@@ -70,6 +95,12 @@ def process_attempt(request_id, attempt_id, *, settings=None, parser=None):
             code = "RESOURCE_EXHAUSTED" if isinstance(exc, MemoryError) else "PROCESSING_ERROR"
             finish_failure(database, claim, code, type(exc).__name__, False)
             return {"outcome": "failed", "code": code}
+        log_event(
+            "processing_finished",
+            claim.request_id,
+            claim.attempt_id,
+            outcome="published" if revision_id else "superseded",
+        )
         return {
             "outcome": "published" if revision_id else "superseded",
             "revision_id": str(revision_id) if revision_id else None,

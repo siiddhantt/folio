@@ -8,6 +8,7 @@ from rq.serializers import JSONSerializer
 
 from folio.config import Settings
 from folio.database import Database
+from folio.observability import record_event
 from folio.ownership import authorized, locked_attempt
 from folio.recovery import recover_expired
 
@@ -88,6 +89,14 @@ def prepare_delivery(database, row, settings, terminal_failure):
                 "WHERE id=%s",
                 (request["id"],),
             )
+            record_event(
+                conn,
+                request["id"],
+                attempt["id"],
+                "attempt_failed",
+                error_code="DELIVERY_FAILED",
+                retryable=False,
+            )
             return None
         job_id = uuid4().hex
         # Consuming the previous terminal delivery and reserving its replacement are atomic.
@@ -96,27 +105,45 @@ def prepare_delivery(database, row, settings, terminal_failure):
             dispatch_count=dispatch_count+1 WHERE id=%s""",
             (job_id, failures, attempt["id"]),
         )
+        record_event(
+            conn, request["id"], attempt["id"], "delivery_requested", transport_job_id=job_id
+        )
         return job_id
 
 
-def acknowledge(database, row, settings, job_id, error):
-    with database.transaction() as conn:
+def acknowledge(database, row, settings, job_id, error, enqueued):
+    with locked_attempt(database, row["request_id"], row["id"]) as (conn, request, attempt):
+        if (
+            not authorized(request, attempt)
+            or attempt["state"] != "pending"
+            or attempt["dispatch_token"] != row["dispatch_token"]
+            or attempt["transport_job_id"] != job_id
+        ):
+            return
         conn.execute(
             """UPDATE processing_attempts SET dispatch_error=%s,
-            last_dispatched_at=CASE WHEN %s::text IS NULL
+            last_dispatched_at=CASE WHEN %s
                 THEN clock_timestamp() ELSE last_dispatched_at END,
             next_dispatch_at=clock_timestamp()+%s*interval '1 second',dispatch_claim_until=NULL
             WHERE id=%s AND state='pending' AND dispatch_token=%s
             AND transport_job_id IS NOT DISTINCT FROM %s""",
             (
                 error,
-                error,
+                enqueued,
                 settings.dispatch_grace_seconds,
                 row["id"],
                 row["dispatch_token"],
                 job_id,
             ),
         )
+        if error != attempt["dispatch_error"]:
+            record_event(
+                conn,
+                request["id"],
+                attempt["id"],
+                "delivery_deferred" if error else "delivery_resumed",
+                error_code=error,
+            )
 
 
 def dispatch_once(settings=None):
@@ -129,6 +156,7 @@ def dispatch_once(settings=None):
         recover_expired(database, settings.batch_size)
         for row in reserve_due(database, settings):
             error, job_id = None, row["transport_job_id"]
+            enqueued = False
             try:
                 old = queue.fetch_job(job_id) if job_id else None
                 status = old.get_status().value if old else None
@@ -147,11 +175,17 @@ def dispatch_once(settings=None):
                         result_ttl=86400,
                         failure_ttl=86400,
                     )
+                    enqueued = True
                     deliveries.append({"request_id": str(row["request_id"]), "job_id": job_id})
             except Exception as exc:
                 error = type(exc).__name__
-                logger.warning("Delivery deferred: %s", error)
-            acknowledge(database, row, settings, job_id, error)
+                logger.warning(
+                    "Delivery deferred request_id=%s attempt_id=%s error=%s",
+                    row["request_id"],
+                    row["id"],
+                    error,
+                )
+            acknowledge(database, row, settings, job_id, error, enqueued)
         return deliveries
     finally:
         database.close()

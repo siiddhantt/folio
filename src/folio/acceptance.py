@@ -5,6 +5,7 @@ from uuid import uuid4
 from psycopg.errors import UniqueViolation
 from psycopg.types.json import Jsonb
 
+from folio.observability import log_event, record_event
 from folio.storage import UploadError
 
 
@@ -50,6 +51,7 @@ def accept_pdf(database, artifacts, stream, filename, key, settings) -> dict:
                 VALUES ('local','upload',%s,%s,%s)""",
                 (key, identity, request_id),
             )
+            record_event(connection, request_id, attempt_id, "accepted")
     except UniqueViolation as error:
         if error.diag.constraint_name != "api_idempotency_pkey":
             raise
@@ -70,6 +72,7 @@ def accept_pdf(database, artifacts, stream, filename, key, settings) -> dict:
             previous["request_id"],
         )
     # Other database errors can include an uncertain COMMIT. Preserve the file for recovery.
+    log_event("upload_receipt", request_id, document_id=str(document_id))
     return {
         "document_id": document_id,
         "file_version_id": file_id,

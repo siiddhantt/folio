@@ -4,6 +4,7 @@ x-settings: &settings
   FOLIO_DATABASE_URL: postgresql://folio:folio@postgres:5432/folio
   FOLIO_REDIS_URL: redis://redis:6379/0
   FOLIO_ARTIFACT_ROOT: /data
+  FOLIO_DEVELOPMENT_MODE: ${FOLIO_DEVELOPMENT_MODE:-false}
   FOLIO_MAX_UPLOAD_BYTES: ${FOLIO_MAX_UPLOAD_BYTES:-26214400}
   FOLIO_MAX_PAGES: ${FOLIO_MAX_PAGES:-100}
   FOLIO_PARSER_TIMEOUT_SECONDS: ${FOLIO_PARSER_TIMEOUT_SECONDS:-240}
@@ -19,6 +20,17 @@ x-settings: &settings
   FOLIO_BOOTSTRAP_FAILURE_LIMIT: ${FOLIO_BOOTSTRAP_FAILURE_LIMIT:-3}
 
 services:
+  web:
+    image: folio-web:local
+    build: {context: ., dockerfile: docker/web.Dockerfile}
+    ports: ["127.0.0.1:${FOLIO_WEB_PORT:-3000}:80"]
+    depends_on:
+      api: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
   postgres:
     image: postgres:18@sha256:e3d24f6906d0760bf4da0dae872415391ededefad23fd471c47dc53b0ddf3c42
     environment:

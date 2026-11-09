@@ -15,6 +15,8 @@ The OpenRouter values are reserved for the later generation slice and are unused
 | Ingestion setting | Default / meaning |
 | --- | --- |
 | `FOLIO_PORT` | `8000`; Compose exposes the API on localhost only. |
+| `FOLIO_WEB_PORT` | `3000`; Compose exposes the web interface on localhost only. |
+| `FOLIO_DEVELOPMENT_MODE` | `false`; gates the development inspection endpoint and UI. Enable explicitly for local inspection; it is not authentication. Safe lifecycle events are recorded whether or not the view is enabled. |
 | `FOLIO_MAX_UPLOAD_BYTES` | `26214400` (25 MiB); actual file bytes. Total multipart input is bounded before spooling, with 64 KiB overhead allowance. |
 | `FOLIO_MAX_PAGES` | `100`; reject rather than silently truncate. |
 | `FOLIO_PARSER_TIMEOUT_SECONDS` | `240`; Docling's cooperative document timeout. |

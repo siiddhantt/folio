@@ -69,3 +69,30 @@ def test_recovery_detects_queue_loss_and_bounds_preclaim_failures(tmp_path):
         assert status["state"] == "failed"
         assert status["attempts"][0]["error_code"] == "DELIVERY_FAILED"
         assert len(status["attempts"]) == 1
+
+
+@pytest.mark.integration
+def test_inspecting_healthy_queued_work_preserves_actual_dispatch_time(tmp_path):
+    from folio.dispatcher import dispatch_once
+
+    settings = Settings(artifact_root=tmp_path, development_mode=True)
+    with TestClient(create_app(settings)) as client:
+        accepted = client.post(
+            "/documents",
+            headers={"Idempotency-Key": str(uuid4())},
+            files={"file": ("report.pdf", b"%PDF-1.4\nqueued work")},
+        ).json()
+        dispatch_once(settings)
+        url = f"/development/ingestion-requests/{accepted['request_id']}"
+        first = client.get(url).json()["attempts"][0]
+        assert first["last_dispatched_at"] is not None
+        with psycopg.connect(settings.database_url) as connection:
+            connection.execute(
+                "UPDATE processing_attempts SET next_dispatch_at=now() WHERE request_id=%s",
+                (accepted["request_id"],),
+            )
+        assert dispatch_once(settings) == []
+        inspected = client.get(url).json()["attempts"][0]
+        assert inspected["last_dispatched_at"] == first["last_dispatched_at"]
+        assert inspected["transport_job_id"] == first["transport_job_id"]
+        assert inspected["dispatch_count"] == first["dispatch_count"]

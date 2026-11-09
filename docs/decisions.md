@@ -1,6 +1,6 @@
 # Folio decision guide
 
-Updated: 2026-11-07. All recommendations below are proposals unless marked accepted.
+Updated: 2026-11-09. All recommendations below are proposals unless marked accepted.
 
 Each discussion should cover: the user's outcome, two or three realistic options, what each costs, a recommendation, an example, and evidence that could change the recommendation. Resolve dependent questions in order rather than approving the whole stack at once.
 
@@ -171,9 +171,16 @@ Keep operational logs useful while avoiding raw private documents and secrets. I
 
 ## D13: Interface and optional growth
 
-Status: open, after the core journey.
+Status: minimal ingestion interface accepted November 9, following the verified API journey. React + TypeScript + Vite was explicitly selected. Light/dark appearance and a development-only view of real processing details are included. See the [interface contract](interface.md).
 
-Options: documented API walkthrough; minimal upload/status/chat/source UI; richer dashboard. Recommendation: prove the API journey first, then consider a minimal interface if it improves source verification.
+The owner subsequently rejected the initial green editorial styling and selected
+customized shadcn elements, a neutral palette and minimal visible copy. Use one
+sans-serif family and compact document controls. Typography and spacing should
+organize real content; avoid hero layouts, slogans and repeated explanations.
+
+Options considered: API-only walkthrough; minimal upload/status/evidence/source interface; richer dashboard. The owner selected the minimal interface to inspect real uploads and understand backend execution before model-backed features. A small React/Vite client supports later source/chat interaction while the Python API remains authoritative; server-rendered templates would reduce frontend tooling but need more manual interaction handling.
+
+Use actual persisted state and bounded polling. A server setting gates development inspection, and observed stage events carry real timestamps. Do not add canned scenarios, seeded runtime content, artificial progress or future chat/summary controls. Detailed tracing collectors, document listing and broader UI remain deferred. The browser journey and existing HTTP/persistence contracts are the agreed test interfaces for this increment.
 
 Select multi-document chat, streaming, caching, tagging, comparison, and other optional work from the requirements ledger individually. Evaluate cache invalidation, interrupted streams, versioning, and access scope before implementation.
 

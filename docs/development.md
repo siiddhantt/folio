@@ -48,6 +48,41 @@ uv run python scripts/smoke.py
 evidence. It verifies text, table relationships, OCR, damaged-page neighbors, encrypted-input
 failure, upload replay and original-byte retrieval. It adds synthetic documents to local storage.
 
+## Browser workflow
+
+The [interface walkthrough](interface-walkthrough.md) follows an actual upload through
+the browser and persisted processing history. The built web service is at port 3000.
+Its `/api` proxy reaches FastAPI; browser document routes do not collide with API routes.
+
+For frontend edits, use Node 22.12 or newer and run these commands from `web`:
+
+```sh
+npm ci --ignore-scripts
+npm run dev
+```
+
+Vite serves port 5173 and proxies `/api` to the local API using `FOLIO_PORT` from
+the environment or root `.env` (default 8000). These server settings are not injected
+into the browser bundle. It adds no
+second application backend. Built assets and self-hosted fonts are served by the
+pinned Nginx container in Compose. Font licenses are included under `/licenses/`.
+
+```sh
+npm run check
+npm run format:check
+npm run build
+npx playwright install chromium
+npm test
+```
+
+Browser checks use actual HTTP/queue/parser processing, add synthetic documents to
+the selected local instance and do not reset its database. Enable development mode
+when running the inspection check. The default test runner starts Vite; set
+`FOLIO_E2E_BASE_URL=http://127.0.0.1:3000` to check the built Docker interface instead.
+For filtered tests on PowerShell, use
+`node node_modules/@playwright/test/cli.js test --grep 'upload a PDF'`.
+Playwright retains traces/screenshots on failure in ignored local output folders.
+
 ## Fault exercises
 
 Run `uv run python scripts/check_recovery.py` only against this local Compose stack, with no

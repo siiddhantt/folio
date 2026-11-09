@@ -26,6 +26,8 @@ htmlcov/
 
 # Frontend and editors
 node_modules/
+test-results/
+playwright-report/
 dist/
 .next/
 .DS_Store

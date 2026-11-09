@@ -1,6 +1,7 @@
 import random
 from uuid import uuid4
 
+from folio.observability import log_event, record_event
 from folio.ownership import authorized, locked_attempt, owns
 
 
@@ -9,7 +10,8 @@ def finish_failure(database, claim, code, message, retryable, parser_status=None
         if not owns(conn, request, attempt, claim.token):
             return False
         _record_failure(conn, request, attempt, code, message, retryable, parser_status, diagnostic)
-        return True
+    log_event("attempt_failed", claim.request_id, claim.attempt_id, error_code=code)
+    return True
 
 
 def _record_failure(
@@ -29,6 +31,15 @@ def _record_failure(
             attempt["id"],
         ),
     )
+    record_event(
+        conn,
+        request["id"],
+        attempt["id"],
+        "attempt_failed",
+        error_code=code,
+        retryable=retryable,
+        parser_status=parser_status,
+    )
     config = request["requested_config"]
     if retryable and attempt["attempt_no"] < config["max_attempts"]:
         delays = config["retry_delays_seconds"]
@@ -46,6 +57,7 @@ def _record_failure(
             "UPDATE ingestion_requests SET authorized_attempt_id=%s WHERE id=%s",
             (next_id, request["id"]),
         )
+        record_event(conn, request["id"], next_id, "retry_scheduled", delay_seconds=delay)
     else:
         conn.execute(
             "UPDATE ingestion_requests SET state='failed',finished_at=clock_timestamp() "
@@ -82,4 +94,5 @@ def recover_expired(database, limit=20):
                 True,
             )
             recovered += 1
+        log_event("ownership_expired", candidate["request_id"], candidate["id"])
     return recovered
