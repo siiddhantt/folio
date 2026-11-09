@@ -101,6 +101,16 @@ Recommendation: start with paragraph-aware pieces under a token limit, retaining
 
 Example: a condition at the end of page 2 may qualify a claim on page 3. Splitting them can lose meaning; joining them must retain both source locators. Large chunks add context but consume tokens and can dilute the relevant passage.
 
+November 9 source review: the running pinned Docling 2.148.0 environment contains
+docling-core 2.106.0. Its HybridChunker supports repeated table headers and
+token-bounded splitting/merging. This is a candidate to test before writing a
+custom chunker, not a selected or evaluated chunking policy. Splits can retain
+metadata for an entire source item, so precise subspan provenance must not be
+inferred from the presence of chunk metadata. Mapping raw item references to
+Folio's stored `provider_ref` and located source elements needs explicit checks;
+unmapped or unlocated evidence must be reported. See the
+[upstream chunking contract](https://docling-project.github.io/docling/concepts/chunking/).
+
 ## D08: Retrieval strategy
 
 Status: open.
@@ -144,6 +154,16 @@ Discuss generation and embeddings separately. A generation-model change needs qu
 Model identity, input/evidence/history budgets, output reservation, and reasoning effort should be adjustable through validated configuration. A model's advertised capacity is a provider limit, not a recommended request size. Do not silently switch model aliases or provider routes during comparisons. See [configuration](configuration.md) for the proposed controls and their constraints.
 
 Agree summary length/focus and insight fields. For long documents compare a bounded full-document prompt with chunk summaries followed by synthesis. Record truncation/coverage; a fluent summary must not imply it read unseen pages.
+
+Next-increment proposal, not yet selected: deliver a persisted, cited summary
+from one immutable extraction revision before embedding-backed retrieval.
+Summary input should cover the available document within declared limits, using
+section groups and staged synthesis where necessary. Do not treat a few search
+hits as a whole-document summary. Retrieval chunks and summary input groups can
+share source mapping without assuming identical sizes or boundaries. The
+alternative is a question-to-source search slice first, useful if retrieval
+quality is the immediate priority. Neither ordering selects a model, vector
+store, chunk policy or paid-call budget.
 
 A response should distinguish answer, evidence references, and insufficient-evidence/clarification outcomes. Check that references belong to supplied evidence; separately evaluate whether the cited passages support the claims.
 

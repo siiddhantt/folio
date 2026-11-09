@@ -18,6 +18,10 @@ server-gated development view of actual processing history. The [interface contr
 defines the scope. Runtime screens contain no built-in sample documents or simulated outcomes.
 The owner refined the visual direction to customized shadcn controls, neutral
 light/dark surfaces, a single sans-serif family and minimal visible copy.
+The owner reviewed the revised interface and approved that visual direction on
+November 9. The implementation checkpoint is committed and pushed in
+[the interface review](https://github.com/siiddhantt/folio/pull/1); the review is
+still a draft. This does not settle the later summary/retrieval decisions.
 
 ## Implemented and checked
 
