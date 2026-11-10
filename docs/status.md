@@ -117,6 +117,13 @@ The rest remains a proposal. Input strategy, provider route, quality thresholds
 and spending limits are not selected. No summary or
 embedding implementation or live model evaluation has begun.
 
+November 10 primary-source research compared Docling grouping, LlamaIndex
+synthesizers/workflow persistence and LangGraph checkpoints. The current proposal
+is complete input when suitable, otherwise saved section notes plus synthesis,
+with one small planner and existing RQ/PostgreSQL execution. This avoids treating
+a recursive synthesis helper as durable recovery. Framework adoption and exact
+limits remain decisions; the large-input example does not raise the page cap.
+
 Noisy/rotated/handwritten OCR needs representative quality evidence. Hosting, authentication, admission backpressure, storage quotas, deletion and online artifact cleanup remain separate work. Local container persistence is not a backup or production-readiness claim.
 
 ## Handoff discipline

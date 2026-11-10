@@ -38,12 +38,12 @@ including reasoning where applicable, and a tokenizer uncertainty margin.
 | Section notes, then synthesis | The complete input exceeds a single-call bound | Bounded requests, resumable groups and limited parallelism; intermediate output costs more and compression can lose qualifications. |
 | Sequential refinement | Each step must update the previous result using another section | Serial latency and repeated summary inputs; later updates can lose earlier facts. Not the recommended default. |
 
-The earlier proposal was a size-aware complete-input path with hierarchical processing
-for larger documents. A smaller complete-input-only increment was offered, with a
-visible unavailable reason above its limit. The owner instead requested further
-research into handling large documents before selecting the execution strategy.
-Neither limiting summaries to one call nor a specific hierarchy is accepted yet.
-The 150-page design example does not change ingestion's current 100-page cap.
+The November 10 research supports the original size-aware proposal: use complete
+input when it meets evaluated quality and cost limits, otherwise saved section
+notes followed by synthesis. The owner requested large-input handling be examined
+now rather than silently deferring it. The execution strategy is still awaiting
+selection. The 150-page design example does not change ingestion's current
+100-page cap.
 Select thresholds after inspecting prepared inputs and comparing
 actual outputs. Do not silently truncate to the beginning, select only similarity
 search hits, or call a partial result a whole-document summary. If no plan fits the
@@ -60,6 +60,64 @@ Processing every group proves input coverage only. It does not prove retention o
 every important fact, correct interpretation, or citation support. The source may
 itself be incomplete: retain known extraction gaps and avoid claiming visual
 understanding of figures when only their text was recovered.
+
+## Large-document design and library boundaries
+
+Research checked November 10, 2026; these are documentation/source observations,
+not measurements of Folio's summary quality or its installed chunker.
+
+| Capability | Maintained option | What Folio still owns |
+| --- | --- | --- |
+| Source-aware grouping | Docling hierarchical/hybrid chunking | Map source item references to immutable evidence; count final labeled input and check omissions. Chunk metadata does not guarantee exact split subspans. |
+| Recursive text synthesis | LlamaIndex `tree_summarize` | Persist group progress, bound concurrency/cost/depth, validate citation scope and inspect factual support. The synthesizer alone is not a durable workflow. |
+| Persisted workflow execution | LangGraph with a PostgreSQL checkpointer | Admission, source coverage, uncertain provider charges and publication into Folio. Decide which layer owns retries and terminal state. |
+
+LlamaIndex's `simple_summarize` can truncate input, which conflicts with this
+coverage contract. Its ordinary Workflows runtime and its synthesizers are
+different facilities: workflow snapshots require application persistence by
+default; a separate DBOS integration offers automatic durability. Do not describe
+the convenience synthesis call as providing either workflow runtime's recovery.
+
+Recommendation: retain RQ and PostgreSQL for execution and saved outcomes. Add
+one concrete summary planner, initially allowing a complete-input call or a
+two-level section-notes/synthesis plan. Avoid arbitrary recursion. If the planned
+notes and required source context cannot fit the final call within the total
+allowance, expose that limit rather than truncate or silently add more levels.
+Reconsider one maintained workflow runtime if this requires a second scheduler,
+complex branching or extensive bespoke checkpoint code; do not add two recovery
+owners merely to get a map/reduce helper.
+
+For illustration only, suppose a 150-page extraction becomes 60,000 prepared
+tokens. A full-input call consumes those tokens and might produce an 800-token
+summary. Six 10,000-token groups producing 500-token notes each, followed by an
+800-token synthesis, consume about 63,000 core input tokens and produce 3,800
+tokens. Instructions, repeated context, reasoning and retries are additional.
+Pages are not a token conversion rule. With group concurrency two, this plan has
+three group waves followed by synthesis; it does not imply a measured latency.
+
+If group four fails, keep the other saved notes and retry unfinished work within
+the admitted allowance. Do not label the final result complete with a missing
+group. Preserve qualifications across groups: for example, an early revenue
+estimate and a later statement excluding subsidiaries must survive together.
+Recursive merging can amplify unsupported claims; a published study motivates
+checking original context/citations during synthesis, but its legal/narrative
+datasets and Llama 3.1 models do not establish the quality of Folio's candidate
+model. Human-reviewed examples remain necessary.
+
+The proposed seam is small: `plan_summary(prepared_evidence, limits)` returns the
+input groups, original source references and bounded steps. Workers execute and
+persist those steps using the admitted plan. A model client is supplied to the
+execution code so deterministic tests can replace external inference; that is
+dependency injection. A decorator only wraps or marks a function and does not
+provide the durability or planning contract. Start with ordinary functions,
+without strategy registries, abstract factories or unused provider adapters.
+
+Before generation, locally check source coverage, final token accounting, table
+relationships and group boundaries. With an agreed live budget, compare complete
+input and grouped synthesis on the same human-reviewed documents: facts near the
+beginning/middle/end, a cross-section exception, a table and known extraction
+gaps. Measure omissions, supported claims, retained qualifications, tokens, cost
+and latency separately from deterministic recovery checks.
 
 ## Reuse, resource limits and failure boundaries
 
@@ -149,3 +207,10 @@ be checked against this contract before adoption.
 - [OpenAI Luna specifications](https://developers.openai.com/api/docs/models/gpt-6-luna)
 - [OpenRouter prompt caching](https://openrouter.ai/docs/guides/best-practices/prompt-caching)
 - [OpenRouter response caching](https://openrouter.ai/docs/guides/features/response-caching)
+- [Docling chunker source, October 26 commit](https://github.com/docling-project/docling-core/blob/8f609ec924ba3e4cde46243e9ec6be08982fadbf/docling_core/transforms/chunker/hybrid_chunker.py#L310-L329)
+- [LlamaIndex tree synthesis source, May 20 commit](https://github.com/run-llama/llama_index/blob/8ea316bc6e612b86bdc4e86db448c79b426db3c3/llama-index-core/llama_index/core/response_synthesizers/tree_summarize.py#L77-L153)
+- [LlamaIndex workflow snapshots](https://developers.llamaindex.ai/python/llamaagents/workflows/durable_workflows/)
+- [LlamaIndex DBOS runtime](https://developers.llamaindex.ai/python/llamaagents/workflows/dbos/)
+- [LangGraph checkpointers](https://docs.langchain.com/oss/python/langgraph/checkpointers)
+- [LangGraph fault tolerance](https://docs.langchain.com/oss/python/langgraph/fault-tolerance)
+- [Context-Aware Hierarchical Merging, revised August 2025](https://arxiv.org/abs/2502.00977)
