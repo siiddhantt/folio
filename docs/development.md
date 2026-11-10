@@ -6,11 +6,19 @@ The API image contains no Docling runtime. Docker does not receive the local API
 
 ## Read the slice
 
-Follow one upload through `api.py` → `acceptance.py` → `dispatcher.py` → `processing.py`
-→ `publication.py` → `queries.py` under [`src/folio`](../src/folio).
-[`ownership.py`](../src/folio/ownership.py) holds claim rules;
-[`recovery.py`](../src/folio/recovery.py) records failure and authorizes bounded retries.
+[`api.py`](../src/folio/api.py) assembles the application. Follow one upload through
+`routes.py` → `acceptance.py` → `dispatcher.py` → `processing.py`
+→ `publication.py` → `queries.py` under [`ingestion/`](../src/folio/ingestion).
+[`ownership.py`](../src/folio/ingestion/ownership.py) holds claim rules;
+[`recovery.py`](../src/folio/ingestion/recovery.py) records failure and authorizes bounded retries.
 The [walkthrough](system-design-walkthrough.md) explains these decisions in plain language.
+
+Keep files together by the behavior they own. Ingestion includes its HTTP routes,
+read queries, worker lifecycle, event history and parser. Configuration, database
+connections, artifact storage, generic logging and migrations remain shared.
+`folio.processing.process_attempt` is a stable queue entry for already-persisted
+RQ messages; the implementation lives in `ingestion/processing.py`. Do not remove
+that import path while queued deliveries may still reference it.
 
 SQL is explicit here because transaction scope, row locks and ownership conditions are part
 of the behavior being reviewed. `Database.transaction()` owns connection/transaction lifetime;

@@ -1,8 +1,9 @@
 import random
 from uuid import uuid4
 
-from folio.observability import log_event, record_event
-from folio.ownership import authorized, locked_attempt, owns
+from folio.ingestion.events import record_event
+from folio.ingestion.ownership import authorized, locked_attempt, owns
+from folio.observability import log_event
 
 
 def finish_failure(database, claim, code, message, retryable, parser_status=None, diagnostic=None):

@@ -8,11 +8,10 @@ from rq.serializers import JSONSerializer
 
 from folio.config import Settings
 from folio.database import Database
-from folio.observability import record_event
-from folio.ownership import authorized, locked_attempt
-from folio.recovery import recover_expired
-
-logger = logging.getLogger(__name__)
+from folio.ingestion.events import record_event
+from folio.ingestion.ownership import authorized, locked_attempt
+from folio.ingestion.recovery import recover_expired
+from folio.observability import configure_logging, log_event
 
 
 def queue_for(settings):
@@ -147,6 +146,7 @@ def acknowledge(database, row, settings, job_id, error, enqueued):
 
 
 def dispatch_once(settings=None):
+    configure_logging("dispatcher")
     settings = settings or Settings()
     database = Database(settings.database_url)
     database.open()
@@ -179,11 +179,14 @@ def dispatch_once(settings=None):
                     deliveries.append({"request_id": str(row["request_id"]), "job_id": job_id})
             except Exception as exc:
                 error = type(exc).__name__
-                logger.warning(
-                    "Delivery deferred request_id=%s attempt_id=%s error=%s",
+                log_event(
+                    "delivery_deferred",
                     row["request_id"],
                     row["id"],
-                    error,
+                    level=logging.WARNING,
+                    error=exc,
+                    operation="queue_delivery",
+                    transport_job_id=job_id,
                 )
             acknowledge(database, row, settings, job_id, error, enqueued)
         return deliveries
@@ -198,5 +201,10 @@ def run():
         try:
             dispatch_once(settings)
         except Exception as exc:
-            logger.error("Recovery cycle unavailable: %s", type(exc).__name__)
+            log_event(
+                "recovery_cycle_unavailable",
+                level=logging.ERROR,
+                error=exc,
+                operation="dispatch",
+            )
         time.sleep(settings.recovery_interval_seconds)

@@ -5,7 +5,8 @@ from uuid import uuid4
 from psycopg.errors import UniqueViolation
 from psycopg.types.json import Jsonb
 
-from folio.observability import log_event, record_event
+from folio.ingestion.events import record_event
+from folio.observability import log_event
 from folio.storage import UploadError
 
 

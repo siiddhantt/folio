@@ -11,7 +11,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from folio.parsing import ExtractionError, parse_pdf
+from folio.ingestion.parsing import ExtractionError, parse_pdf
 
 pytestmark = pytest.mark.parser
 FIXTURES = Path(os.environ.get("FOLIO_TEST_PDFS", str(Path(__file__).parent / "fixtures")))

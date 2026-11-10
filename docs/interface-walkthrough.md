@@ -110,10 +110,38 @@ For process output, run:
 docker compose logs --follow --tail 50 api dispatcher worker
 ```
 
-Match the request/attempt IDs to the development view. Application lifecycle logs
-include those identifiers without copying document text. `Ctrl+C` stops following
-logs; it does not stop the containers. `docker compose ps` shows service state;
-the API health check alone does not prove a worker is available.
+Match the request/attempt IDs to the development view. Folio's application records
+are single-line JSON with a UTC `timestamp`, `severity`, `component`, `pid`, `event`
+and relevant identifiers. An API receipt and a worker result share a request ID;
+a retry keeps that request ID and receives a new attempt ID. `component` identifies
+the API, dispatcher or worker process. RQ, Uvicorn and parser dependencies retain
+their own logging formats.
+
+On PowerShell, isolate the known request without dumping unrelated records:
+
+```powershell
+$requestId = 'paste the request ID from Development details'
+docker compose logs --no-color --no-log-prefix --tail 500 api dispatcher worker |
+    Select-String -SimpleMatch $requestId
+```
+
+Use `--follow` to keep watching a request. `Ctrl+C` stops following logs; it does
+not stop the containers. The tail limit only searches recent output; use the
+saved development history to inspect older work. `docker compose ps` shows service
+state; the API health check alone does not prove a worker is available.
+
+For an unexpected execution error, the diagnostic record identifies the exception
+class, operation and bounded application code locations. It deliberately excludes
+the exception message, local variable values, document contents and artifact paths.
+The diagnostic describes an observed exception; it does not prove that the worker
+still owns the request or that its failure transaction committed. Consult saved
+status and attempt history for that outcome.
+
+For example, if parsing completes but publication is absent, the document is not
+yet ready merely because a log says `parse_completed`. The raw-result write or
+publication can still fail. The saved `published` event and succeeded request
+identify the committed outcome. Logs are useful diagnostics, not a second work
+queue or a complete copy of the timeline.
 
 ## Try a real waiting job
 
@@ -143,16 +171,17 @@ cover that behavior and their timing limitations.
 | Start here | Follow this responsibility |
 | --- | --- |
 | [`UploadPage.tsx`](../web/src/documents/UploadPage.tsx), [`api.ts`](../web/src/api.ts) | Selected file, upload intent, HTTP request and navigation to its saved URL. |
-| [`api.py`](../src/folio/api.py), [`acceptance.py`](../src/folio/acceptance.py) | Input checks, original storage, transaction and idempotency receipt. |
-| [`dispatcher.py`](../src/folio/dispatcher.py), [`ownership.py`](../src/folio/ownership.py) | Due work, queue delivery and conditional worker ownership. |
-| [`processing.py`](../src/folio/processing.py), [`publication.py`](../src/folio/publication.py), [`recovery.py`](../src/folio/recovery.py) | Parser execution, publication and bounded failure/retry behavior. |
+| [`routes.py`](../src/folio/ingestion/routes.py), [`acceptance.py`](../src/folio/ingestion/acceptance.py) | Input checks, original storage, transaction and idempotency receipt. |
+| [`dispatcher.py`](../src/folio/ingestion/dispatcher.py), [`ownership.py`](../src/folio/ingestion/ownership.py) | Due work, queue delivery and conditional worker ownership. |
+| [`processing.py`](../src/folio/ingestion/processing.py), [`publication.py`](../src/folio/ingestion/publication.py), [`recovery.py`](../src/folio/ingestion/recovery.py) | Parser execution, publication and bounded failure/retry behavior. |
 | [`useDocument.ts`](../web/src/documents/useDocument.ts), [`EvidenceReader.tsx`](../web/src/documents/EvidenceReader.tsx) | Status polling, evidence pagination and source inspection. |
-| [`development.py`](../src/folio/development.py), [`DeveloperPanel.tsx`](../web/src/development/DeveloperPanel.tsx) | Safe database inspection and its development-only display. |
+| [`development.py`](../src/folio/ingestion/development.py), [`DeveloperPanel.tsx`](../web/src/development/DeveloperPanel.tsx) | Safe database inspection and its development-only display. |
 
 Automated checks use controlled files so their expected content is independently
 known. Those files are test inputs, not runtime content or a special processing
 path. The browser checks upload through the same API and worker used here.
 
-Owner exercise: while the worker is stopped, explain which facts survive closing
-the tab, which service must return before parsing can start, and why another
-upload with a new idempotency key would create a new document.
+Owner exercise: trace one request across its API receipt and worker logs. Explain
+why `parse_completed` alone does not make it ready, and which saved event proves
+publication. In the stopped-worker exercise, explain which facts survive closing
+the tab and why a new idempotency key would create a new document.

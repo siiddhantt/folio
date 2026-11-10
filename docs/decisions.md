@@ -143,7 +143,7 @@ Keep a narrow retrieval operation that accepts a question and permitted document
 
 ## D10: Generation, summaries, and frameworks
 
-Status: OpenRouter selected as the API gateway. GPT-6 Luna is a preferred evaluation candidate; model choice, prompts, and orchestration remain open. See [verified model notes](models.md).
+Status: OpenRouter selected as the API gateway. Automatic-only summary generation accepted November 10. GPT-6 Luna is a preferred evaluation candidate; model choice, prompts, and orchestration remain open. See [verified model notes](models.md).
 
 Options: direct SDK calls with explicit orchestration; a small LlamaIndex integration; a small LangChain integration. Compare source mapping, testability, dependencies, and how much control flow remains visible. No current need for an autonomous-agent runtime.
 
@@ -155,8 +155,9 @@ Model identity, input/evidence/history budgets, output reservation, and reasonin
 
 Agree summary length/focus and insight fields. For long documents compare a bounded full-document prompt with chunk summaries followed by synthesis. Record truncation/coverage; a fluent summary must not imply it read unseen pages.
 
-Next-increment proposal, not yet selected: deliver a persisted, cited summary
-from one immutable extraction revision before embedding-backed retrieval.
+Next-increment direction: automatic summaries after usable extraction. The
+proposed contract is a persisted, cited summary from one immutable extraction
+revision before embedding-backed retrieval; its remaining prerequisites are open.
 Summary input should cover the available document within declared limits, using
 section groups and staged synthesis where necessary. Do not treat a few search
 hits as a whole-document summary. Retrieval chunks and summary input groups can
@@ -169,8 +170,18 @@ The [summary proposal](summaries.md) clarifies that source preparation comes
 before generation. Compare a bounded complete-input call against section notes
 and synthesis; embeddings are not required for either. It records input coverage,
 durable reuse, uncertain provider outcomes and an illustrative token-cost
-comparison. The automatic-versus-user-triggered policy and all numerical budgets
-remain open.
+comparison. The owner selected automatic-only generation: no manual generation,
+regeneration or resume controls, and no new generation merely from opening a
+document. Automatic retries remain bounded within the same workflow. Input
+coverage planning, model/route and all numerical budgets remain open. Selecting
+the trigger does not authorize live model spending.
+
+Accepted output on November 10: a short overview and 3–5 cited key points, with
+known extraction gaps displayed. Points adapt to the source; separate fixed
+findings/dates/risks sections are not required. A smaller complete-input-only
+increment was offered; the owner requested current large-document research before
+choosing its scope. Execution strategy and its small interface remain open. The
+150-page design example does not increase the accepted ingestion page limit.
 
 A response should distinguish answer, evidence references, and insufficient-evidence/clarification outcomes. Check that references belong to supplied evidence; separately evaluate whether the cited passages support the claims.
 
@@ -218,6 +229,28 @@ Status: commentless `.env` and configurable model/token budgets accepted. The in
 Keep secrets and adjustable deployment settings in the ignored local `.env`, with a commentless safe `.env.example`. Validate values at startup and document them in prose. Pin dependencies separately. Version prompt templates, schemas, and evaluation data in source rather than putting whole prompts into environment variables.
 
 Potential settings include model IDs, service URLs, file limits, processing timeouts, chunking parameters, retrieval limits, log level, and usage budgets. Add each only when its behavior exists; do not fill the file with speculative flags. Values affecting embeddings/indexing require a compatible rebuild or explicit rejection.
+
+## D15: Backend organization and debugging
+
+The owner requested a grouped, minimal backend and effective debugging on
+November 10. The selected implementation pattern is one `ingestion/` feature
+package: routes, acceptance, processing, recovery, evidence reads and parsing
+stay together. App assembly, configuration, database connections, artifact
+storage, process logging and schema migrations remain shared at the root.
+
+Alternatives considered: retain the flat layout; split documents from ingestion;
+or introduce controller/service/repository layers. One feature package makes the
+current complete workflow easier to follow without adding cross-feature ownership
+or forwarding layers. Keep a narrow stable `folio.processing.process_attempt`
+entry for RQ messages already stored with that import path. Other imports move
+directly to their owning feature. A second implemented feature with real shared
+behavior is the reason to revisit these boundaries.
+
+Keep the existing PostgreSQL event timeline and standard Python logging. Use
+structured process records with time, severity, component, request/attempt identity
+and safe failure locations. Durable state remains authoritative: console output
+is not a second job ledger. Exclude arbitrary exception messages and document
+contents. A tracing collector and additional logging dependencies are deferred.
 
 ## Slice order and remaining decisions
 

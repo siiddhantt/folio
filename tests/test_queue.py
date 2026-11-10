@@ -14,7 +14,7 @@ from folio.config import Settings
 
 @pytest.mark.integration
 def test_dispatcher_delivers_accepted_work_without_the_api_process(tmp_path):
-    from folio.dispatcher import dispatch_once
+    from folio.ingestion.dispatcher import dispatch_once
 
     settings = Settings(artifact_root=tmp_path)
     with TestClient(create_app(settings)) as client:
@@ -34,7 +34,7 @@ def test_dispatcher_delivers_accepted_work_without_the_api_process(tmp_path):
 
 @pytest.mark.integration
 def test_recovery_detects_queue_loss_and_bounds_preclaim_failures(tmp_path):
-    from folio.dispatcher import dispatch_once
+    from folio.ingestion.dispatcher import dispatch_once
 
     settings = Settings(artifact_root=tmp_path, bootstrap_failure_limit=2)
     redis = Redis.from_url(settings.redis_url)
@@ -73,7 +73,7 @@ def test_recovery_detects_queue_loss_and_bounds_preclaim_failures(tmp_path):
 
 @pytest.mark.integration
 def test_inspecting_healthy_queued_work_preserves_actual_dispatch_time(tmp_path):
-    from folio.dispatcher import dispatch_once
+    from folio.ingestion.dispatcher import dispatch_once
 
     settings = Settings(artifact_root=tmp_path, development_mode=True)
     with TestClient(create_app(settings)) as client:

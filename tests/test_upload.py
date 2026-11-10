@@ -29,8 +29,8 @@ def test_accepted_pdf_has_durable_status_and_original(tmp_path):
 
 @pytest.mark.integration
 def test_processed_pdf_publishes_inspectable_evidence(tmp_path):
-    from folio.parsing.evidence import Element, Extraction, Location, Page
-    from folio.processing import process_attempt
+    from folio.ingestion.parsing.evidence import Element, Extraction, Location, Page
+    from folio.ingestion.processing import process_attempt
 
     def parser(path, config):
         return Extraction(

@@ -1,6 +1,6 @@
 # Folio status
 
-Updated: 2026-11-09
+Updated: 2026-11-10
 
 ## Accepted direction
 
@@ -50,6 +50,30 @@ an extraction failure.
 
 The [reading guide](system-design-walkthrough.md) connects the current modules to transactions, indexes, ownership and scaling. Reproduction commands belong in the [README](../README.md); parser and queue test boundaries are described in the [ingestion design](ingestion-design.md#reviewable-slices-and-agent-use).
 
+The November 10 backend review grouped the workflow under `ingestion/`, retaining
+shared infrastructure at the root and a stable RQ import entry for queued work.
+It removed the event/ownership import cycle and fixed artifact-directory setup
+errors that previously escaped the immediate failure/retry handler. A new real
+database check reproduced the escaped error before the fix.
+
+Folio process logs now have a consistent JSON envelope across the API, dispatcher
+and worker, with UTC time, severity, process identity and request/attempt IDs.
+Unexpected execution errors include the operation and bounded application code
+locations without exception messages, document contents or machine paths.
+Third-party logs retain their own formats. The saved event timeline remains the
+outcome authority; diagnostic observations are not commit acknowledgments.
+
+The final fast suite passed 23 checks against isolated PostgreSQL/Redis, including
+fresh-process logging and private-message exclusion, after explicit failing tests
+for the changed behaviors. Ruff and formatting passed. A separate reviewer found
+no actionable defect in the final refactor/logging diff; that review was static.
+The rebuilt local Docker stack passed the five-PDF HTTP smoke: native text,
+tables, mixed OCR, damaged-page neighbors and expected encrypted-input failure,
+plus idempotent replay and original-byte reads. Actual API/worker records shared
+the same synthetic request ID through publication. The public-file/credential
+check passed. No browser, full parser-quality or supervision suite was rerun for
+this checkpoint; parser implementation and native supervision logic are unchanged.
+
 ## Next decisions and remaining scope
 
 The accepted minimal interface is implemented and checked in the local Docker stack.
@@ -86,8 +110,11 @@ Then agree summary/insight behavior and grounded-answer policy, followed by chun
 
 Current discussion: [a size-aware summary slice](summaries.md), with source-linked
 preparation before model calls, complete-input or hierarchical processing, and
-saved-result reuse. This remains a proposal. Trigger, output format, provider
-route, quality thresholds and spending limits are not selected. No summary or
+saved-result reuse. The owner selected automatic-only generation on November 10:
+no manual generate/regenerate/resume controls and no generation on page reload.
+The accepted output is a short overview and 3–5 cited key points with known gaps.
+The rest remains a proposal. Input strategy, provider route, quality thresholds
+and spending limits are not selected. No summary or
 embedding implementation or live model evaluation has begun.
 
 Noisy/rotated/handwritten OCR needs representative quality evidence. Hosting, authentication, admission backpressure, storage quotas, deletion and online artifact cleanup remain separate work. Local container persistence is not a backup or production-readiness claim.

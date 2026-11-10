@@ -2,6 +2,7 @@ import json
 import os
 import subprocess
 import sys
+from datetime import datetime, timedelta
 from pathlib import Path
 from uuid import uuid4
 
@@ -54,8 +55,8 @@ def test_development_view_has_durable_acceptance_without_private_configuration(t
 
 @pytest.mark.integration
 def test_development_view_follows_actual_processing_and_paginates_events(tmp_path):
-    from folio.parsing.evidence import Element, Extraction, Location, Page
-    from folio.processing import process_attempt
+    from folio.ingestion.parsing.evidence import Element, Extraction, Location, Page
+    from folio.ingestion.processing import process_attempt
 
     settings = Settings(artifact_root=tmp_path, development_mode=True)
     with TestClient(create_app(settings)) as client:
@@ -109,7 +110,7 @@ def test_development_view_follows_actual_processing_and_paginates_events(tmp_pat
 
 @pytest.mark.integration
 def test_failed_parse_has_no_completion_and_records_authorized_retry(tmp_path):
-    from folio.processing import process_attempt
+    from folio.ingestion.processing import process_attempt
 
     settings = Settings(
         artifact_root=tmp_path,
@@ -160,7 +161,7 @@ def test_original_can_be_previewed_without_changing_download_behavior(tmp_path):
 
 @pytest.mark.integration
 def test_delivery_outage_is_observed_without_spending_a_processing_attempt(tmp_path):
-    from folio.dispatcher import dispatch_once
+    from folio.ingestion.dispatcher import dispatch_once
 
     settings = Settings(
         artifact_root=tmp_path, development_mode=True, redis_url="redis://127.0.0.1:1/15"
@@ -183,8 +184,8 @@ def test_delivery_outage_is_observed_without_spending_a_processing_attempt(tmp_p
 
 @pytest.mark.integration
 def test_unavailable_event_storage_does_not_erase_known_failure(tmp_path):
-    from folio.parsing.evidence import ExtractionError
-    from folio.processing import process_attempt
+    from folio.ingestion.parsing.evidence import ExtractionError
+    from folio.ingestion.processing import process_attempt
 
     settings = Settings(artifact_root=tmp_path, development_mode=True)
     with psycopg.connect(settings.database_url) as connection:
@@ -216,7 +217,7 @@ def test_unavailable_event_storage_does_not_erase_known_failure(tmp_path):
 
 
 @pytest.mark.integration
-def test_clean_api_and_worker_processes_emit_correlated_lifecycle_logs(tmp_path):
+def test_clean_api_dispatcher_and_worker_emit_correlated_structured_logs(tmp_path):
     environment = {
         **os.environ,
         "FOLIO_ARTIFACT_ROOT": str(tmp_path),
@@ -245,14 +246,30 @@ with TestClient(create_app()) as client:
         timeout=30,
     )
     receipt = json.loads(api.stdout)
+    dispatcher = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            """
+from folio.config import Settings
+from folio.ingestion.dispatcher import dispatch_once
+dispatch_once(Settings(redis_url='redis://127.0.0.1:1/15'))
+""",
+        ],
+        env=environment,
+        capture_output=True,
+        text=True,
+        check=True,
+        timeout=30,
+    )
     worker = subprocess.run(
         [
             sys.executable,
             "-c",
             """
 import sys
-from folio.parsing.evidence import ExtractionError
-from folio.processing import process_attempt
+from folio.ingestion.parsing.evidence import ExtractionError
+from folio.ingestion.processing import process_attempt
 def unreadable(path, config):
     raise ExtractionError('NO_USABLE_CONTENT', 'No readable source evidence')
 process_attempt(sys.argv[1], sys.argv[2], parser=unreadable)
@@ -268,16 +285,88 @@ process_attempt(sys.argv[1], sys.argv[2], parser=unreadable)
     )
     events = [
         json.loads(line)
-        for line in (api.stderr + worker.stderr).splitlines()
-        if line.startswith('{"event":')
+        for line in (api.stderr + dispatcher.stderr + worker.stderr).splitlines()
+        if line.startswith("{")
     ]
     names = [event["event"] for event in events]
     assert names.count("upload_receipt") == 1
     assert names.count("processing_started") == 1
+    assert names.count("delivery_deferred") == 1
     assert names.count("attempt_failed") == 1
+    assert {event["component"] for event in events} == {"api", "dispatcher", "worker"}
+    assert len({event["pid"] for event in events}) == 3
+    for event in events:
+        assert datetime.fromisoformat(event["timestamp"]).utcoffset() == timedelta(0)
+        assert event["severity"] in {"INFO", "WARNING", "ERROR"}
+        assert isinstance(event["pid"], int) and event["pid"] > 0
+    deferred = next(event for event in events if event["event"] == "delivery_deferred")
+    assert deferred["severity"] == "WARNING"
+    assert deferred["error_type"] == "ConnectionError"
     assert all(event["request_id"] == receipt["request_id"] for event in events)
     assert all(
         event["attempt_id"] == receipt["attempt_id"]
         for event in events
         if event["event"] != "upload_receipt"
     )
+
+
+@pytest.mark.integration
+def test_unexpected_processing_error_is_diagnosable_without_private_exception_text(tmp_path):
+    settings = Settings(artifact_root=tmp_path)
+    private_text = "PRIVATE_DOCUMENT_SENTINEL password=private-value"
+    with TestClient(create_app(settings)) as client:
+        receipt = client.post(
+            "/documents",
+            headers={"Idempotency-Key": str(uuid4())},
+            files={"file": ("private-report.pdf", b"%PDF-1.4 controlled failure")},
+        ).json()
+        attempt = client.get(receipt["status_url"]).json()["authorized_attempt_id"]
+        worker = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                """
+import sys
+from folio.ingestion.processing import process_attempt
+def broken_parser(path, config):
+    raise ValueError(sys.argv[3])
+process_attempt(sys.argv[1], sys.argv[2], parser=broken_parser)
+""",
+                receipt["request_id"],
+                attempt,
+                private_text,
+            ],
+            env={
+                **os.environ,
+                "FOLIO_ARTIFACT_ROOT": str(tmp_path),
+                "PYTHONPATH": str(Path(__file__).resolve().parents[1] / "src"),
+            },
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=30,
+        )
+        status = client.get(receipt["status_url"]).json()
+        assert status["state"] == "failed"
+        assert status["revision_id"] is None
+        assert status["attempts"][0]["error_code"] == "PROCESSING_ERROR"
+        assert status["attempts"][0]["error_detail"] == "ValueError"
+    assert "PRIVATE_DOCUMENT_SENTINEL" not in worker.stderr
+    assert "private-value" not in worker.stderr
+    assert "private-report.pdf" not in worker.stderr
+    assert str(tmp_path) not in worker.stderr
+    records = [json.loads(line) for line in worker.stderr.splitlines() if line.startswith("{")]
+    errors = [record for record in records if record["event"] == "processing_error"]
+    assert len(errors) == 1
+    error = errors[0]
+    assert error["request_id"] == receipt["request_id"]
+    assert error["attempt_id"] == attempt
+    assert error["severity"] == "ERROR"
+    assert error["error_type"] == "ValueError"
+    assert error["operation"] == "parse"
+    assert 1 <= len(error["error_frames"]) <= 8
+    for frame in error["error_frames"]:
+        assert set(frame) == {"module", "function", "line"}
+        assert frame["module"].startswith("folio.")
+        assert frame["function"] and isinstance(frame["line"], int) and frame["line"] > 0
+    assert not any(record["event"] == "processing_finished" for record in records)

@@ -1,6 +1,6 @@
 # Understanding Folio's first ingestion slice
 
-Reading guide, November 7, 2026. The source links below follow the implemented and accepted first ingestion slice.
+Reading guide, updated November 10, 2026. The source links below follow the implemented and accepted first ingestion slice.
 Use [status](status.md) for completed checks and their limits, and [the system design](ingestion-system.md) for the full contract.
 Summaries, retrieval and chat remain future work; this guide follows a PDF only as far as inspectable evidence.
 
@@ -14,17 +14,17 @@ Read the current code in this order:
 
 | File | Question it answers |
 | --- | --- |
-| [api.py](../src/folio/api.py) | What does HTTP accept, return, and expose for inspection? |
-| [acceptance.py](../src/folio/acceptance.py) | When is an upload accepted, and how does replay avoid another document? |
+| [api.py](../src/folio/api.py), [ingestion/routes.py](../src/folio/ingestion/routes.py) | Where is the app assembled, and what does HTTP accept, return, and expose for inspection? |
+| [acceptance.py](../src/folio/ingestion/acceptance.py) | When is an upload accepted, and how does replay avoid another document? |
 | [storage.py](../src/folio/storage.py) | How are bytes saved under an opaque key and checked against their hash? |
 | [database.py](../src/folio/database.py) | Where do connections and transaction lifetimes come from? |
 | [migrations](../src/folio/migrations) | Which identities, relationships and ordering constraints does PostgreSQL enforce? |
-| [dispatcher.py](../src/folio/dispatcher.py) | How does committed pending work reach RQ, including after a delivery failure? |
-| [ownership.py](../src/folio/ownership.py) | Which attempt may run, and which token may change its outcome? |
-| [processing.py](../src/folio/processing.py) | How does a worker claim, parse, stage and finish one attempt? |
-| [parsing/parser.py](../src/folio/parsing/parser.py) | How does Docling become Folio evidence rather than a schema every caller must know? |
-| [publication.py](../src/folio/publication.py), [recovery.py](../src/folio/recovery.py) | Where do success, failure and bounded retry become durable? |
-| [queries.py](../src/folio/queries.py) | How do callers inspect consistent status and paginated evidence? |
+| [dispatcher.py](../src/folio/ingestion/dispatcher.py) | How does committed pending work reach RQ, including after a delivery failure? |
+| [ownership.py](../src/folio/ingestion/ownership.py) | Which attempt may run, and which token may change its outcome? |
+| [processing.py](../src/folio/ingestion/processing.py) | How does a worker claim, parse, stage and finish one attempt? |
+| [parsing/parser.py](../src/folio/ingestion/parsing/parser.py) | How does Docling become Folio evidence rather than a schema every caller must know? |
+| [publication.py](../src/folio/ingestion/publication.py), [recovery.py](../src/folio/ingestion/recovery.py) | Where do success, failure and bounded retry become durable? |
+| [queries.py](../src/folio/ingestion/queries.py) | How do callers inspect consistent status and paginated evidence? |
 
 **A transaction protects a particular boundary.** In the current acceptance code, the PDF is saved first.
 HTTP first spools a bounded multipart upload; artifact storage then copies/hash-checks it in chunks. No transaction spans that upload.

@@ -1,14 +1,19 @@
-# Document summaries: proposed next slice
+# Document summaries
 
-Status: proposal discussed November 9, 2026. No summary implementation or paid
-evaluation is authorized by this document. Trigger, format, model/route, numerical
-limits and final processing policy remain open.
+Status: automatic-only generation and output format accepted November 10, 2026. The remaining
+design below is a proposal. Model/route, numerical limits and final
+processing policy remain open; no paid evaluation is authorized yet.
 
 ## Outcome and order
 
 Create a persisted summary with citations from one immutable extraction revision.
 Users can continue reading extracted evidence while summary work runs. Extraction
 and summary have separate outcomes; summary failure must not remove evidence.
+
+Accepted output: one short overview and 3–5 key points, with citations on factual
+claims and known extraction gaps visible alongside the result. Points reflect
+the document's actual content; do not force every PDF into dates/risks/findings
+sections. There is no separate invented insight taxonomy in this version.
 
 The proposed development sequence is preparation, summary, then embedding-backed
 retrieval. This is not a future runtime dependency: summary and embedding jobs
@@ -33,8 +38,13 @@ including reasoning where applicable, and a tokenizer uncertainty margin.
 | Section notes, then synthesis | The complete input exceeds a single-call bound | Bounded requests, resumable groups and limited parallelism; intermediate output costs more and compression can lose qualifications. |
 | Sequential refinement | Each step must update the previous result using another section | Serial latency and repeated summary inputs; later updates can lose earlier facts. Not the recommended default. |
 
-Recommendation: a size-aware complete-input path with hierarchical processing for
-larger documents. Select thresholds after inspecting prepared inputs and comparing
+The earlier proposal was a size-aware complete-input path with hierarchical processing
+for larger documents. A smaller complete-input-only increment was offered, with a
+visible unavailable reason above its limit. The owner instead requested further
+research into handling large documents before selecting the execution strategy.
+Neither limiting summaries to one call nor a specific hierarchy is accepted yet.
+The 150-page design example does not change ingestion's current 100-page cap.
+Select thresholds after inspecting prepared inputs and comparing
 actual outputs. Do not silently truncate to the beginning, select only similarity
 search hits, or call a partial result a whole-document summary. If no plan fits the
 total budget, report that boundary and keep the parsed document usable.
@@ -53,13 +63,17 @@ understanding of figures when only their text was recovered.
 
 ## Reuse, resource limits and failure boundaries
 
-### One workflow, two possible triggers
+### Automatic generation only
 
-Automatic generation after extraction and an explicit user request should enter
-the same summary-request operation. Trigger origin is metadata, not a different
-generation path or a new result identity. For the same revision and summary
-specification, return the saved result, return existing work status, or atomically
-accept one new run. A manual request must not bypass cost or concurrency limits.
+Accepted: usable extraction starts summary work automatically, subject to the
+agreed operating limits. There is no Generate, Regenerate or Resume control and
+no manual generation endpoint in this version. Reading a saved document does
+not trigger another generation. Automatic recovery belongs to the same workflow.
+
+Proposed invariant: for the same revision and summary specification, reuse the
+saved result or existing work, or atomically accept one new run. Repeated delivery
+must not create competing runs. Keep parsed evidence readable while a summary
+is pending, unavailable or failed.
 
 Before accepting model work, reuse or prepare the source manifest, plan the
 bounded calls and reserve the permitted budget. Concurrent callers cannot both
@@ -67,9 +81,7 @@ claim the same remaining allowance. A run that cannot be admitted stays visibly
 unavailable for that reason; do not secretly truncate its input. At execution,
 apply the same limits to subsequent groups, synthesis and retries.
 
-Recommendation: automatic generation as the default product behavior, with
-manual actions using the same operation to request or resume eligible work.
-Application-wide and per-document settings are sufficient initially. Accounts,
+Recommendation: application-wide and per-document settings initially. Accounts,
 billing and subscription plans are deferred; a future plan can supply limits to
 this admission decision without creating a separate summary engine. Changing a
 model/prompt configuration should not silently regenerate old documents merely
@@ -90,11 +102,9 @@ because somebody opens them.
   cache usage and cost. Unknown usage stays unknown. Compare time until readable
   evidence with time until the summary is ready.
 
-The proposed default is automatic generation after extraction within an agreed
-cost limit; user-triggered generation is the alternative that avoids spending on
-unused summaries. The owner requested a shared path and asked how future budget
-policy would fit; automatic behavior is still the recommendation rather than a
-confirmed choice. Provider prompt/response caching is
+The owner selected automatic-only generation to keep the product's controls and
+workflow small. This selects the trigger, not a model or spending allowance.
+Provider prompt/response caching is
 optional additional optimization, not Folio's durable reuse mechanism. OpenRouter
 documents that simultaneous identical response-cache misses both run and are
 billed, so provider caching does not replace the in-flight guard.
@@ -121,7 +131,7 @@ synthesis. Actual seconds require measurement on the selected route.
 
 ## Review before implementation
 
-Agree the trigger and summary format, then input/coverage policy, versioned
+With the automatic trigger and format accepted, agree input/coverage policy, versioned
 persistence and retry behavior, and model/route plus spending limits. Validate
 token/source preparation before connecting generation. Use known evidence near
 the beginning, middle and end, a cross-page qualification and a table to review

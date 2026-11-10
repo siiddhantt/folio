@@ -1,6 +1,6 @@
 # Folio requirements agreement
 
-Status: ingestion accepted November 7; minimal interface and development inspection accepted November 9. Later capabilities retain open design choices. Updated: 2026-11-09.
+Status: ingestion accepted November 7; minimal interface and development inspection accepted November 9; automatic-only summary trigger accepted November 10. Later capabilities retain open design choices. Updated: 2026-11-10.
 
 This agreement separates product outcomes, engineering constraints, proposed behavior, and optional capabilities. A proposed detail is not accepted merely because it appears here.
 
@@ -34,7 +34,7 @@ The first journey is verified through APIs. On November 9, a minimal upload/deta
 | R01 | Intelligent upload and ingestion | First slice implemented: bounded PDF upload, immutable original and metadata, idempotent acceptance and useful invalid-input errors. Initial limits are 25 MiB and 100 physical pages; encrypted PDFs are terminal unsupported inputs. |
 | R02 | Asynchronous document processing | Extraction runs through RQ/Redis with durable PostgreSQL intent and bounded recovery. Analysis and indexing will join the asynchronous workflow when implemented. Request/attempt history remains inspectable. |
 | R03 | Document retrieval | First slice exposes metadata, processing state, original bytes and paginated revision evidence. Library listing/filtering and later search remain open. |
-| R04 | Summaries and AI insights | Persist a useful summary and an agreed insights representation linked to the document. An output that failed must not appear successful. Insight types and long-document strategy remain open. |
+| R04 | Summaries and AI insights | Automatically prepare a saved short overview and 3–5 cited key points after usable extraction within agreed limits, showing known gaps. No manual generation controls; reopening a document reuses saved work. An output that failed must not appear successful. Long-document strategy and spending limits remain open. |
 | R05 | Start a chat session | Create a conversation bound to one selected PDF. Follow-up questions and evidence retrieval preserve that document scope. |
 | R06 | Ask a grounded question | Retrieve evidence and produce a contextual answer with resolvable citations. Agree the behavior for absent, conflicting, or ambiguous evidence. |
 | R07 | Chat history | Store and retrieve ordered user/assistant turns and their source context/citations. Specify persistence behavior when a model call fails. |

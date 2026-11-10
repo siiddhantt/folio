@@ -1,8 +1,12 @@
+import logging
 from contextlib import contextmanager
 from dataclasses import dataclass
 from uuid import UUID, uuid4
 
-from folio.observability import record_event
+import psycopg
+
+from folio.ingestion.events import record_event
+from folio.observability import log_event
 
 
 @dataclass(frozen=True)
@@ -71,3 +75,29 @@ def claim_attempt(database, request_id, attempt_id):
         ).fetchone()
         record_event(connection, request["id"], attempt["id"], "worker_claimed")
         return Claim(request["id"], attempt["id"], token, request["requested_config"], file)
+
+
+def observe(database, claim, name, **details):
+    try:
+        with locked_attempt(database, claim.request_id, claim.attempt_id) as (
+            conn,
+            request,
+            attempt,
+        ):
+            if not owns(conn, request, attempt, claim.token):
+                return False
+            recorded = record_event(conn, claim.request_id, claim.attempt_id, name, **details)
+        if recorded:
+            log_event(name, claim.request_id, claim.attempt_id, **details)
+        return recorded
+    except psycopg.Error as error:
+        log_event(
+            "observation_unavailable",
+            claim.request_id,
+            claim.attempt_id,
+            level=logging.WARNING,
+            observed_event=name,
+            error=error,
+            operation="observe",
+        )
+        return False

@@ -2,8 +2,8 @@ from uuid import uuid4
 
 from psycopg.types.json import Jsonb
 
-from folio.observability import record_event
-from folio.ownership import locked_attempt, owns
+from folio.ingestion.events import record_event
+from folio.ingestion.ownership import locked_attempt, owns
 
 
 def publish(database, claim, extraction, raw_artifact):

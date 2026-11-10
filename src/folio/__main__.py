@@ -2,6 +2,7 @@ import argparse
 import logging
 
 from folio.config import Settings
+from folio.observability import configure_logging
 
 
 def main():
@@ -16,15 +17,16 @@ def main():
 
         migrate(settings.database_url)
     elif args.command == "dispatch":
-        from folio.dispatcher import run
+        from folio.ingestion.dispatcher import run
 
         run()
     else:
         from rq.serializers import JSONSerializer
         from rq.worker import SpawnWorker
 
-        from folio.dispatcher import queue_for
+        from folio.ingestion.dispatcher import queue_for
 
+        configure_logging("worker")
         queue = queue_for(settings)
         SpawnWorker(
             [queue],

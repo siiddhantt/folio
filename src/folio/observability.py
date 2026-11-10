@@ -1,13 +1,16 @@
 import json
 import logging
-
-import psycopg
-from psycopg.types.json import Jsonb
+import os
+import traceback
+from datetime import UTC, datetime
 
 logger = logging.getLogger(__name__)
+_component = "unknown"
 
 
-def configure_logging():
+def configure_logging(component):
+    global _component
+    _component = component
     application = logging.getLogger("folio")
     application.setLevel(logging.INFO)
     application.propagate = False
@@ -17,62 +20,38 @@ def configure_logging():
         application.addHandler(handler)
 
 
-def log_event(name, request_id, attempt_id=None, **details):
-    logger.info(
-        "%s",
-        json.dumps(
-            {
-                "event": name,
-                "request_id": str(request_id),
-                "attempt_id": str(attempt_id) if attempt_id is not None else None,
-                **details,
-            }
-        ),
-    )
-
-
-def record_event(connection, request_id, attempt_id, name, **details):
-    """Hold the request lock; a savepoint isolates recoverable event-insert SQL errors."""
+def log_event(name, request_id=None, attempt_id=None, *, level=logging.INFO, error=None, **details):
+    """Emit application-owned metadata; telemetry must not interrupt processing."""
     try:
-        with connection.transaction():
-            connection.execute(
-                """INSERT INTO processing_events(request_id,attempt_id,name,details)
-                VALUES (%s,%s,%s,%s)""",
-                (request_id, attempt_id, name, Jsonb(details)),
-            )
-        return True
-    except psycopg.Error as error:
-        logger.warning(
-            "Event unavailable request_id=%s attempt_id=%s event=%s error=%s",
-            request_id,
-            attempt_id,
-            name,
-            type(error).__name__,
+        if error is not None:
+            # Only application code identities; never messages, locals, source text or paths.
+            frames = []
+            for frame, line in traceback.walk_tb(error.__traceback__):
+                module = frame.f_globals.get("__name__", "")
+                if module.startswith("folio."):
+                    frames.append(
+                        {"module": module, "function": frame.f_code.co_name, "line": line}
+                    )
+            details["error_type"] = type(error).__name__
+            details["error_frames"] = frames[-8:]
+            if isinstance(error, OSError) and isinstance(error.errno, int):
+                details["errno"] = error.errno
+        logger.log(
+            level,
+            "%s",
+            json.dumps(
+                {
+                    "timestamp": datetime.now(UTC).isoformat(),
+                    "severity": logging.getLevelName(level),
+                    "component": _component,
+                    "pid": os.getpid(),
+                    "event": name,
+                    "request_id": str(request_id) if request_id is not None else None,
+                    "attempt_id": str(attempt_id) if attempt_id is not None else None,
+                    **details,
+                }
+            ),
         )
-        return False
-
-
-def observe(database, claim, name, **details):
-    from folio.ownership import locked_attempt, owns
-
-    try:
-        with locked_attempt(database, claim.request_id, claim.attempt_id) as (
-            conn,
-            request,
-            attempt,
-        ):
-            if not owns(conn, request, attempt, claim.token):
-                return False
-            recorded = record_event(conn, claim.request_id, claim.attempt_id, name, **details)
-        if recorded:
-            log_event(name, claim.request_id, claim.attempt_id, **details)
-        return recorded
-    except psycopg.Error as error:
-        logger.warning(
-            "Observation unavailable request_id=%s attempt_id=%s event=%s error=%s",
-            claim.request_id,
-            claim.attempt_id,
-            name,
-            type(error).__name__,
-        )
-        return False
+    except Exception:
+        # A missing log is preferable to changing an accepted document's outcome.
+        pass
