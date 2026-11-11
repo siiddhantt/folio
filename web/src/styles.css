@@ -29,6 +29,8 @@
 }
 
 :root {
+  --header-height: 60px;
+  --page-gutter: 32px;
   --background: #ffffff;
   --foreground: #202020;
   --primary: #262626;
@@ -96,8 +98,8 @@
 }
 
 .site-header {
-  height: 60px;
-  padding: 0 32px;
+  height: var(--header-height);
+  padding: 0 var(--page-gutter);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -118,7 +120,7 @@
   stroke-width: 1.6;
 }
 main {
-  min-height: calc(100dvh - 60px);
+  min-height: calc(100dvh - var(--header-height));
 }
 .skip-link {
   position: absolute;
@@ -220,9 +222,9 @@ main {
   color: var(--muted);
   font-size: 13px;
 }
-@media (max-width: 680px) {
-  .site-header {
-    padding: 0 20px;
+@media (max-width: 760px) {
+  :root {
+    --page-gutter: 20px;
   }
 }
 @media (prefers-reduced-motion: reduce) {

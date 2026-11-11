@@ -18,9 +18,11 @@
 }
 .activity-heading {
   display: flex;
+  flex: 0 0 var(--header-height);
+  height: var(--header-height);
   justify-content: space-between;
   align-items: center;
-  padding: 16px 24px;
+  padding: 0 24px;
   border-bottom: 1px solid var(--line);
 }
 .activity-heading h2 {
@@ -149,7 +151,7 @@
     padding: 20px;
   }
   .activity-heading {
-    padding: 12px 20px;
+    padding-inline: 20px;
   }
   .event-timeline li {
     grid-template-columns: 80px minmax(0, 1fr);

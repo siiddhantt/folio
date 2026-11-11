@@ -19,6 +19,18 @@ ignored `.env` and a safe template.
 
 ## Reading workspace increment — November 11
 
+Owner refinement: the site and Activity headers now share a fixed height, their
+dividers align, and stacked document actions keep the filename's left edge.
+Shared gutters also remove a mismatch between narrow-screen breakpoints. The
+three-file CSS change passed independent review, type/format/build checks and
+browser geometry checks at 320, 390, 700 and 1440 pixels in light/dark themes:
+header bottoms matched at 60 pixels and no horizontal overflow was observed.
+The backend runtime was unavailable, so these visual checks used temporary
+browser-only responses against the actual frontend; no ingestion/model claim
+follows and no new permanent regression suite was added for CSS values.
+The web image built successfully. Full-stack availability remains unverified
+at this refinement checkpoint. No application settings or model calls changed.
+
 The accepted reading workspace now has desktop content/source columns, mobile
 Content/Original tabs, an Activity drawer and compact coverage. Source jumps
 preserve loaded evidence and mobile reading position; keyboard focus follows the
