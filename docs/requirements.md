@@ -69,7 +69,7 @@ The comparison and application pin Docling 2.148.0. Application dependencies are
 
 Accepted for ingestion: retain immutable originals, source identities/hashes, parser configuration, physical PDF pages, structured table meaning and attempt history. Publish usable evidence with known coverage warnings; zero usable content is unavailable. Detection cannot prove complete semantic recovery. Enforce accepted upload/page/time/resource bounds and retries. A PostgreSQL transaction publishes a complete revision; filesystem and Redis operations remain separate. Repeated delivery must not duplicate publication, and a stale worker must not overwrite newer work.
 
-Accepted conversation scope is one selected PDF. Proposed later answer rules still need refinement: treat previous answers as context rather than evidence, preserve document scope in retrieval, distinguish valid citation IDs from actual support, and explain absent/ambiguous evidence. Uploaded text cannot grant permissions or override application instructions. Summary, search and insight stages should report their own outcomes; their exact contracts and output budgets remain open.
+Accepted conversation scope is one selected PDF. Proposed later answer rules still need refinement: treat previous answers as context rather than evidence, preserve document scope in retrieval, distinguish valid citation IDs from actual support, and explain absent/ambiguous evidence. Uploaded text cannot grant permissions or override application instructions. Summary behavior and spending are accepted under R04; retrieval and chat contracts, models and budgets remain open. Each stage reports its own outcome.
 
 ## Optional capability ledger
 

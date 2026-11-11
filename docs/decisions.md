@@ -143,14 +143,15 @@ Keep a narrow retrieval operation that accepts a question and permitted document
 
 ## D10: Generation, summaries, and frameworks
 
-Status: OpenRouter selected as the API gateway. Automatic-only, complete-input summary generation accepted November 10. The owner delegated cost-conscious model selection. After Nano and Mini source reviews exposed citation and qualification failures, GPT-5.1 on the verified OpenAI standard route became the current candidate. It is temporary, retires April 1, 2027, and does not establish general summary accuracy. See [verified model notes](models.md) and [recorded evaluations](summary-evaluation.md).
+Status: OpenRouter selected as the API gateway. Automatic-only, complete-input summary generation accepted November 10. The owner delegated cost-conscious model selection. Nano, Mini and GPT-5.1 were earlier evaluated candidates; the current candidate is DeepSeek V4.1 Flash 1017 through Together. It does not establish general summary accuracy. See [verified model notes](models.md) and [recorded evaluations](summary-evaluation.md).
 
 On November 11 the owner reaffirmed OpenRouter and explicitly deferred switching
 to or testing Autoloops. The owner subsequently accepted a minimal, test-first
 DeepSeek comparison through OpenRouter, aligned response bounds and generous
 completion headroom within the existing spending allowance. Adaptive retries
-remain explicitly excluded. The implementation choice is the researched
-V4.1-Flash-1017 Fireworks route, reasoning off and a fixed 16,384-token completion
+remain explicitly excluded. The initial Fireworks route became unavailable;
+Together was selected explicitly, as recorded below. The current route uses
+reasoning off and a fixed 16,384-token completion
 ceiling. Short prose targets remain guidance; character bounds provide room for
 qualifications rather than rejecting an answer for a few extra words.
 
@@ -359,6 +360,19 @@ proven by that example. Citation correctness is reviewed separately. See the
 [evaluation record](summary-evaluation.md) for actual results.
 
 ## Slice order and remaining decisions
+
+November 11 planning recommendation, not an accepted implementation contract:
+after the bounded alignment refinement, prioritize one selected PDF → one
+question → a saved cited answer. Chunking, embedding and scoped retrieval are
+steps within that user outcome. Compare the existing Docling chunker candidate
+before building custom splitting. PostgreSQL with pgvector and exact search is
+the proposed storage starting point; lexical search is a useful baseline and
+Qdrant remains an alternative if measured needs justify a second store. Chunking
+policy, embedding space, answer model, spending and insufficient-evidence behavior
+remain decisions to settle before implementation. Keep summary diagnostic
+compaction as a small correctness repair rather than a broader summary redesign.
+Then add bounded follow-ups/history and the remaining aggregate APIs. Further
+cosmetic expansion should not delay that core workflow.
 
 1. Accepted, implemented and checked: upload one supported document, process it, and inspect persisted evidence, sources, warnings and attempt history. Idempotency, retry and interruption behavior belong in this slice; [status](status.md) records operational probe limits. The owner walkthrough remains part of the checkpoint. No model call is needed.
 2. Produce and inspect a persisted summary and agreed insights, including coverage and provider-failure behavior.
