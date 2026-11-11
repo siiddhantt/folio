@@ -145,6 +145,11 @@ Keep a narrow retrieval operation that accepts a question and permitted document
 
 Status: OpenRouter selected as the API gateway. Automatic-only, complete-input summary generation accepted November 10. The owner delegated cost-conscious model selection. After Nano and Mini source reviews exposed citation and qualification failures, GPT-5.1 on the verified OpenAI standard route became the current candidate. It is temporary, retires April 1, 2027, and does not establish general summary accuracy. See [verified model notes](models.md) and [recorded evaluations](summary-evaluation.md).
 
+On November 11 the owner reaffirmed OpenRouter and explicitly deferred switching
+to or testing Autoloops. DeepSeek through OpenRouter and better output-budget
+controls are under investigation; no new model configuration or adaptive retry
+policy is accepted by that research request alone.
+
 Options: direct SDK calls with explicit orchestration; a small LlamaIndex integration; a small LangChain integration. Compare source mapping, testability, dependencies, and how much control flow remains visible. No current need for an autonomous-agent runtime.
 
 Recommendation: keep retrieval, evidence formatting, generation, and validation understandable regardless of library. Preserve provider metadata behind a small boundary; do not implement unused providers.

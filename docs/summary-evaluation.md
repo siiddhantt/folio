@@ -113,6 +113,11 @@ create a new run or charge.
 The 59-page report parsed in 102.58 seconds. Its complete input fitted admission,
 but the provider exhausted 4,096 output tokens. Read-only generation metadata
 confirmed `finish_reason=length` and `native_finish_reason=max_output_tokens`.
+Later read-only metadata inspection reported 45,043 native prompt tokens,
+4,096 native completion tokens and 50 native reasoning tokens. OpenRouter's
+normalized estimates differ, so native counts are used for this observation.
+The raw incomplete response was not retained; the remaining tokens cannot all
+be assumed visible text, and reasoning was not the dominant reported component.
 Folio rejected the incomplete output; the $0.09726375 known bill plus a new
 $0.38096 reservation exceeds the $0.40 document cap, so retry admission correctly
 ended unavailable without another request. The original and 657 evidence elements

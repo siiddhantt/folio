@@ -20,11 +20,14 @@ ignored `.env` and a safe template.
 ## Summary checkpoint — November 11
 
 Autoloops/DeepSeek-V4.1 Flash was subsequently investigated as a lower-cost
-candidate. Its published inference offer is suitable in principle, but hosted
-limits, schema/billing details and text-LLM data terms remain unverified. The
-[research notes](models.md#autoloops--deepseek-investigation--november-11) record
-the proposed comparison and minimal adapter boundary. No application settings,
-credentials or paid usage changed; a provider switch is not yet selected.
+candidate. The owner then explicitly deferred Autoloops testing or adoption and
+reaffirmed OpenRouter. Research recommends a constrained short output contract
+and a DeepSeek V4.1 Flash 1017 comparison through OpenRouter/Fireworks with an
+explicit reasoning mode and measured completion headroom; integration and any
+adaptive retry remain proposals. Read-only metadata for the failed NIST
+call reports only 50 reasoning tokens within 4,096 completion tokens, so reasoning
+exhaustion is not an established cause. No application settings, credentials or
+paid usage changed during this research.
 
 The automatic complete-input summary slice is implemented and independently
 reviewed, with no blocking software defect found in the final review. Usable

@@ -9,7 +9,8 @@ have separate configuration and evaluation needs.
 
 ## Autoloops / DeepSeek investigation — November 11
 
-Status: research only, not a selected gateway change or an evaluated Folio model.
+Status: deferred by the owner after research on November 11; do not switch to or
+test Autoloops. OpenRouter remains selected. No Folio model-quality evaluation occurred.
 No credentials, inference calls or runtime configuration were used or changed.
 
 [Autoloops' model page](https://autoloops.ai/models/deepseek-v4.1-flash) advertises
@@ -50,7 +51,7 @@ tokens costs $0.0174; 200,000 + 4,000 costs $0.0648. These are arithmetic exampl
 not observed Folio token counts or bills, and exclude retries and unverified fees.
 Reasoning, if billed as output, must be included in those output counts.
 
-Recommendation: a bounded direct-Autoloops comparison on public evidence after
+Earlier recommendation, not selected: a bounded direct-Autoloops comparison on public evidence after
 checking the host contract. Keep the generic prompt and source-support review.
 The existing `profile()`/`generate()` boundary can accommodate one concrete
 adapter; provider-specific counting, request controls and billing need deliberate
@@ -59,6 +60,59 @@ monetary usage must remain unknown unless documented billed counters and frozen
 rates support explicitly labeled derived costs. The durable queue, evidence,
 citation validation, ownership and cumulative budget should remain shared.
 No switch, new abstraction framework, budget reset or production claim is implied.
+
+## DeepSeek through OpenRouter — output-budget research
+
+Status: recommended comparison, not implemented or quality-tested. The owner
+reaffirmed OpenRouter and deferred Autoloops on November 11.
+
+The [OpenRouter catalog](https://openrouter.ai/api/v1/models) identifies
+`deepseek/deepseek-v4.1-flash-1017`, tokenizer family `DeepSeek`, optional reasoning
+with efforts `none`, `low`, `high`, `max`, enabled by default. The inspected
+[route metadata](https://openrouter.ai/api/v1/models/deepseek/deepseek-v4.1-flash-1017/endpoints)
+includes Fireworks (`fireworks`) and Together (`together`), each advertising
+1,048,576 context, 943,718 maximum completion tokens, structured output,
+response formatting, reasoning and `max_tokens`. Their listed rates are
+$0.30 input / $1.20 output / $0.006 cached input per million, with no listed
+fixed fee, cache-write charge or pricing overrides. These are observed metadata,
+not Folio runtime measurements. Every inspected route omitted a numeric separate
+prompt ceiling; null must not be interpreted as unlimited.
+
+Fireworks is the proposed first route because its
+[structured-response documentation](https://docs.fireworks.ai/structured-responses/structured-response-formatting)
+explicitly supports string and array size constraints during generation, while
+warning that output truncation can still leave incomplete JSON. Its
+[chat reference](https://docs.fireworks.ai/api-reference/post-chatcompletions)
+documents DeepSeek V4.1 thinking-off controls. These provider-wide documents and
+the [model listing](https://fireworks.ai/models/deepseek-ai/deepseek-v4p1-flash-1017)
+still need an exact-route compatibility check with Folio's schema.
+
+Proposed OpenRouter controls: select Fireworks, disable fallbacks, require
+supported parameters, set `reasoning.effort` to `none`, and start evaluation
+with `max_tokens=8192`. `only:["fireworks"]` also matches provider variants;
+it does not uniquely pin the standard endpoint. Narrow the currently observed
+variants with `ignore:["fireworks/spot","fireworks/us"]` and rate ceilings
+of $0.30 input / $1.20 output per million, then recheck endpoint metadata.
+These controls do not freeze future routes or independently enforce cumulative
+spending. See [routing semantics](https://openrouter.ai/docs/guides/routing/provider-selection).
+They do not change Folio's visible
+summary length. OpenRouter's [reasoning guide](https://openrouter.ai/docs/guides/best-practices/reasoning-tokens)
+distinguishes hiding reasoning from disabling it; `exclude` alone does not save
+the tokens or bill. A native Fireworks integer thinking cap is not proof that
+OpenRouter forwards `reasoning.max_tokens` as a hard DeepSeek cap.
+
+At those listed token rates, the full combined context as a conservative input billing
+upper bound plus 8,192 output tokens is $0.3244032. That fits $0.40, but does not
+establish a separate input allowance or prove every request size is accepted.
+Retain the local 64,000-token bound, model-specific counting and combined-context
+check; explicitly revise the current mandatory-prompt-cap policy before use.
+The existing GPT-only tokenizer/client also needs a concrete DeepSeek path.
+Missing billing remains unknown; the cumulative $1 allowance is not reset.
+
+The proposed ceiling provides completion headroom, not an accuracy or no-error
+guarantee. Validate complete output and citations, then review source support on
+the regression document plus a fresh document. No hierarchy, input truncation,
+automatic model fallback or adaptive retry is implicitly selected.
 
 ## Current summary candidate
 

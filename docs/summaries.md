@@ -79,6 +79,55 @@ document prompt injection.
 
 ## Recovery and spending
 
+### Output-exhaustion investigation — November 11
+
+Status: researched proposal, not implemented. OpenRouter remains selected;
+Autoloops testing is deferred by the owner.
+
+The failed NIST call reached 4,096 completion tokens, with only 50 reported
+reasoning tokens. Its complete input fitted. The raw incomplete response was not
+retained, so neither hidden reasoning nor verbose prose is a proven full diagnosis.
+The prompt requests at most 235 visible words, but the schema permits six text
+fields of 2,000 characters each, plus up to 48 source references. This mismatch
+permits much more output than intended; it does not prove the cause of that call.
+
+A generation limit is a cutoff, not a request to finish valid JSON before it.
+Separate the visible length target from total completion capacity, including
+reasoning, JSON and non-visible formatting. Input admission can count prepared
+evidence; future generated text cannot be counted exactly in advance. Keep the
+complete-input design and source qualifications rather than discarding evidence
+or trimming sentences/citations to make the answer fit.
+
+Recommended first increment: align overview/point character bounds with the short
+format, enforce supported schema constraints, configure reasoning explicitly and
+measure output usage across sources. An 8,192-token ceiling on the researched
+DeepSeek/OpenRouter route is a proposed starting allowance, not a measured need
+or an instruction to produce that many tokens. Actual bills use generated tokens.
+Model-specific token accounting and provider support must be verified; keep the
+64,000 local input limit. See [route research](models.md#deepseek-through-openrouter--output-budget-research).
+
+Record finish reason and safe usage breakdowns without logging document contents.
+Classify `length` separately as an output-limit outcome. The current path maps it
+to generic `INVALID_OUTPUT`, attempts the same frozen specification again, then
+shows only the later budget-denial reason. Preserve the original cause so the
+owner can distinguish generation failure from insufficient retry allowance.
+
+An optional later recovery is one preplanned larger-cap attempt after a genuine
+length stop. This needs explicit acceptance: both attempt settings must be saved
+in the initial policy and remain within context, output and cumulative spending
+bounds. Current manifest equality deliberately rejects changed retry settings.
+Do not silently alter it, append a continuation to partial JSON, repair missing
+citations, or issue unbounded retries. No API setting guarantees that every
+generation will finish; validation can prevent publication of detected partial
+or invalid output.
+
+Sources: [OpenAI output accounting](https://developers.openai.com/api/docs/guides/token-counting),
+[GPT-5.1 length guidance](https://developers.openai.com/cookbook/examples/gpt-5/gpt-5-1_prompting_guide),
+[OpenRouter reasoning controls](https://openrouter.ai/docs/guides/best-practices/reasoning-tokens),
+[Fireworks structured output](https://docs.fireworks.ai/structured-responses/structured-response-formatting).
+
+### Implemented allowance
+
 The allowance is $1 cumulatively for this deployment and $0.40 per
 document, including retries and uncertain calls. The owner raised the original
 $0.10 document limit on November 11 for a stronger-model comparison after
