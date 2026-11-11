@@ -11,6 +11,23 @@ SAFE_CONFIGURATION = (
     "max_attempts",
     "retry_delays_seconds",
     "retry_jitter_seconds",
+    "max_upload_bytes",
+    "settings_revision",
+)
+
+SAFE_SUMMARY_CONFIGURATION = (
+    "enabled",
+    "model_id",
+    "provider",
+    "input_limit_tokens",
+    "max_output_tokens",
+    "token_margin",
+    "reasoning_effort",
+    "timeout_seconds",
+    "max_attempts",
+    "budget_usd",
+    "document_budget_usd",
+    "unavailable_code",
 )
 
 
@@ -26,6 +43,12 @@ def inspect_request(database, request_id, after_id=0, limit=100):
             return None
         config = request.pop("requested_config")
         request["configuration"] = {key: config[key] for key in SAFE_CONFIGURATION if key in config}
+        policy = config.get("summary_policy")
+        request["summary_configuration"] = (
+            {key: policy[key] for key in SAFE_SUMMARY_CONFIGURATION if key in policy}
+            if policy is not None
+            else None
+        )
         request["source"] = connection.execute(
             "SELECT sha256,byte_size,media_type FROM file_versions WHERE id=%s",
             (request["file_version_id"],),

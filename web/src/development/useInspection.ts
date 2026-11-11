@@ -14,6 +14,7 @@ export interface Inspection extends Omit<RequestStatus, 'revision_id' | 'attempt
   file_version_id: string;
   source: { sha256: string; byte_size: number; media_type: string };
   configuration: Record<string, unknown>;
+  summary_configuration: Record<string, unknown> | null;
   attempts: (Attempt & {
     lease_expires_at: string | null;
     transport_job_id: string | null;

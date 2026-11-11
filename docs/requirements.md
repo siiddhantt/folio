@@ -1,6 +1,6 @@
 # Folio requirements agreement
 
-Status: ingestion accepted November 7; minimal interface and development inspection accepted November 9; automatic-only summary trigger accepted November 10; complete-input summaries, short-source output and revised spending limits accepted by November 11. Later capabilities retain open design choices. Updated: 2026-11-11.
+Status: ingestion accepted November 7; minimal interface and development inspection accepted November 9; automatic-only summary trigger accepted November 10; complete-input summaries, short-source output, revised spending limits and a development configuration console accepted by November 11. Later capabilities retain open design choices. Updated: 2026-11-11.
 
 This agreement separates product outcomes, engineering constraints, proposed behavior, and optional capabilities. A proposed detail is not accepted merely because it appears here.
 
@@ -104,6 +104,14 @@ Every item is accounted for. Deferred means intentionally outside the initial co
 4. Retention/deletion, backpressure, total storage limits and any later private/public hosting boundary.
 
 Authentication, multi-tenancy, hosting, billing features, additional OCR languages and new workload limits are not silently assumed. Initial ingestion bounds are accepted starting policies, not measured capacity guarantees.
+
+The November 11 development-console increment lets the owner save page/file-size
+limits, a parser timeout within the worker's execution window, automatic-summary
+enablement, token limits and reasoning effort. Changes apply to new uploads only;
+each upload preserves ingestion and summary settings together. Model/provider,
+worker limits and spending state are read-only. This is local development tooling,
+not a public administration, model-management or billing feature. See D16 and
+the [console contract](development-console.md).
 
 ## Quality evidence
 

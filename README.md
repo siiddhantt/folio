@@ -13,7 +13,8 @@ durable work, RQ/Redis delivers it, and a Docling worker publishes evidence. Nat
 English OCR are supported; encrypted inputs receive a clear error. Recoverable partial
 content remains available. A minimal React interface supports upload, processing status,
 text/table evidence and the original PDF. An opt-in development view shows real processing
-history. Automatic summaries are implemented with checked persistence, budget and failure
+history; its configuration console saves processing controls for new uploads.
+Automatic summaries are implemented with checked persistence, budget and failure
 contracts. The current configuration completed summaries of three tested PDFs,
 including a 59-page report, without exhausting output. Source review still finds
 citation and qualification weaknesses; no general quality pass is claimed. Generation defaults to disabled.
@@ -37,7 +38,10 @@ inspect the recovered content. No sample documents or simulated workflows are bu
 
 For local inspection, set `FOLIO_DEVELOPMENT_MODE=true` in your existing `.env`, recreate
 services with `docker compose up -d`, and open **Development details** on a document.
-The inspection endpoint defaults to disabled. See the [hands-on walkthrough](docs/interface-walkthrough.md).
+The header control beside the theme toggle opens [development settings](http://localhost:3000/development/settings).
+Saves survive restarts and apply to new uploads, including their later summaries.
+The development routes default to disabled. See the [hands-on walkthrough](docs/interface-walkthrough.md)
+and [console behavior](docs/development-console.md).
 
 The [interactive API documentation](http://localhost:8000/docs) remains available. Upload one PDF using
 `POST /documents`, a fresh `Idempotency-Key` header and the `file` field. Follow the returned
@@ -53,8 +57,9 @@ The smoke check uses only committed synthetic PDFs. [Development and verificatio
 explains the tests, fault exercises and limitations. Copy `.env.example` to `.env` only when
 creating a new configuration; preserve an existing local file. `.env` is ignored by Git.
 
-Automatic summaries require an explicitly enabled `FOLIO_SUMMARY_ENABLED` and a worker-side
-OpenRouter key. When enabled, a newly published usable extraction schedules one saved
+Automatic summaries require an explicitly enabled saved summary setting and a worker-side
+OpenRouter key. `FOLIO_SUMMARY_ENABLED` seeds the setting on first use; subsequent changes
+use the development console. When enabled for an upload, its usable extraction schedules one saved
 summary from all available evidence. Oversized inputs remain readable with a summary
 unavailable reason. Reads never generate, and enabling summaries does not backfill old
 revisions. The persistent allowance is $1 total and $0.40 per document, including retries
@@ -82,6 +87,7 @@ stays charged against the allowance and why a late worker cannot replace a newer
 - [Agent instructions](AGENTS.md): collaboration, verification, and development boundaries.
 - [Skills](docs/skills.md): selected workflows, pinned upstream sources, and licenses.
 - [Configuration](docs/configuration.md): supported environment values and their meaning.
+- [Development console](docs/development-console.md): saved controls for new uploads and reproducible experiments.
 - [Summaries](docs/summaries.md): automatic complete-input behavior, citations, spending and source walkthrough.
 - [Interface contract](docs/interface.md): the small document workflow, design and verification boundaries.
 - [Interface walkthrough](docs/interface-walkthrough.md): follow a real upload through the UI and backend.

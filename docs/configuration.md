@@ -2,6 +2,13 @@
 
 Folio's local `.env` is commentless and excluded from Git. `.env.example` is a safe, commentless template; it contains no usable credential.
 
+The accepted [development console](development-console.md) stores editable
+document/summary controls in PostgreSQL. Environment values seed them once;
+subsequent console saves survive restarts. Credentials, infrastructure, selected
+model/provider, execution supervision and spending allowances remain
+environment-managed. The environment values below are initial defaults for
+editable controls, not a way to overwrite an existing saved configuration.
+
 | Name | Meaning | Current state |
 | --- | --- | --- |
 | `OPENROUTER_API_KEY` | Server-side credential for OpenRouter | Supplied locally; never commit or print its value. |
@@ -16,7 +23,7 @@ never passed to the API, dispatcher or browser bundle. Summaries default to disa
 | --- | --- |
 | `FOLIO_PORT` | `8000`; Compose exposes the API on localhost only. |
 | `FOLIO_WEB_PORT` | `3000`; Compose exposes the web interface on localhost only. |
-| `FOLIO_DEVELOPMENT_MODE` | `false`; gates the development inspection endpoint and UI. Enable explicitly for local inspection; it is not authentication. Safe lifecycle events are recorded whether or not the view is enabled. |
+| `FOLIO_DEVELOPMENT_MODE` | `false`; gates development inspection and configuration routes/UI. Saved controls still apply when hidden. Enable explicitly for local inspection; it is not authentication. Safe lifecycle events are recorded whether or not the view is enabled. |
 | `FOLIO_MAX_UPLOAD_BYTES` | `26214400` (25 MiB); actual file bytes. Total multipart input is bounded before spooling, with 64 KiB overhead allowance. |
 | `FOLIO_MAX_PAGES` | `100`; reject rather than silently truncate. |
 | `FOLIO_PARSER_TIMEOUT_SECONDS` | `240`; Docling's cooperative document timeout. |
@@ -36,8 +43,10 @@ For processes outside Compose, `FOLIO_DATABASE_URL`, `FOLIO_REDIS_URL`,
 Compose deliberately supplies private-network URLs and volume/model paths. Its database
 password is a public local-development default, not a production secret.
 
-Accepted requests freeze their processing settings. Changing `.env` changes newly accepted
-work after recreating services; it does not rewrite old requests. A worker rejects an old
+Accepted requests freeze their processing settings. Console saves apply to new
+uploads, including their eventual summary policy. Changing non-editable `.env`
+settings takes effect after recreating services; it does not rewrite old requests.
+A worker rejects an old
 request if its parser version or current supervision timing is incompatible. Changing parser
 versions requires rebuilding the parser image and deliberately updating the pinned code.
 Keep OCR language/model choices fixed to the verified English configuration for this slice.
@@ -51,7 +60,7 @@ worker receives `OPENROUTER_API_KEY`; no quality pass is implied.
 
 | Setting | Default / meaning |
 | --- | --- |
-| `FOLIO_SUMMARY_ENABLED` | `false`; capture automatic summary policy when usable extraction is published. |
+| `FOLIO_SUMMARY_ENABLED` | `false`; initial automatic-summary switch. New uploads capture the saved policy before processing. |
 | `FOLIO_SUMMARY_MODEL_ID` | `deepseek/deepseek-v4.1-flash-1017`; fixed comparison model. |
 | `FOLIO_SUMMARY_PROVIDER` | `together`; explicitly selected standard route through OpenRouter. The earlier Fireworks route remains supported, without automatic fallback. |
 | `FOLIO_SUMMARY_INPUT_LIMIT_TOKENS` | `64000`; complete evidence, instructions, schema and margin must fit. |
@@ -71,7 +80,9 @@ evidence must fit; there is no truncation, hierarchy, retrieval substitution,
 manual generation or generation on reads. Enabling does not backfill old revisions.
 See the [summary contract and walkthrough](summaries.md).
 
-Runtime settings are captured when usable extraction is published. Effective
+For new uploads, runtime settings and the summary policy are captured together
+before multipart processing. Older requests without a saved summary policy keep
+their legacy publication-time capture. Effective
 input and code versions are recorded at first admission; retries after admission
 must match that manifest. A never-admitted queued run can use newer preparation
 code after a deployment, so the manifest is authoritative for actual provenance.

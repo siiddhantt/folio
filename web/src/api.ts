@@ -13,8 +13,16 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
   const response = await fetch(`/api${path}`, { ...options, signal });
   if (!response.ok) {
     const body = await response.json().catch(() => null);
+    const validation = Array.isArray(body?.detail)
+      ? body.detail
+          .map((issue: { msg?: unknown }) => issue.msg)
+          .filter((msg: unknown) => typeof msg === 'string')
+          .join(' ')
+      : '';
     const message =
-      typeof body?.detail === 'string' ? body.detail : `Request failed (${response.status}).`;
+      typeof body?.detail === 'string'
+        ? body.detail
+        : validation || `Request failed (${response.status}).`;
     throw new ApiError(message, response.status);
   }
   return response.json() as Promise<T>;

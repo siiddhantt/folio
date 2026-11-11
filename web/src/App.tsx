@@ -1,17 +1,24 @@
 import { useEffect, useState } from 'react';
-import { Link, Route, Routes } from 'react-router-dom';
-import { PanelsTopLeft } from 'lucide-react';
+import { Link, Route, Routes, useLocation } from 'react-router-dom';
+import { PanelsTopLeft, SlidersHorizontal } from 'lucide-react';
 import { request, errorMessage } from './api';
 import type { Capabilities } from './types';
 import { ThemeToggle } from './components/ThemeToggle';
 import { Button, Notice } from './components/ui';
 import { UploadPage } from './documents/UploadPage';
 import { DocumentPage } from './documents/DocumentPage';
+import { SettingsPage } from './configuration/SettingsPage';
 
 export function App() {
   const [capabilities, setCapabilities] = useState<Capabilities | null>(null);
   const [error, setError] = useState('');
   const [reload, setReload] = useState(0);
+  const location = useLocation();
+  useEffect(() => {
+    const refresh = () => setReload((value) => value + 1);
+    window.addEventListener('focus', refresh);
+    return () => window.removeEventListener('focus', refresh);
+  }, []);
   useEffect(() => {
     const controller = new AbortController();
     setError('');
@@ -21,7 +28,7 @@ export function App() {
         if (!controller.signal.aborted) setError(errorMessage(e));
       });
     return () => controller.abort();
-  }, [reload]);
+  }, [reload, location.pathname]);
   return (
     <>
       <a className="skip-link" href="#main">
@@ -32,10 +39,23 @@ export function App() {
           <PanelsTopLeft aria-hidden="true" />
           Folio
         </Link>
-        <ThemeToggle />
+        <div className="header-actions">
+          {capabilities?.development_mode && (
+            <Button variant="ghost" size="icon" asChild>
+              <Link
+                to="/development/settings"
+                aria-label="Development settings"
+                title="Development settings"
+              >
+                <SlidersHorizontal aria-hidden="true" />
+              </Link>
+            </Button>
+          )}
+          <ThemeToggle />
+        </div>
       </header>
       <main id="main">
-        {error ? (
+        {error && !capabilities ? (
           <div className="page-message">
             <Notice error>{error} Folio could not load its settings.</Notice>
             <Button variant="outline" onClick={() => setReload(reload + 1)}>
@@ -47,6 +67,12 @@ export function App() {
         ) : (
           <Routes>
             <Route path="/" element={<UploadPage capabilities={capabilities} />} />
+            {capabilities.development_mode && (
+              <Route
+                path="/development/settings"
+                element={<SettingsPage onSaved={() => setReload((value) => value + 1)} />}
+              />
+            )}
             <Route
               path="/documents/:documentId"
               element={<DocumentPage capabilities={capabilities} />}

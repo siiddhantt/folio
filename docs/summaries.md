@@ -42,7 +42,9 @@ risks, dates or recommendations. It uses no document-specific reference answers.
 
 There is no Generate, Regenerate or Resume control. Old revisions without a
 summary intent return `not_scheduled`; enabling summaries does not backfill them.
-Runtime settings are captured when usable extraction is published. The effective
+New uploads capture the summary policy with their ingestion settings before
+multipart processing; console changes cannot change a document still parsing.
+Legacy requests without that saved policy retain publication-time capture. The effective
 input hash and prompt/schema/preparation versions are recorded at first admission;
 a never-admitted queued run can use newer code after a deployment. An admitted
 retry must match that saved manifest rather than silently generating a different

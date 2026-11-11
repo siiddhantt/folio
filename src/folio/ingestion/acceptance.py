@@ -14,11 +14,11 @@ def fingerprint(value) -> str:
     return hashlib.sha256(json.dumps(value, sort_keys=True).encode()).hexdigest()
 
 
-def accept_pdf(database, artifacts, stream, filename, key, settings) -> dict:
-    artifact = artifacts.save_pdf(stream, settings.max_upload_bytes)
+def accept_pdf(database, artifacts, stream, filename, key, configuration) -> dict:
+    artifact = artifacts.save_pdf(stream, configuration.max_upload_bytes)
     identity = fingerprint([artifact.sha256, artifact.byte_size, filename, {}])
     document_id, file_id, request_id, attempt_id = (uuid4() for _ in range(4))
-    config = settings.processing_config()
+    config = configuration.processing
     try:
         with database.transaction() as connection:
             connection.execute(

@@ -63,7 +63,12 @@ def process_attempt(request_id, attempt_id, *, settings=None, parser=None):
             raw = artifacts.save_result(extraction.raw)
             observe(database, claim, "raw_result_saved", duration_seconds=perf_counter() - started)
             operation = "publish"
-            revision_id = publish(database, claim, extraction, raw, capture_policy(settings))
+            policy = (
+                claim.config["summary_policy"]
+                if "summary_policy" in claim.config
+                else capture_policy(settings)
+            )
+            revision_id = publish(database, claim, extraction, raw, policy)
         except ExtractionError as exc:
             diagnostic = None
             try:

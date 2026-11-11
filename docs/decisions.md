@@ -262,6 +262,44 @@ and safe failure locations. Durable state remains authoritative: console output
 is not a second job ledger. Exclude arbitrary exception messages and document
 contents. A tracing collector and additional logging dependencies are deferred.
 
+## D16: Development configuration console
+
+Status: accepted November 11; implemented. Verification and remaining limits are
+recorded in [status](status.md).
+
+The owner selected a development-only console beside the theme control, with
+persisted document/summary controls and changes applying to new uploads only.
+Editable values are page/file-size limits, parser timeout within the running
+worker's limit, automatic summaries, input/output token limits and reasoning
+effort. Model/provider, execution limits and remaining spending allowance are
+read-only. Secrets, infrastructure and budget administration stay outside this
+slice. Worker timing/model selection and changing already accepted work were
+considered and deferred.
+
+Use a typed singleton PostgreSQL record with a revision and update time. Seed
+editable values from environment defaults once; later saves survive restarts.
+Environment still supplies infrastructure and the non-editable execution/model
+settings. Development mode gates the console/routes, not whether saved values
+are used. A save supplies the revision the editor read; a stale save fails
+instead of silently replacing another editor's work.
+
+At the start of an upload, capture one complete configuration. Use that same
+snapshot for multipart and actual-file byte limits, ingestion and its eventual
+summary. Save its revision with the request. Queued/running work and retries
+retain their snapshots; changing controls cannot regenerate existing results.
+Legacy requests without a saved summary policy retain their earlier behavior.
+
+The current worker checks PDF page count before constructing Docling's
+converter. File selection/upload is not a claim that the PDF passed inspection.
+Keep that resource check in the worker; this slice does not add a browser PDF
+parser or promise that a larger page limit fits existing execution/token limits.
+
+Verification extends the accepted HTTP, persistence and worker interfaces:
+saved settings across restart, stale/invalid saves, disabled development routes,
+snapshot consistency, upload bounds and budget preservation. A small real PDF
+demonstrates changed page limits; deterministic model substitutes exercise the
+summary configuration without paid inference.
+
 ## Summary integration host selection — November 11
 
 The accepted comparison remains DeepSeek V4.1 Flash 1017 through OpenRouter,

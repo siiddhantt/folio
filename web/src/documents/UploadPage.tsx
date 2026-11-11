@@ -12,13 +12,15 @@ export function UploadPage({ capabilities }: { capabilities: Capabilities }) {
   const [busy, setBusy] = useState(false);
   const intent = useRef(crypto.randomUUID());
   const controller = useRef<AbortController | null>(null);
+  const sizeError =
+    file && file.size > capabilities.max_upload_bytes
+      ? `Choose a PDF smaller than ${formatBytes(capabilities.max_upload_bytes)}.`
+      : '';
   useEffect(() => () => controller.current?.abort(), []);
   function select(file: File | undefined) {
     intent.current = crypto.randomUUID();
     setError('');
     setFile(file || null);
-    if (file && file.size > capabilities.max_upload_bytes)
-      setError(`Choose a PDF smaller than ${formatBytes(capabilities.max_upload_bytes)}.`);
   }
   async function upload() {
     if (!file || busy || file.size > capabilities.max_upload_bytes) return;
@@ -68,7 +70,7 @@ export function UploadPage({ capabilities }: { capabilities: Capabilities }) {
               onChange={(event) => select(event.target.files?.[0])}
             />
           </label>
-          {error && <Notice error>{error}</Notice>}
+          {(sizeError || error) && <Notice error>{sizeError || error}</Notice>}
           <div className="upload-actions">
             <span className="file-hint">PDF · English OCR</span>
             <Button

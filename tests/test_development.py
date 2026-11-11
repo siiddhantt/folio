@@ -14,16 +14,17 @@ from folio.api import create_app
 from folio.config import Settings
 
 
+@pytest.mark.integration
 def test_capabilities_disclose_limits_and_development_view_is_disabled_by_default():
-    client = TestClient(create_app(Settings(_env_file=None, max_pages=12)))
-    response = client.get("/capabilities")
-    assert response.status_code == 200
-    assert response.json() == {
-        "max_upload_bytes": 26214400,
-        "max_pages": 12,
-        "development_mode": False,
-    }
-    assert client.get(f"/development/ingestion-requests/{uuid4()}").status_code == 404
+    with TestClient(create_app(Settings(_env_file=None, max_pages=12))) as client:
+        response = client.get("/capabilities")
+        assert response.status_code == 200
+        assert response.json() == {
+            "max_upload_bytes": 26214400,
+            "max_pages": 12,
+            "development_mode": False,
+        }
+        assert client.get(f"/development/ingestion-requests/{uuid4()}").status_code == 404
 
 
 @pytest.mark.integration

@@ -3,11 +3,12 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Header, HTTPException, Query, Request
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from starlette.concurrency import run_in_threadpool
-from starlette.datastructures import UploadFile
+from starlette.datastructures import Headers, UploadFile
 from starlette.formparsers import MultiPartException
 
+from folio.configuration.store import capture_upload
 from folio.ingestion.acceptance import accept_pdf
 from folio.ingestion.development import inspect_request
 from folio.ingestion.queries import (
@@ -16,22 +17,36 @@ from folio.ingestion.queries import (
     request_status,
     revision_evidence,
 )
+from folio.storage import UploadError
 
 
 class UploadLimit:
-    def __init__(self, app, limit):
-        self.app, self.limit = app, limit
+    def __init__(self, app, database, settings):
+        self.app, self.database, self.settings = app, database, settings
 
     async def __call__(self, scope, receive, send):
-        if scope["type"] != "http":
+        if scope["type"] != "http" or scope["path"] != "/documents" or scope["method"] != "POST":
             return await self.app(scope, receive, send)
+        try:
+            configuration = await run_in_threadpool(
+                capture_upload,
+                self.database,
+                self.settings,
+                Headers(scope=scope).get("idempotency-key"),
+            )
+        except UploadError as error:
+            return await JSONResponse({"detail": str(error)}, status_code=error.status_code)(
+                scope, receive, send
+            )
+        scope["folio_configuration"] = configuration
+        limit = configuration.max_upload_bytes + 65536
         total, exceeded = 0, False
 
         async def bounded_receive():
             nonlocal total, exceeded
             message = await receive()
             total += len(message.get("body", b""))
-            if total > self.limit:
+            if total > limit:
                 exceeded = True
                 # Starlette closes already-spooled files when multipart parsing raises this.
                 raise MultiPartException("Request body exceeds the upload limit")
@@ -82,7 +97,13 @@ def create_router(database, artifacts, settings):
             if len(file.filename) > 255:
                 raise HTTPException(422, "Filename must be at most 255 characters")
             return await run_in_threadpool(
-                accept_pdf, database, artifacts, file.file, file.filename, idempotency_key, settings
+                accept_pdf,
+                database,
+                artifacts,
+                file.file,
+                file.filename,
+                idempotency_key,
+                request.scope["folio_configuration"],
             )
 
     @router.get("/ingestion-requests/{request_id}")

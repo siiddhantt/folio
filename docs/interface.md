@@ -81,5 +81,9 @@ demonstrated by stopping/restarting local infrastructure with ordinary commands;
 no product feature simulates success or injects fictional failures. Explain why
 acceptance, execution and publication are separate boundaries.
 
-Deferred: document library/listing, chat/summary controls, full tracing collectors,
+The November 11 [development console](development-console.md) adds persisted
+processing controls beside the theme toggle. It applies only to new uploads;
+per-document generation controls remain deferred.
+
+Deferred: document library/listing, chat controls, full tracing collectors,
 live OCR percentages, streaming updates, authentication and public hosting.

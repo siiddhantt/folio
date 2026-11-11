@@ -112,6 +112,19 @@ export function DeveloperPanel({ requestId }: { requestId: string }) {
                     ))}
                   </dl>
                 </details>
+                {data.summary_configuration && (
+                  <details className="configuration-record">
+                    <summary>Summary settings for this request</summary>
+                    <dl className="identity-list">
+                      {Object.entries(data.summary_configuration).map(([name, value]) => (
+                        <div className="configuration-pair" key={name}>
+                          <dt>{name.replaceAll('_', ' ')}</dt>
+                          <dd>{typeof value === 'string' ? value : JSON.stringify(value)}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </details>
+                )}
               </div>
             </div>
           )}

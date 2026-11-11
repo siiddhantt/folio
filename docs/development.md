@@ -125,8 +125,10 @@ visible in the checks; they are not suppressed or represented as test failures.
 
 ## Boundaries and operations
 
-- Keep `FOLIO_SUMMARY_ENABLED=false` when running browser/upload smoke checks
-  against a local stack unless those uploads are deliberately budgeted live
+- Disable automatic summaries in the development console before browser/upload
+  smoke checks against an initialized local stack. `FOLIO_SUMMARY_ENABLED=false`
+  only seeds a fresh settings record; it does not override saved controls.
+  Leave generation enabled only when uploads are deliberately budgeted live
   evaluations. The summary integration tests inject controlled provider responses;
   browser summary tests substitute the summary endpoint, not the server's worker.
 - One worker is the default; `docker compose up -d --scale worker=2 worker` runs two on

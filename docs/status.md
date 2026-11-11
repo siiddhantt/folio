@@ -17,6 +17,38 @@ allowance. This is an evaluation candidate, not a general quality guarantee. Cha
 retrieval and vector storage remain deferred. Configuration uses a commentless
 ignored `.env` and a safe template.
 
+## Development console increment — November 11
+
+Accepted: a local development console with changes applying only to new uploads.
+Seven persisted controls cover pages, file bytes, parser timeout, automatic
+summaries, input/output token limits and reasoning effort. Model/provider,
+execution limits and remaining spending stay read-only. The header control sits
+beside the theme toggle; document inspection exposes the captured settings.
+See the [console walkthrough](development-console.md).
+
+The settings record is seeded from environment defaults once and uses a revision
+check to reject stale saves. Each upload captures ingestion and summary policy
+before reading multipart input. Existing work and idempotent receipts retain
+their behavior; lowering the byte limit still permits verification/replay of an
+already accepted original. Saved controls remain authoritative with development
+mode disabled, while the console and routes disappear.
+
+The implementation passed 80 fast backend checks (16 parser/supervision checks
+excluded), Ruff and frontend type/build/format checks. Independent review fixed
+summary/worker timeout incompatibility and selected-file warnings after a limit
+refresh; an additional regression preserves ingestion with an unsupported
+environment reasoning value. No blocking defect remained in the final source
+review. All 11 browser checks passed against the Docker-served app in 3.1 minutes,
+including save/conflict/upload and selected-file refresh. Existing summary UI
+checks substitute summary responses; they are not model-quality evidence.
+Desktop light/dark and 390-pixel console layouts were inspected without page
+overflow. The rebuilt Docker stack is healthy. A real three-page PDF failed under a saved
+two-page cap and succeeded on a new upload under a three-page cap; the earlier
+request retained its configuration. Baseline controls were restored. No paid
+calls occurred; spending remained $0.223380304 with no held amount. Parser and
+supervision suites were not rerun because their implementation did not change;
+the actual Docker demonstration exercised the parser with captured settings.
+
 ## DeepSeek summary increment — November 11
 
 The owner accepted test-first response bounds and DeepSeek through OpenRouter,
@@ -203,9 +235,11 @@ the workflow, not the semantic accuracy of all extracted content. Native PDF
 rendering varies by browser; page pixels were not validated in the in-app viewer,
 and open/download actions remain available. Normal worker operation was restored.
 
-Finish the accepted DeepSeek comparison and review actual source support before
-beginning grounded answers, chunking, retrieval or indexing. Previous GPT-5.1
-results remain frozen; no document-specific prompt tuning is planned.
+Walk through the saved development controls and actual request snapshots with
+the owner. The bounded DeepSeek comparison is complete, with the source-support
+limitations recorded above; review those results before beginning grounded
+answers, chunking, retrieval or indexing. Previous GPT-5.1 results remain frozen;
+no document-specific prompt tuning is planned.
 Chat/history, global statistics,
 the final document-chat demonstration/video and selected optional capabilities
 remain unfinished; see the [requirements ledger](requirements.md). The current

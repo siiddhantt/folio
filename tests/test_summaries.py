@@ -107,6 +107,7 @@ def summary_document(tmp_path, monkeypatch):
     settings = Settings(
         _env_file=None,
         artifact_root=tmp_path,
+        development_mode=True,
         parser_timeout_seconds=240,
         job_timeout_seconds=300,
         worker_monitor_seconds=10,
@@ -116,7 +117,7 @@ def summary_document(tmp_path, monkeypatch):
     )
     with psycopg.connect(settings.database_url) as connection:
         connection.execute("DELETE FROM summary_budget_account")
-    with TestClient(create_app(settings)) as client:
+    with TestClient(create_app(settings), base_url="http://localhost") as client:
 
         def publish(parser=available_evidence):
             receipt = client.post(
@@ -488,7 +489,16 @@ def test_complete_input_preserves_tables_and_rejects_an_oversized_document(
     assert [location["page_no"] for location in stored_table["locations"]] == [1, 1, 2]
     assert stored_table["locations"][0]["x0"] == 50
 
-    monkeypatch.setenv("FOLIO_SUMMARY_INPUT_LIMIT_TOKENS", "1")
+    controls = client.get("/development/settings").json()
+    response = client.put(
+        "/development/settings",
+        headers={"X-Folio-Development": "1"},
+        json={
+            "revision": controls["revision"],
+            "values": {**controls["values"], "summary_input_limit_tokens": 2049},
+        },
+    )
+    assert response.status_code == 200
     _, oversized = publish(with_table)
     url = f"/revisions/{oversized}/summary"
     before = len(model.calls)
