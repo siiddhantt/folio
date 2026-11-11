@@ -11,10 +11,12 @@ dependencies = [
   "rq==3.0.0",
   "pydantic-settings==2.16.2",
   "python-multipart==0.0.33",
+  "httpx==0.28.1",
+  "tiktoken==0.14.0",
 ]
 
 [dependency-groups]
-dev = ["pytest==9.2.0", "httpx==0.28.1", "ruff==0.17.4", "reportlab==5.1.0", "pypdf==7.0.0"]
+dev = ["pytest==9.2.0", "ruff==0.17.4", "reportlab==5.1.0", "pypdf==7.0.0"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

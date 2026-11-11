@@ -11,6 +11,7 @@ from folio.ingestion.publication import publish
 from folio.ingestion.recovery import finish_failure
 from folio.observability import configure_logging, log_event
 from folio.storage import Artifacts
+from folio.summaries.config import capture_policy
 
 
 def process_attempt(request_id, attempt_id, *, settings=None, parser=None):
@@ -62,7 +63,7 @@ def process_attempt(request_id, attempt_id, *, settings=None, parser=None):
             raw = artifacts.save_result(extraction.raw)
             observe(database, claim, "raw_result_saved", duration_seconds=perf_counter() - started)
             operation = "publish"
-            revision_id = publish(database, claim, extraction, raw)
+            revision_id = publish(database, claim, extraction, raw, capture_policy(settings))
         except ExtractionError as exc:
             diagnostic = None
             try:

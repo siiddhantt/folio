@@ -8,6 +8,7 @@ from folio.database import Database
 from folio.ingestion.routes import UploadLimit, create_router
 from folio.observability import configure_logging
 from folio.storage import Artifacts, UploadError
+from folio.summaries.routes import create_router as create_summary_router
 
 
 def create_app(settings: Settings | None = None):
@@ -43,4 +44,5 @@ def create_app(settings: Settings | None = None):
         }
 
     app.include_router(create_router(database, artifacts, settings))
+    app.include_router(create_summary_router(database))
     return app

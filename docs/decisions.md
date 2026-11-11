@@ -9,7 +9,7 @@ Each discussion should cover: the user's outcome, two or three realistic options
 - Name: Folio.
 - General-purpose document assistance, using fact-checking in reports/documents as initial examples. These examples do not constrain content domains.
 - Public source development; no public-service deployment implied.
-- OpenRouter as the initial API gateway. GPT-6 Luna is a preferred evaluation candidate; the exact runtime model and its quality remain to be validated.
+- OpenRouter as the initial API gateway. The first bounded summary evaluation uses GPT-5 Nano temporarily; its retirement and compatibility limits are recorded in the model notes. Chat and embedding models remain open.
 - PDFs with native text and English OCR, with one selected PDF per conversation. Docling is the selected parser; DOCX and other formats remain deferred.
 - Preserve usable partial extraction with explicit coverage warnings; do not globally block summaries/chat when recoverable evidence exists.
 - Develop locally with Docker Compose. The completed Docling/LiteParse comparison informed parser selection.
@@ -143,7 +143,7 @@ Keep a narrow retrieval operation that accepts a question and permitted document
 
 ## D10: Generation, summaries, and frameworks
 
-Status: OpenRouter selected as the API gateway. Automatic-only summary generation accepted November 10. GPT-6 Luna is a preferred evaluation candidate; model choice, prompts, and orchestration remain open. See [verified model notes](models.md).
+Status: OpenRouter selected as the API gateway. Automatic-only, complete-input summary generation accepted November 10. The owner delegated cost-conscious model selection. After Nano and Mini source reviews exposed citation and qualification failures, GPT-5.1 on the verified OpenAI standard route became the current candidate. It is temporary, retires April 1, 2027, and does not establish general summary accuracy. See [verified model notes](models.md) and [recorded evaluations](summary-evaluation.md).
 
 Options: direct SDK calls with explicit orchestration; a small LlamaIndex integration; a small LangChain integration. Compare source mapping, testability, dependencies, and how much control flow remains visible. No current need for an autonomous-agent runtime.
 
@@ -153,41 +153,42 @@ Discuss generation and embeddings separately. A generation-model change needs qu
 
 Model identity, input/evidence/history budgets, output reservation, and reasoning effort should be adjustable through validated configuration. A model's advertised capacity is a provider limit, not a recommended request size. Do not silently switch model aliases or provider routes during comparisons. See [configuration](configuration.md) for the proposed controls and their constraints.
 
-Agree summary length/focus and insight fields. For long documents compare a bounded full-document prompt with chunk summaries followed by synthesis. Record truncation/coverage; a fluent summary must not imply it read unseen pages.
+The summary format and complete-input path below are selected. Section summaries followed by synthesis remain a later alternative. Record coverage; a fluent summary must not imply it read unseen pages.
 
-Next-increment direction: automatic summaries after usable extraction. The
-proposed contract is a persisted, cited summary from one immutable extraction
-revision before embedding-backed retrieval; its remaining prerequisites are open.
-Summary input should cover the available document within declared limits, using
-section groups and staged synthesis where necessary. Do not treat a few search
-hits as a whole-document summary. Retrieval chunks and summary input groups can
-share source mapping without assuming identical sizes or boundaries. The
-alternative is a question-to-source search slice first, useful if retrieval
-quality is the immediate priority. Neither ordering selects a model, vector
-store, chunk policy or paid-call budget.
+Accepted next increment: automatically create one saved, cited summary from all
+usable evidence in one immutable extraction revision, using one model call per
+attempt. If the complete input exceeds its limit, expose the summary's unavailable
+reason and keep evidence usable; do not truncate or substitute search hits.
+Section-note synthesis, embeddings and retrieval remain deferred.
 
-The [summary proposal](summaries.md) clarifies that source preparation comes
-before generation. Compare a bounded complete-input call against section notes
-and synthesis; embeddings are not required for either. It records input coverage,
+The [summary contract](summaries.md) clarifies that source preparation comes
+before generation. The bounded complete-input call is selected; section notes
+and synthesis remain deferred. Embeddings are not required. It records input coverage,
 durable reuse, uncertain provider outcomes and an illustrative token-cost
 comparison. The owner selected automatic-only generation: no manual generation,
 regeneration or resume controls, and no new generation merely from opening a
-document. Automatic retries remain bounded within the same workflow. Input
-coverage planning, model/route and all numerical budgets remain open. Selecting
-the trigger does not authorize live model spending.
+document. Automatic retries remain bounded within the same workflow. A shared
+token-budget function checks instructions, evidence labels, structured tables,
+output-schema overhead and a margin against the selected model/route limits.
+Summary configuration is separate from future chat and embedding settings.
 
 Accepted output on November 10: a short overview and 3–5 cited key points, with
-known extraction gaps displayed. Points adapt to the source; separate fixed
-findings/dates/risks sections are not required. A smaller complete-input-only
-increment was offered; the owner requested current large-document research before
-choosing its scope. Execution strategy and its small interface remain open. The
-150-page design example does not increase the accepted ingestion page limit.
+known extraction gaps displayed. On November 11 the owner accepted 1–2 points for
+short documents rather than filler. Points adapt to the source; separate fixed
+findings/dates/risks sections are not required. After large-document research and
+cost examples, the owner selected the complete-input-only path for this increment.
+The 150-page design example does not increase the accepted ingestion page limit.
+
+Implementation follows the existing durable PostgreSQL/RQ pattern, with a concrete
+summary feature rather than a generic workflow framework. Publication creates its
+intent atomically with evidence. Result and billing state are separate: a stale
+worker cannot publish, and an uncertain billed call retains its reservation.
 
 A response should distinguish answer, evidence references, and insufficient-evidence/clarification outcomes. Check that references belong to supplied evidence; separately evaluate whether the cited passages support the claims.
 
 ## D11: Quality, tests, and budgets
 
-Status: behavior-first method and the three first-ingestion test interfaces accepted November 7. Synthetic PDF fixtures exercise the HTTP/persistence flow, parser contract and processing/recovery boundary. Completed checks are recorded in [status](status.md); live retrieval/generation quality criteria and budgets remain open.
+Status: behavior-first method and the three first-ingestion test interfaces accepted November 7. Summary checks extend HTTP/persistence and workers with deterministic model substitutes; live quality is separate. The owner initially accepted $1 cumulative and $0.10 per document, including retries and uncertain calls. On November 11 the document cap was raised to $0.40 for a stronger-model comparison after source review found failures; the $1 total is unchanged. Restarting services does not reset consumption. Completed checks are recorded in [status](status.md).
 
 Start with a small manually checked set: ordinary factual questions, an exact identifier, a table, a boundary-spanning answer, missing information, a follow-up, a misleading embedded instruction, and an unreadable/unsupported file.
 
@@ -199,7 +200,7 @@ Agree a maximum live-evaluation spend, a per-document limit, and a response budg
 
 ## D12: API shape, performance, and monitoring
 
-Status: the first-ingestion API and stored attempt measurements were accepted November 7 and implemented. Summary/chat resources, global statistics and broader performance targets remain open.
+Status: the first-ingestion API and stored attempt measurements were accepted November 7 and implemented. The summary slice adds a read-only revision summary resource and usage metadata. Chat resources, global statistics and broader performance targets remain open.
 
 Current routes cover upload, document metadata/original, request/attempt status and paginated revision evidence. Status uses one consistent database snapshot; unique reading order supports evidence pagination. Remaining conversation, insight and aggregate APIs need their own acceptance criteria. API errors should help the caller act.
 
@@ -224,7 +225,7 @@ Select multi-document chat, streaming, caching, tagging, comparison, and other o
 
 ## D14: Configuration and reproducibility
 
-Status: commentless `.env` and configurable model/token budgets accepted. The ingestion loader validates accepted bounds and service settings; exact model/token budgets remain open. See [config.py](../src/folio/config.py). OpenRouter settings are documented for future model-backed work, not consumed by this ingestion slice.
+Status: commentless `.env` and separate summary model/token budgets accepted. The ingestion and summary loaders validate their own settings. See [configuration](configuration.md) for implemented defaults, provider compatibility limits and the persistent spending allowance. Only the worker receives model credentials.
 
 Keep secrets and adjustable deployment settings in the ignored local `.env`, with a commentless safe `.env.example`. Validate values at startup and document them in prose. Pin dependencies separately. Version prompt templates, schemas, and evaluation data in source rather than putting whole prompts into environment variables.
 

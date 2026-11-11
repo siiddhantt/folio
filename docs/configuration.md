@@ -9,8 +9,8 @@ Folio's local `.env` is commentless and excluded from Git. `.env.example` is a s
 
 The ingestion loader is [`Settings`](../src/folio/config.py). It validates positive bounds,
 retry delays and the timeout relationship at startup. Docker Compose forwards only the
-implemented ingestion settings; it does not pass model credentials into these services.
-The OpenRouter values are reserved for the later generation slice and are unused here.
+implemented settings. Only the worker receives the OpenRouter credential; it is
+never passed to the API, dispatcher or browser bundle. Summaries default to disabled.
 
 | Ingestion setting | Default / meaning |
 | --- | --- |
@@ -42,13 +42,59 @@ request if its parser version or current supervision timing is incompatible. Cha
 versions requires rebuilding the parser image and deliberately updating the pinned code.
 Keep OCR language/model choices fixed to the verified English configuration for this slice.
 
-## Model and token controls
+## Automatic summary controls
 
-Configurable model identity and token budgets are accepted requirements. The following names and semantics are a proposed configuration contract; numerical defaults and runtime implementation remain open. They are not added as inert flags to the environment template.
+[`SummarySettings`](../src/folio/summaries/config.py) validates these implemented
+settings. `.env.example` and Compose default generation to disabled. Local
+generation is explicitly enabled for the ongoing budgeted evaluation. Only the
+worker receives `OPENROUTER_API_KEY`; no quality pass is implied.
+
+| Setting | Default / meaning |
+| --- | --- |
+| `FOLIO_SUMMARY_ENABLED` | `false`; capture automatic summary policy when usable extraction is published. |
+| `FOLIO_SUMMARY_MODEL_ID` | `openai/gpt-5.1`; temporary candidate retiring April 1, 2027. |
+| `FOLIO_SUMMARY_PROVIDER` | `openai`; verified standard route only. |
+| `FOLIO_SUMMARY_INPUT_LIMIT_TOKENS` | `64000`; complete evidence, instructions, schema and margin must fit. |
+| `FOLIO_SUMMARY_MAX_OUTPUT_TOKENS` | `4096`; includes reasoning, not a requested visible length. |
+| `FOLIO_SUMMARY_TOKEN_MARGIN` | `2048`; positive allowance for uncertain provider framing. |
+| `FOLIO_SUMMARY_REASONING_EFFORT` | `low`; checked against model metadata. |
+| `FOLIO_SUMMARY_TIMEOUT_SECONDS` | `90`; provider request timeout. |
+| `FOLIO_SUMMARY_MAX_ATTEMPTS` | `2`; initial attempt plus at most one automatic retry. |
+| `FOLIO_SUMMARY_BUDGET_USD` | `1.00`; persistent deployment allowance, not reset by restart. |
+| `FOLIO_SUMMARY_DOCUMENT_BUDGET_USD` | `0.40`; owner-approved allowance including retries and uncertain calls. |
+
+Current prompt/schema/preparation versions are 5/3/3. Preparation preserves
+parent links alongside text/table content, source IDs and page references. Output
+contains an overview and 1–5 cited points, normally 3–5 without padding short
+sources. Stored coverage supplies known extraction gaps. Complete available
+evidence must fit; there is no truncation, hierarchy, retrieval substitution,
+manual generation or generation on reads. Enabling does not backfill old revisions.
+See the [summary contract and walkthrough](summaries.md).
+
+Runtime settings are captured when usable extraction is published. Effective
+input and code versions are recorded at first admission; retries after admission
+must match that manifest. A never-admitted queued run can use newer preparation
+code after a deployment, so the manifest is authoritative for actual provenance.
+
+Token admission uses the selected upstream tokenizer plus a margin. Monetary
+admission reserves the route's full prompt ceiling plus maximum output, not the
+estimated input bill: $0.38096 for the observed GPT-5.1 standard route. Unknown
+outcomes retain that reservation; retries require a fresh one. An uncertain
+call therefore leaves insufficient room for another full reservation under the
+$0.40 document cap, even with two attempts configured. Invalid summary
+configuration cannot prevent usable extraction publication. The client rejects
+missing limits, unsupported parameters and tiered pricing. Configurability does
+not establish compatibility; see [model research and retirement limits](models.md).
+
+## Deferred chat and embedding controls
+
+Chat and embeddings remain deferred. The following names are proposals for later
+conversation work, not settings consumed by summaries or added as inert flags to
+the environment template. Their numerical defaults remain open.
 
 | Proposed setting | Purpose |
 | --- | --- |
-| `AI_MODEL` | Explicit generation model ID. The current evaluation candidate is `openai/gpt-6-luna`; avoid a moving latest alias in a reproducible comparison. |
+| `AI_MODEL` | Explicit later chat model ID, to be selected and evaluated; avoid a moving latest alias. |
 | `AI_INPUT_BUDGET_TOKENS` | Folio's maximum assembled input: instructions, current question, selected history, retrieved evidence, and formatting overhead. |
 | `AI_EVIDENCE_BUDGET_TOKENS` | The part of the input budget available to retrieved passages and their source labels. |
 | `AI_HISTORY_BUDGET_TOKENS` | The part of the input budget available to previous conversation turns. |

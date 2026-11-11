@@ -17,7 +17,7 @@ def main():
 
         migrate(settings.database_url)
     elif args.command == "dispatch":
-        from folio.ingestion.dispatcher import run
+        from folio.summaries.dispatcher import run
 
         run()
     else:

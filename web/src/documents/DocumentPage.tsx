@@ -9,6 +9,7 @@ import type { Capabilities, RequestStatus } from '../types';
 import { useDocument } from './useDocument';
 import { EvidenceReader } from './EvidenceReader';
 import { DeveloperPanel } from '../development/DeveloperPanel';
+import { SummaryPanel } from '../summaries/SummaryPanel';
 
 function processingLabel(status: RequestStatus): string {
   if (status.state === 'succeeded') return 'Evidence available';
@@ -69,26 +70,35 @@ export function DocumentPage({ capabilities }: { capabilities: Capabilities }) {
             <DeveloperPanel key={status.request_id} requestId={status.request_id} />
           )}
           <div className="reading-layout">
-            <section className="evidence-column" aria-label="Extracted evidence">
-              <div className="section-caption">
-                <h2>Content</h2>
-              </div>
-              {status?.revision_id ? (
-                <EvidenceReader
+            <div className="evidence-column">
+              {status?.revision_id && (
+                <SummaryPanel
                   key={status.revision_id}
                   revisionId={status.revision_id}
                   onSourcePage={setSourcePage}
                 />
-              ) : (
-                <div className="waiting-copy">
-                  <p>
-                    {status?.state === 'failed'
-                      ? 'No extracted content.'
-                      : 'Waiting for extracted content…'}
-                  </p>
-                </div>
               )}
-            </section>
+              <section aria-label="Extracted evidence">
+                <div className="section-caption">
+                  <h2>Content</h2>
+                </div>
+                {status?.revision_id ? (
+                  <EvidenceReader
+                    key={status.revision_id}
+                    revisionId={status.revision_id}
+                    onSourcePage={setSourcePage}
+                  />
+                ) : (
+                  <div className="waiting-copy">
+                    <p>
+                      {status?.state === 'failed'
+                        ? 'No extracted content.'
+                        : 'Waiting for extracted content…'}
+                    </p>
+                  </div>
+                )}
+              </section>
+            </div>
             <section className="source-column" aria-label="Original PDF">
               <div className="source-heading">
                 <h2>Original</h2>

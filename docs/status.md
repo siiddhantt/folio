@@ -1,6 +1,6 @@
 # Folio status
 
-Updated: 2026-11-10
+Updated: 2026-11-11
 
 ## Accepted direction
 
@@ -10,7 +10,64 @@ The complete first ingestion slice was accepted on November 7: FastAPI, PostgreS
 
 Docling processes PDF native text and English OCR. Usable partial evidence remains available with known coverage warnings. Encrypted PDFs receive a terminal unsupported-input result. DOCX and other formats are deferred. One selected PDF per conversation remains the later conversation boundary.
 
-OpenRouter is the selected initial model gateway; GPT-6 Luna is an evaluation candidate. Exact generation/embedding models, retrieval strategy, vector storage and live-call budgets remain open. Configuration uses a commentless ignored `.env` and a safe template.
+OpenRouter is the selected initial model gateway. Automatic summaries use
+GPT-5.1 temporarily on its verified OpenAI standard route, with a persistent $1
+deployment and owner-approved $0.40 document allowance. GPT-5.1 retires April 1,
+2027; this is an evaluation candidate, not a validated long-term choice. Chat/embedding models,
+retrieval and vector storage remain deferred. Configuration uses a commentless
+ignored `.env` and a safe template.
+
+## Summary checkpoint — November 11
+
+The automatic complete-input summary slice is implemented and independently
+reviewed, with no blocking software defect found in the final review. Usable
+extraction publication creates its summary intent;
+workers prepare all available evidence, enforce route/token/spending bounds and
+save a cited result. Oversized input stays readable with an unavailable reason.
+There is no hierarchy, manual generation, generation on reads or backfill.
+Prompt/schema/preparation versions are 5/3/3; reasoning is `low`. Output is a short
+overview and 1–5 cited points, normally 3–5 without padding short sources; known
+gaps remain visible. See the [summary contract and walkthrough](summaries.md).
+
+The final fast suite passed 64 checks in 16.19 seconds, using real PostgreSQL
+and deterministic provider clients, not live quality judgments. The checks include
+red-green repairs for parent links and rejection of oversized citation lists.
+Ruff checking/formatting passed for 45 files; frontend types and formatting passed.
+All nine browser behaviors passed across eight initial successes and one rerun:
+a concurrent evaluation upload caused the initial queue-wait timeout. Earlier
+summary UI checks used real uploads with mocked summary states. Aside also
+inspected the final historical summary, source-page-2 navigation, reload and a
+390-pixel layout without page overflow. The unavailable-summary screen retained
+evidence pagination, the original PDF and page navigation. The native PDF preview
+remains tiny at narrow widths. Independent review prompted
+three backend failure-path fixes, a positive margin and metadata/retry corrections.
+
+Local generation is enabled for the ongoing evaluation; the environment template
+remains disabled. Ten completed development calls, including the frozen final
+NIST and unseen-document comparison, are recorded in the
+[evaluation report](summary-evaluation.md). Nano failed citation support. Mini
+with prompt 3/minimal improved source selection but remained verbose and weakened
+optional wording. Mini prompt 4/low still failed some citation/qualification
+checks; the mixed PDF passed narrow source review. The first GPT-5.1 trial improved
+support but still packed too many ideas and references into points. Prompt 5
+requests one central idea per point; schema 3 permits at most eight references
+per statement. The frozen final report run exhausted its output allowance and
+published no summary. Its second attempt ended with `SUMMARY_DOCUMENT_BUDGET`
+before another paid call because a full reservation would exceed the allowance.
+The unseen two-page historical document produced a saved summary. Independent
+source review found three precision errors: plural relocations instead of one
+move, troops placed at the cabin rather than the field, and original-log reuse
+generalized across three renovations when the source established it only for
+the 1930s. Two points also exceeded the 35-word prompt guidance. No substantive
+parser loss explained these errors. All ten calls cost $0.20725480, matching PostgreSQL and
+OpenRouter usage metadata, with no uncertain billing. The current
+configuration has not established a large-document or general quality pass.
+
+The earlier $0.3761728 Luna reservation omitted automatic cache writes. Its
+verified all-write bound is $0.4683728, exceeding the accepted $0.40 cap, so no
+Luna call was made. The compatible GPT-5.1 route reserves $0.38096 instead.
+These are development observations, not a human-approved held-out benchmark.
+The source walkthrough and the unresolved quality boundary remain owner review items.
 
 Accepted November 9: a minimal upload/document-detail/source interface with React,
 TypeScript and Vite; light/dark typography; reusable feature components; and a
@@ -30,7 +87,7 @@ still a draft. This does not settle the later summary/retrieval decisions.
 - The application now accepts PDFs, persists originals and work, dispatches and claims attempts, publishes page/table evidence, and exposes status, original bytes and paginated evidence. Recovery, retry and stale-owner checks exist in [src/folio](../src/folio).
 - The combined Docker suite passed 27 checks: 12 against real PostgreSQL/Redis and 15 offline parser checks, including real text, tables, OCR, damaged/empty/encrypted PDFs and controlled export failures. The opt-in supervision probe was separate. These are bounded contract checks, not general parser-accuracy claims.
 - The full Docker HTTP smoke passed for five PDFs: text, table, mixed text/OCR, damaged and encrypted. It also checked idempotent replay and original-byte retrieval. The encrypted case ended in the expected terminal error; a no-content page retained an unknown-cause warning.
-- OpenRouter authentication was checked using read-only metadata. No inference call, model-quality result or application spending budget is implied.
+- The initial OpenRouter authentication check used read-only metadata. Live generation and its explicit spending boundary were added in the summary increment recorded above.
 
 ## Operational verification
 
@@ -106,23 +163,22 @@ the workflow, not the semantic accuracy of all extracted content. Native PDF
 rendering varies by browser; page pixels were not validated in the in-app viewer,
 and open/download actions remain available. Normal worker operation was restored.
 
-Then agree summary/insight behavior and grounded-answer policy, followed by chunking, retrieval, indexing and model budgets. Summaries, chat/history, global statistics, the final document-chat demonstration/video and selected optional capabilities remain unfinished; see the [requirements ledger](requirements.md).
-
-Current discussion: [a size-aware summary slice](summaries.md), with source-linked
-preparation before model calls, complete-input or hierarchical processing, and
-saved-result reuse. The owner selected automatic-only generation on November 10:
-no manual generate/regenerate/resume controls and no generation on page reload.
-The accepted output is a short overview and 3–5 cited key points with known gaps.
-The rest remains a proposal. Input strategy, provider route, quality thresholds
-and spending limits are not selected. No summary or
-embedding implementation or live model evaluation has begun.
+Review the known summary failures with the owner and select the next model/configuration
+decision before beginning grounded answers, chunking, retrieval or indexing.
+No further tuning or paid calls are planned for this frozen checkpoint.
+Chat/history, global statistics,
+the final document-chat demonstration/video and selected optional capabilities
+remain unfinished; see the [requirements ledger](requirements.md). The current
+[summary contract](summaries.md) supersedes the earlier size-aware proposal with
+automatic complete-input-only processing and bounded spending.
 
 November 10 primary-source research compared Docling grouping, LlamaIndex
-synthesizers/workflow persistence and LangGraph checkpoints. The current proposal
+synthesizers/workflow persistence and LangGraph checkpoints. That earlier proposal
 is complete input when suitable, otherwise saved section notes plus synthesis,
 with one small planner and existing RQ/PostgreSQL execution. This avoids treating
 a recursive synthesis helper as durable recovery. Framework adoption and exact
-limits remain decisions; the large-input example does not raise the page cap.
+limits were not selected then; hierarchy remains deferred and the large-input
+example does not raise the page cap.
 
 Noisy/rotated/handwritten OCR needs representative quality evidence. Hosting, authentication, admission backpressure, storage quotas, deletion and online artifact cleanup remain separate work. Local container persistence is not a backup or production-readiness claim.
 

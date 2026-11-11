@@ -6,7 +6,7 @@ from folio.ingestion.events import record_event
 from folio.ingestion.ownership import locked_attempt, owns
 
 
-def publish(database, claim, extraction, raw_artifact):
+def publish(database, claim, extraction, raw_artifact, summary_policy=None):
     if not extraction.pages or not extraction.elements:
         raise ValueError("Cannot publish evidence without pages and source elements")
     pages = {page.page_no for page in extraction.pages}
@@ -111,4 +111,8 @@ def publish(database, claim, extraction, raw_artifact):
             (revision_id, request["document_id"], request["id"]),
         )
         record_event(conn, request["id"], attempt["id"], "published", revision_id=str(revision_id))
+        if summary_policy is not None:
+            from folio.summaries.lifecycle import insert_intent
+
+            insert_intent(conn, revision_id, request["document_id"], summary_policy)
         return revision_id

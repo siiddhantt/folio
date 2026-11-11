@@ -4,6 +4,7 @@ import { Button, Notice } from '../components/ui';
 import type { Evidence, SourceElement } from '../types';
 import { CoverageNotice } from './CoverageNotice';
 import { EvidenceTable } from './EvidenceTable';
+import { SourcePages } from './SourcePages';
 
 export function EvidenceReader({
   revisionId,
@@ -81,18 +82,7 @@ function EvidenceBlock({
   return (
     <article className="evidence-block">
       <div className="evidence-meta">
-        <span>
-          {pages.map((page) => (
-            <button
-              key={page}
-              className="page-link"
-              onClick={() => onSourcePage(page)}
-              aria-label={`View page ${page} in original`}
-            >
-              {page}
-            </button>
-          ))}
-        </span>
+        <SourcePages pages={pages} onSourcePage={onSourcePage} />
       </div>
       {element.table_data ? (
         <EvidenceTable element={element} />

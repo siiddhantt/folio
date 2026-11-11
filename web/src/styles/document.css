@@ -37,6 +37,21 @@
 .evidence-column {
   min-width: 0;
 }
+.summary-panel {
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 20px;
+  margin-bottom: 20px;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+.summary-points {
+  list-style: disc;
+  padding-left: 20px;
+  margin-top: 12px;
+}
+.summary-points li + li {
+  margin-top: 8px;
+}
 .section-caption,
 .source-heading {
   display: flex;
@@ -121,7 +136,7 @@
   color: var(--muted);
   font-size: 13px;
 }
-.evidence-column > [data-slot='button'] {
+.evidence-column section > [data-slot='button'] {
   margin-top: 24px;
 }
 .coverage-gap {

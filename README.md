@@ -3,7 +3,8 @@
 Understand your documents. Check the evidence.
 
 Folio turns uploaded PDFs into inspectable evidence: text, tables, physical-page references,
-and visible extraction limitations. Summaries and grounded conversations will build on that evidence.
+and visible extraction limitations. Automatic cited summaries build on that evidence;
+grounded conversations remain a later slice.
 
 ## Current state
 
@@ -12,7 +13,10 @@ durable work, RQ/Redis delivers it, and a Docling worker publishes evidence. Nat
 English OCR are supported; encrypted inputs receive a clear error. Recoverable partial
 content remains available. A minimal React interface supports upload, processing status,
 text/table evidence and the original PDF. An opt-in development view shows real processing
-history. Summaries, chat and embeddings are not implemented.
+history. Automatic summaries are implemented with checked persistence, budget and failure
+contracts. The current configuration did not finish a summary of a tested 59-page report;
+large-input capacity and model quality remain unresolved. Generation defaults to disabled.
+Chat and embeddings remain deferred.
 
 ## Run locally
 
@@ -48,6 +52,27 @@ The smoke check uses only committed synthetic PDFs. [Development and verificatio
 explains the tests, fault exercises and limitations. Copy `.env.example` to `.env` only when
 creating a new configuration; preserve an existing local file. `.env` is ignored by Git.
 
+Automatic summaries require an explicitly enabled `FOLIO_SUMMARY_ENABLED` and a worker-side
+OpenRouter key. When enabled, a newly published usable extraction schedules one saved
+summary from all available evidence. Oversized inputs remain readable with a summary
+unavailable reason. Reads never generate, and enabling summaries does not backfill old
+revisions. The persistent allowance is $1 total and $0.40 per document, including retries
+and uncertain calls. See [summary behavior and source reading order](docs/summaries.md)
+and [configuration](docs/configuration.md) before enabling generation. Local evaluation
+is enabled with GPT-5.1, `low` reasoning and prompt/schema/preparation versions
+5/3/3; the template remains disabled. [Recorded live calls](docs/summary-evaluation.md)
+exposed citation and wording failures. The frozen final large-report run exhausted its
+output allowance and published no summary. The unseen historical summary was broadly
+grounded but blurred one relocation, the troops' location and the scope of log reuse.
+Summary quality remains unresolved; no general quality pass is claimed.
+
+For the summary source walkthrough, read [preparation.py](src/folio/summaries/preparation.py),
+[processing.py](src/folio/summaries/processing.py), then [lifecycle.py](src/folio/summaries/lifecycle.py)
+alongside the [summary contract](docs/summaries.md). Preparation decides what evidence
+the model sees; processing coordinates the call; lifecycle owns reservations and saved
+outcomes. As a reading exercise, trace a provider timeout: identify why its reservation
+stays charged against the allowance and why a late worker cannot replace a newer result.
+
 ## Design and development
 
 - [Requirements](docs/requirements.md): user outcomes, acceptance criteria, constraints, and deferred capabilities.
@@ -56,6 +81,7 @@ creating a new configuration; preserve an existing local file. `.env` is ignored
 - [Agent instructions](AGENTS.md): collaboration, verification, and development boundaries.
 - [Skills](docs/skills.md): selected workflows, pinned upstream sources, and licenses.
 - [Configuration](docs/configuration.md): supported environment values and their meaning.
+- [Summaries](docs/summaries.md): automatic complete-input behavior, citations, spending and source walkthrough.
 - [Interface contract](docs/interface.md): the small document workflow, design and verification boundaries.
 - [Interface walkthrough](docs/interface-walkthrough.md): follow a real upload through the UI and backend.
 - [Ingestion investigation](docs/ingestion.md): parser research, local comparison, and source-preservation findings.
