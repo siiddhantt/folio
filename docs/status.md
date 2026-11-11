@@ -19,6 +19,13 @@ ignored `.env` and a safe template.
 
 ## Summary checkpoint — November 11
 
+Autoloops/DeepSeek-V4.1 Flash was subsequently investigated as a lower-cost
+candidate. Its published inference offer is suitable in principle, but hosted
+limits, schema/billing details and text-LLM data terms remain unverified. The
+[research notes](models.md#autoloops--deepseek-investigation--november-11) record
+the proposed comparison and minimal adapter boundary. No application settings,
+credentials or paid usage changed; a provider switch is not yet selected.
+
 The automatic complete-input summary slice is implemented and independently
 reviewed, with no blocking software defect found in the final review. Usable
 extraction publication creates its summary intent;

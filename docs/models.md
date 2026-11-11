@@ -7,6 +7,59 @@ is the current summary evaluation candidate. The owner delegated a cost-consciou
 choice; this does not establish model quality. Summary, later chat and embeddings
 have separate configuration and evaluation needs.
 
+## Autoloops / DeepSeek investigation — November 11
+
+Status: research only, not a selected gateway change or an evaluated Folio model.
+No credentials, inference calls or runtime configuration were used or changed.
+
+[Autoloops' model page](https://autoloops.ai/models/deepseek-v4.1-flash) advertises
+`deepseek-v4.1-flash`, an OpenAI-compatible API at `https://api.autoloops.ai/v1`,
+1M context, US hosting and rates of $0.30 input, $1.20 output and $0.006 cached
+input per million tokens. It also advertises JSON-schema output and thinking-off
+operation. These are published capabilities, not verified response contracts.
+Autoloops hosts general text generation despite its voice-agent emphasis.
+
+The public page does not establish the host's separate input/output limits,
+strict-schema request syntax/subset, reasoning controls/defaults, billed usage
+fields, cache-write or long-context charges, or exact model snapshot. Its
+documentation link leads to the upstream model card; the console required login.
+The homepage promotes a discount without clarifying its duration on the model
+page. Do not assume a discount, cache hit or unlisted charge is accounted for.
+The [privacy policy](https://autoloops.ai/privacy) and
+[terms](https://autoloops.ai/terms) inspected describe speech transcription;
+their audio/transcript promises do not establish text-LLM data handling. Use
+public or synthetic evidence for an initial comparison.
+
+DeepSeek's official [October update](https://api-docs.deepseek.com/news/news261017)
+and [model listing](https://api-docs.deepseek.com/quick_start/pricing) identify
+V4.1-Flash-1017 behind its own `deepseek-flash` alias. Autoloops' alias does not
+prove the same snapshot. The upstream [JSON guide](https://api-docs.deepseek.com/guides/json_mode)
+documents JSON-object mode; strict tool arguments are separate. Neither proves
+Autoloops' strict response-schema behavior. Upstream [thinking controls](https://api-docs.deepseek.com/guides/thinking_mode)
+and [output limits](https://api-docs.deepseek.com/api/create-chat-completion/)
+must not be copied to a different host without verification.
+
+The official [encoding implementation](https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017/blob/main/encoding/README.md)
+and [tokenizer integration](https://github.com/deepseek-ai/deepseek-recipe/blob/main/docs/tokenizer.md)
+provide a model-specific counting path, subject to matching the host's rendering.
+Folio cannot silently use its GPT tokenizer for DeepSeek. The prior NIST failure
+was output exhaustion; a larger advertised input context does not fix it.
+
+At advertised uncached rates, an illustrative 50,000 input + 2,000 billed output
+tokens costs $0.0174; 200,000 + 4,000 costs $0.0648. These are arithmetic examples,
+not observed Folio token counts or bills, and exclude retries and unverified fees.
+Reasoning, if billed as output, must be included in those output counts.
+
+Recommendation: a bounded direct-Autoloops comparison on public evidence after
+checking the host contract. Keep the generic prompt and source-support review.
+The existing `profile()`/`generate()` boundary can accommodate one concrete
+adapter; provider-specific counting, request controls and billing need deliberate
+implementation. A URL/model environment change alone is insufficient. Missing
+monetary usage must remain unknown unless documented billed counters and frozen
+rates support explicitly labeled derived costs. The durable queue, evidence,
+citation validation, ownership and cumulative budget should remain shared.
+No switch, new abstraction framework, budget reset or production claim is implied.
+
 ## Current summary candidate
 
 GPT-5.1 with `low` reasoning, prompt 5/schema 3/preparation 3 is the current
