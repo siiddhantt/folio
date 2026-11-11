@@ -165,6 +165,63 @@ def test_automatic_summary_is_saved_and_reused_without_another_call(summary_docu
 
 
 @pytest.mark.integration
+def test_summary_attempt_history_retains_safe_failures_and_uncertain_billing(summary_document):
+    from folio.summaries.processing import process_summary
+
+    settings, client, publish = summary_document
+    receipt, revision_id = publish()
+    url = f"/development/ingestion-requests/{receipt['request_id']}"
+    pending = client.get(url).json()["summary"]
+    assert pending["state"] == "pending"
+    assert pending["attempts"] == []
+
+    class Interrupted(Model):
+        def generate(self, messages, schema):
+            attempt = client.get(url).json()["summary"]["attempts"][0]
+            assert attempt["state"] == "running"
+            assert attempt["invoked_at"]
+            assert attempt["billing_state"] == "reserved"
+            assert attempt["failure_diagnostics"] is None
+            raise OSError(5, "PRIVATE_DOCUMENT_SENTINEL", "/private/source.pdf")
+
+    process_summary(pending["id"], settings=settings, client=Interrupted())
+    with TestClient(create_app(settings)) as restarted:
+        details = restarted.get(url).json()["summary"]
+        assert details["state"] == "pending"
+        failed = details["attempts"][0]
+        assert failed["state"] == "failed"
+        assert failed["started_at"] <= failed["invoked_at"] <= failed["finished_at"]
+        assert failed["error_code"] == "SUMMARY_PROCESSING_ERROR"
+        assert failed["billing_state"] == "unknown"
+        assert failed["reserved_usd"] > 0
+        assert failed["cost_usd"] is None
+        diagnostic = failed["failure_diagnostics"]
+        assert diagnostic["error_type"] == "OSError"
+        assert diagnostic["errno"] == 5
+        assert 1 <= len(diagnostic["error_frames"]) <= 8
+        assert "PRIVATE_DOCUMENT_SENTINEL" not in json.dumps(details)
+        assert "/private/source.pdf" not in json.dumps(details)
+
+    process_summary(pending["id"], settings=settings, client=Model())
+    saved = client.get(url).json()["summary"]
+    assert saved["state"] == "ready"
+    assert [attempt["state"] for attempt in saved["attempts"]] == ["failed", "succeeded"]
+    assert saved["attempts"][0] == failed
+    completed = saved["attempts"][1]
+    assert completed["billing_state"] == "known"
+    assert completed["cost_usd"] == pytest.approx(0.000045)
+    assert completed["usage"]["finish_reason"] == "stop"
+    assert completed["usage"]["completion_tokens"] == 100
+    assert completed["response_id"] == "fixture-response"
+    assert completed["failure_diagnostics"] is None
+    history = client.get("/ingestion-requests").json()["items"]
+    assert len(history) == 1
+    assert history[0]["extraction_state"] == "succeeded"
+    assert history[0]["summary_state"] == "ready"
+    assert history[0]["revision_id"] == revision_id
+
+
+@pytest.mark.integration
 def test_deepseek_summary_flows_from_prepared_evidence_to_saved_citations(
     summary_document, monkeypatch
 ):
@@ -367,6 +424,10 @@ def test_output_limit_is_terminal_and_preserves_usage_and_evidence(summary_docum
     assert len(model.calls) == 1
     assert client.get(receipt["status_url"]).json()["state"] == "succeeded"
     assert client.get(f"/revisions/{revision_id}/evidence").status_code == 200
+    listed = client.get("/ingestion-requests").json()["items"][0]
+    assert listed["extraction_state"] == "succeeded"
+    assert listed["summary_state"] == "failed"
+    assert listed["summary_error_code"] == "SUMMARY_OUTPUT_LIMIT"
 
 
 @pytest.mark.integration
@@ -556,15 +617,18 @@ def test_concurrent_work_cannot_reuse_reserved_global_or_document_allowance(
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("budget,expected", [("0.04", "ready"), ("0.02", "unavailable")])
+@pytest.mark.parametrize(
+    "budget,expected,late_failure",
+    [("0.04", "ready", False), ("0.02", "unavailable", False), ("0.04", "ready", True)],
+)
 def test_expired_invocation_keeps_its_reservation_and_rejects_late_publication(
-    summary_document, monkeypatch, budget, expected
+    summary_document, monkeypatch, budget, expected, late_failure
 ):
     from folio.summaries.processing import process_summary
 
     settings, client, publish = summary_document
     monkeypatch.setenv("FOLIO_SUMMARY_BUDGET_USD", budget)
-    _, revision_id = publish()
+    receipt, revision_id = publish()
     url = f"/revisions/{revision_id}/summary"
     run_id = client.get(url).json()["run_id"]
     started, release = Event(), Event()
@@ -574,6 +638,8 @@ def test_expired_invocation_keeps_its_reservation_and_rejects_late_publication(
             result = super().generate(messages, schema)
             started.set()
             assert release.wait(15)
+            if late_failure:
+                raise OSError("Late failure after ownership expired")
             return result
 
     old_model, new_model = Held(), Model()
@@ -599,10 +665,14 @@ def test_expired_invocation_keeps_its_reservation_and_rejects_late_publication(
             assert len(new_model.calls) == (1 if expected == "ready" else 0)
         finally:
             release.set()
-        assert old.result(timeout=5)["outcome"] == "superseded"
+        assert old.result(timeout=5)["outcome"] == ("failed" if late_failure else "superseded")
     assert client.get(url).json() == completed
     assert Decimal(completed["usage"]["uncertain_cost_usd"]) == Decimal("0.0152384")
     assert completed["usage"]["cost_usd"] is None
+    inspected = client.get(f"/development/ingestion-requests/{receipt['request_id']}").json()
+    expired = inspected["summary"]["attempts"][0]
+    assert expired["error_code"] == "SUMMARY_WORKER_LOST"
+    assert expired["failure_diagnostics"] is None
 
 
 @pytest.mark.integration

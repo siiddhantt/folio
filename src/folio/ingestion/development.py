@@ -1,3 +1,5 @@
+from folio.summaries.inspection import inspect_summary
+
 SAFE_CONFIGURATION = (
     "parser",
     "parser_version",
@@ -57,7 +59,8 @@ def inspect_request(database, request_id, after_id=0, limit=100):
             """SELECT id,attempt_no,state,available_at,started_at,finished_at,lease_expires_at,
             error_code,error_detail,parser_status,retryable,metrics,transport_job_id,
             last_dispatched_at,next_dispatch_at,dispatch_count,terminal_delivery_failures,
-            dispatch_error FROM processing_attempts WHERE request_id=%s ORDER BY attempt_no""",
+            dispatch_error,failure_diagnostics FROM processing_attempts
+            WHERE request_id=%s ORDER BY attempt_no""",
             (request_id,),
         ).fetchall()
         events = connection.execute(
@@ -67,4 +70,5 @@ def inspect_request(database, request_id, after_id=0, limit=100):
         ).fetchall()
         request["events"] = events[:limit]
         request["next_after_id"] = events[limit - 1]["id"] if len(events) > limit else None
+        request["summary"] = inspect_summary(connection, request_id)
         return request

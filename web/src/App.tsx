@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, Route, Routes, useLocation } from 'react-router-dom';
-import { PanelsTopLeft, SlidersHorizontal } from 'lucide-react';
+import { History, PanelsTopLeft, SlidersHorizontal } from 'lucide-react';
 import { request, errorMessage } from './api';
 import type { Capabilities } from './types';
 import { ThemeToggle } from './components/ThemeToggle';
@@ -8,6 +8,7 @@ import { Button, Notice } from './components/ui';
 import { UploadPage } from './documents/UploadPage';
 import { DocumentPage } from './documents/DocumentPage';
 import { SettingsPage } from './configuration/SettingsPage';
+import { RunsPage } from './runs/RunsPage';
 
 export function App() {
   const [capabilities, setCapabilities] = useState<Capabilities | null>(null);
@@ -40,6 +41,12 @@ export function App() {
           Folio
         </Link>
         <div className="header-actions">
+          <Button variant="ghost" size="sm" asChild>
+            <Link to="/runs" aria-current={location.pathname === '/runs' ? 'page' : undefined}>
+              <History aria-hidden="true" />
+              Runs
+            </Link>
+          </Button>
           {capabilities?.development_mode && (
             <Button variant="ghost" size="icon" asChild>
               <Link
@@ -67,6 +74,7 @@ export function App() {
         ) : (
           <Routes>
             <Route path="/" element={<UploadPage capabilities={capabilities} />} />
+            <Route path="/runs" element={<RunsPage />} />
             {capabilities.development_mode && (
               <Route
                 path="/development/settings"

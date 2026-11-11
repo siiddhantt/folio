@@ -1,6 +1,6 @@
 # Folio requirements agreement
 
-Status: ingestion accepted November 7; minimal interface and development inspection accepted November 9; automatic-only summary trigger accepted November 10; complete-input summaries, short-source output, revised spending limits and a development configuration console accepted by November 11. Later capabilities retain open design choices. Updated: 2026-11-11.
+Status: ingestion accepted November 7; minimal interface and development inspection accepted November 9; automatic-only summary trigger accepted November 10; complete-input summaries, short-source output, revised spending limits and a development configuration console accepted by November 11; separate processing-run history and saved failure details accepted November 12. Later capabilities retain open design choices. Updated: 2026-11-12.
 
 This agreement separates product outcomes, engineering constraints, proposed behavior, and optional capabilities. A proposed detail is not accepted merely because it appears here.
 
@@ -33,7 +33,7 @@ The first journey is verified through APIs. On November 9, a minimal upload/deta
 | --- | --- | --- |
 | R01 | Intelligent upload and ingestion | First slice implemented: bounded PDF upload, immutable original and metadata, idempotent acceptance and useful invalid-input errors. Initial limits are 25 MiB and 100 physical pages; encrypted PDFs are terminal unsupported inputs. |
 | R02 | Asynchronous document processing | Extraction runs through RQ/Redis with durable PostgreSQL intent and bounded recovery. Analysis and indexing will join the asynchronous workflow when implemented. Request/attempt history remains inspectable. |
-| R03 | Document retrieval | First slice exposes metadata, processing state, original bytes and paginated revision evidence. Library listing/filtering and later search remain open. |
+| R03 | Document retrieval | Metadata, processing state, original bytes and paginated revision evidence are available. A bounded Runs page lists accepted uploads and reopens documents separately from future conversations. Filtering and content search remain open. |
 | R04 | Summaries and AI insights | Automatically prepare a saved short overview and normally 3–5 cited key points (1–2 for short documents) from complete available evidence in one call per attempt, showing known gaps. No manual generation controls or generation on reads. Inputs over the selected limit remain readable with a summary-unavailable reason. Spending allowance: $1 cumulative and $0.40 per document, including retries/uncertain calls; the owner raised the document limit on November 11 after live quality failures. |
 | R05 | Start a chat session | Create a conversation bound to one selected PDF. Follow-up questions and evidence retrieval preserve that document scope. |
 | R06 | Ask a grounded question | Retrieve evidence and produce a contextual answer with resolvable citations. Agree the behavior for absent, conflicting, or ambiguous evidence. |
@@ -83,7 +83,7 @@ Every item is accounted for. Deferred means intentionally outside the initial co
 | O04 | Automatic categorization and tagging | Deferred; avoid imposing a domain-specific taxonomy. |
 | O05 | Sentiment analysis or deeper key-insight extraction | Deferred extension; define basic insights under R04 independently. |
 | O06 | Comparative analysis across documents | Deferred; requires multi-document provenance and conflict handling. |
-| O07 | Simple frontend/dashboard | Minimal upload/detail/evidence/source UI accepted November 9 with React, TypeScript and Vite. Light/dark appearance included; library and richer dashboard deferred. |
+| O07 | Simple frontend/dashboard | Minimal upload/detail/evidence/source UI accepted November 9 with React, TypeScript and Vite. Light/dark appearance included; a separate Runs page accepted November 12. A richer dashboard remains deferred. |
 | O08 | Real-time processing/chat updates | Deferred; polling is an initial option. SSE/WebSocket require a stated need. |
 | O09 | Smart embedding/response caching | Deferred; define invalidation and scope keys before enabling. |
 | O10 | Vector database integration | Proposed pgvector starting option; Qdrant and other services remain alternatives. |

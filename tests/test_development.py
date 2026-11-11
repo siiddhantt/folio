@@ -46,6 +46,8 @@ def test_development_view_has_durable_acceptance_without_private_configuration(t
         assert "models_path" not in details["configuration"]
         assert "storage_key" not in details["source"]
         assert "claim_token" not in details["attempts"][0]
+        assert details["attempts"][0]["failure_diagnostics"] is None
+        assert details["summary"] is None
         assert details["authorized_attempt_id"] == details["attempts"][0]["id"]
         assert [event["name"] for event in details["events"]] == ["accepted"]
         assert details["events"][0]["occurred_at"]
@@ -129,13 +131,19 @@ def test_failed_parse_has_no_completion_and_records_authorized_retry(tmp_path):
         attempt = client.get(receipt["status_url"]).json()["authorized_attempt_id"]
 
         def interrupted(path, config):
-            raise OSError("Controlled external interruption")
+            raise OSError(5, "Controlled external interruption")
 
         process_attempt(receipt["request_id"], attempt, settings=settings, parser=interrupted)
         details = client.get(url).json()
         assert details["state"] == "open"
         assert [a["state"] for a in details["attempts"]] == ["failed", "pending"]
         assert details["authorized_attempt_id"] == details["attempts"][1]["id"]
+        assert details["attempts"][0]["failure_diagnostics"]["errno"] == 5
+        assert details["attempts"][1]["failure_diagnostics"] is None
+        history = client.get("/ingestion-requests").json()["items"]
+        assert len(history) == 1
+        assert history[0]["extraction_state"] == "open"
+        assert history[0]["current_attempt_state"] == "pending"
         assert "parse_completed" not in [e["name"] for e in details["events"]]
         failure, retry = details["events"][-2:]
         assert failure["name"] == "attempt_failed"
@@ -212,6 +220,11 @@ def test_unavailable_event_storage_does_not_erase_known_failure(tmp_path):
             assert status["attempts"][0]["error_code"] == "NO_USABLE_CONTENT"
             details = client.get(f"/development/ingestion-requests/{receipt['request_id']}").json()
             assert details["events"] == []
+            assert details["attempts"][0]["failure_diagnostics"]["error_type"] == "ExtractionError"
+            history = client.get("/ingestion-requests").json()["items"]
+            assert history[0]["extraction_state"] == "failed"
+            assert history[0]["extraction_error_code"] == "NO_USABLE_CONTENT"
+            assert history[0]["summary_state"] == "not_scheduled"
     finally:
         with psycopg.connect(settings.database_url) as connection:
             connection.execute("ALTER TABLE processing_events DROP CONSTRAINT unavailable_in_test")
@@ -313,7 +326,7 @@ process_attempt(sys.argv[1], sys.argv[2], parser=unreadable)
 
 @pytest.mark.integration
 def test_unexpected_processing_error_is_diagnosable_without_private_exception_text(tmp_path):
-    settings = Settings(artifact_root=tmp_path)
+    settings = Settings(artifact_root=tmp_path, development_mode=True)
     private_text = "PRIVATE_DOCUMENT_SENTINEL password=private-value"
     with TestClient(create_app(settings)) as client:
         receipt = client.post(
@@ -352,6 +365,19 @@ process_attempt(sys.argv[1], sys.argv[2], parser=broken_parser)
         assert status["revision_id"] is None
         assert status["attempts"][0]["error_code"] == "PROCESSING_ERROR"
         assert status["attempts"][0]["error_detail"] == "ValueError"
+    with TestClient(create_app(settings)) as restarted:
+        saved = restarted.get(f"/development/ingestion-requests/{receipt['request_id']}").json()[
+            "attempts"
+        ][0]["failure_diagnostics"]
+        assert saved["error_type"] == "ValueError"
+        assert 1 <= len(saved["error_frames"]) <= 8
+        for frame in saved["error_frames"]:
+            assert set(frame) == {"module", "function", "line"}
+            assert frame["module"].startswith("folio.")
+            assert frame["function"] and frame["line"] > 0
+        assert set(saved) == {"error_type", "error_frames"}
+        assert "PRIVATE_DOCUMENT_SENTINEL" not in json.dumps(saved)
+        assert str(tmp_path) not in json.dumps(saved)
     assert "PRIVATE_DOCUMENT_SENTINEL" not in worker.stderr
     assert "private-value" not in worker.stderr
     assert "private-report.pdf" not in worker.stderr

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ApiError, errorMessage, request } from '../api';
 import type { Attempt, RequestStatus } from '../types';
+import type { FailureDiagnostics, SummaryInspection } from './types';
 
 export interface ProcessingEvent {
   id: number;
@@ -15,7 +16,9 @@ export interface Inspection extends Omit<RequestStatus, 'revision_id' | 'attempt
   source: { sha256: string; byte_size: number; media_type: string };
   configuration: Record<string, unknown>;
   summary_configuration: Record<string, unknown> | null;
+  summary: SummaryInspection | null;
   attempts: (Attempt & {
+    failure_diagnostics: FailureDiagnostics | null;
     lease_expires_at: string | null;
     transport_job_id: string | null;
     last_dispatched_at: string | null;
@@ -49,7 +52,12 @@ export function useInspection(requestId: string, open: boolean) {
         after = snapshot.events.at(-1)?.id ?? after;
         setData({ ...snapshot, events: [...events.values()] });
         setError('');
-        if (snapshot.next_after_id !== null || snapshot.state === 'open')
+        if (
+          snapshot.next_after_id !== null ||
+          snapshot.state === 'open' ||
+          snapshot.summary?.state === 'pending' ||
+          snapshot.summary?.state === 'running'
+        )
           timer = setTimeout(poll, snapshot.next_after_id !== null ? 0 : 2000);
       } catch (e) {
         if (controller.signal.aborted) return;

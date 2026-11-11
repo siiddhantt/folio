@@ -2,10 +2,26 @@ import json
 import logging
 import os
 import traceback
+from collections import deque
 from datetime import UTC, datetime
 
 logger = logging.getLogger(__name__)
 _component = "unknown"
+
+
+def exception_details(error):
+    """Bounded code identities only; never exception messages, locals or paths."""
+    frames = deque(maxlen=8)
+    for frame, line in traceback.walk_tb(error.__traceback__):
+        module = frame.f_globals.get("__name__", "")
+        if isinstance(module, str) and module.startswith("folio."):
+            frames.append(
+                {"module": module[:200], "function": frame.f_code.co_name[:120], "line": line}
+            )
+    details = {"error_type": type(error).__name__[:120], "error_frames": list(frames)}
+    if isinstance(error, OSError) and isinstance(error.errno, int):
+        details["errno"] = error.errno
+    return details
 
 
 def configure_logging(component):
@@ -24,18 +40,7 @@ def log_event(name, request_id=None, attempt_id=None, *, level=logging.INFO, err
     """Emit application-owned metadata; telemetry must not interrupt processing."""
     try:
         if error is not None:
-            # Only application code identities; never messages, locals, source text or paths.
-            frames = []
-            for frame, line in traceback.walk_tb(error.__traceback__):
-                module = frame.f_globals.get("__name__", "")
-                if module.startswith("folio."):
-                    frames.append(
-                        {"module": module, "function": frame.f_code.co_name, "line": line}
-                    )
-            details["error_type"] = type(error).__name__
-            details["error_frames"] = frames[-8:]
-            if isinstance(error, OSError) and isinstance(error.errno, int):
-                details["errno"] = error.errno
+            details.update(exception_details(error))
         logger.log(
             level,
             "%s",

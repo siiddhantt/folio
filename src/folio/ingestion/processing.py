@@ -91,7 +91,14 @@ def process_attempt(request_id, attempt_id, *, settings=None, parser=None):
                     operation="save_diagnostic",
                 )
             finish_failure(
-                database, claim, exc.code, exc.message, exc.retryable, exc.parser_status, diagnostic
+                database,
+                claim,
+                exc.code,
+                exc.message,
+                exc.retryable,
+                exc.parser_status,
+                diagnostic,
+                error=exc,
             )
             return {"outcome": "failed", "code": exc.code}
         except psycopg.OperationalError as exc:
@@ -103,7 +110,9 @@ def process_attempt(request_id, attempt_id, *, settings=None, parser=None):
                 error=exc,
                 operation=operation,
             )
-            finish_failure(database, claim, "DATABASE_INTERRUPTED", type(exc).__name__, True)
+            finish_failure(
+                database, claim, "DATABASE_INTERRUPTED", type(exc).__name__, True, error=exc
+            )
             return {"outcome": "failed", "code": "DATABASE_INTERRUPTED"}
         except OSError as exc:
             resource_limit = exc.errno in (errno.ENOSPC, errno.ENOMEM, errno.EDQUOT)
@@ -116,7 +125,9 @@ def process_attempt(request_id, attempt_id, *, settings=None, parser=None):
                 error=exc,
                 operation=operation,
             )
-            finish_failure(database, claim, code, "Storage operation failed", not resource_limit)
+            finish_failure(
+                database, claim, code, "Storage operation failed", not resource_limit, error=exc
+            )
             return {"outcome": "failed", "code": code}
         except Exception as exc:
             code = "RESOURCE_EXHAUSTED" if isinstance(exc, MemoryError) else "PROCESSING_ERROR"
@@ -128,7 +139,7 @@ def process_attempt(request_id, attempt_id, *, settings=None, parser=None):
                 error=exc,
                 operation=operation,
             )
-            finish_failure(database, claim, code, type(exc).__name__, False)
+            finish_failure(database, claim, code, type(exc).__name__, False, error=exc)
             return {"outcome": "failed", "code": code}
         log_event(
             "processing_finished",

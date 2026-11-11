@@ -26,7 +26,12 @@ def recovered_text(path, config):
 
 @pytest.fixture
 def accepted(tmp_path):
-    settings = Settings(artifact_root=tmp_path, retry_delays_seconds=(0,), retry_jitter_seconds=0)
+    settings = Settings(
+        artifact_root=tmp_path,
+        development_mode=True,
+        retry_delays_seconds=(0,),
+        retry_jitter_seconds=0,
+    )
     with TestClient(create_app(settings)) as client:
         receipt = client.post(
             "/documents",
@@ -129,6 +134,9 @@ def test_expired_worker_cannot_overwrite_recovered_result(accepted, late_failure
     assert final["state"] == "succeeded"
     assert final["revision_id"] == result["revision_id"]
     assert [a["state"] for a in final["attempts"]] == ["failed", "succeeded"]
+    inspected = client.get(f"/development/ingestion-requests/{receipt['request_id']}").json()
+    assert inspected["attempts"][0]["error_code"] == "WORKER_LOST"
+    assert all(attempt["failure_diagnostics"] is None for attempt in inspected["attempts"])
 
 
 @pytest.mark.integration

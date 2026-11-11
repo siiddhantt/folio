@@ -5,6 +5,8 @@ from uuid import uuid4
 
 from psycopg.types.json import Jsonb
 
+from folio.observability import exception_details
+
 
 @dataclass(frozen=True)
 class Claim:
@@ -127,6 +129,7 @@ def finish(
     code=None,
     state="failed",
     retryable=False,
+    error=None,
 ):
     # A failed metadata request has not established a generation specification to freeze.
     if retryable and manifest is not None and "reservation_usd" not in manifest:
@@ -154,7 +157,7 @@ def finish(
         )
         connection.execute(
             """UPDATE summary_attempts SET finished_at=clock_timestamp(),error_code=%s,
-            usage=%s,response_id=%s,cost_usd=%s,
+            usage=%s,response_id=%s,cost_usd=%s,failure_diagnostics=%s,
             billing_state=CASE WHEN %s::numeric IS NOT NULL THEN 'known'
                 WHEN invoked_at IS NOT NULL THEN 'unknown' ELSE billing_state END WHERE id=%s""",
             (
@@ -162,6 +165,7 @@ def finish(
                 Jsonb(usage),
                 generation.response_id if generation else None,
                 generation.cost_usd if generation else None,
+                Jsonb(exception_details(error)) if error is not None else None,
                 generation.cost_usd if generation else None,
                 claim.attempt_id,
             ),

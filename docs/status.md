@@ -1,6 +1,6 @@
 # Folio status
 
-Updated: 2026-11-11
+Updated: 2026-11-12
 
 ## Accepted direction
 
@@ -16,6 +16,46 @@ OpenRouter, with a persistent $1 deployment and owner-approved $0.40 document
 allowance. This is an evaluation candidate, not a general quality guarantee. Chat/embedding models,
 retrieval and vector storage remain deferred. Configuration uses a commentless
 ignored `.env` and a safe template.
+
+## Processing runs increment — November 12
+
+The accepted header Runs link opens a separate processing-history page, leaving
+the home screen and future conversations distinct. It lists one accepted upload
+per row with separate extraction and summary outcomes. Cursor pagination bounds
+the query and display; new uploads do not shift older pages. Retries stay inside
+their request. History works outside development mode; detailed Activity remains
+gated. No generic run table, reprocessing or backfill was introduced.
+
+Activity now shows individual summary attempts, invocation/timing, reported token
+usage and known versus uncertain billing. It keeps polling while summary work
+continues after extraction. Ingestion and summary failures save bounded safe
+exception metadata in the existing ownership-checked transaction. The shared
+extractor excludes arbitrary messages, document contents, locals and paths.
+Earlier failures without this metadata remain absent, rather than reconstructed.
+See D18 and the [processing-runs walkthrough](processing-runs.md).
+
+Test-first changes passed 54 focused backend checks with real isolated
+PostgreSQL/Redis and controlled model responses. All 18 browser checks passed
+against the Docker-served stack in 4.8 minutes. Independent review caught a null
+reasoning-token value crashing Activity; the browser check reproduced it before
+the guard/type fix and passed afterward. Final review found no remaining
+actionable defect. Ruff, frontend types/format/build and diff checks passed.
+
+The full Docker runtime was rebuilt and verified with five real PDF smoke inputs:
+text, tables, mixed OCR, damaged and encrypted, including replay/original bytes.
+An actual encrypted-PDF failure exposed saved exception locations in Activity;
+those exact diagnostics survived API and worker container restarts. Desktop
+light/dark and 390/320-pixel history layouts were inspected with no horizontal
+overflow or page errors. Aside's browser initialization timed out, so rendered
+inspection used existing Playwright tooling. Software checks paused automatic
+summaries, then restored the saved preference. No new paid call occurred and the
+prior cumulative spending allowance was preserved. Parser/supervision unit
+suites were not rerun; the real smoke exercised the unchanged parsing path.
+
+Current model research proposes hosted OpenAI small embeddings and a Luna answer
+comparison, with a local embedding alternative. Tokenizer/pricing compatibility,
+chunking, retrieval storage and answer behavior are still decisions to settle;
+none was implemented or enabled by this increment. See [model notes](models.md).
 
 ## Reading workspace increment — November 11
 

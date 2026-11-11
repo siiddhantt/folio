@@ -16,6 +16,9 @@ text/table evidence and a locally rendered original page. Content and Original
 sit side by side on desktop and use tabs on mobile. Compact coverage notices
 retain known gaps without overwhelming the reading view. An opt-in Activity panel
 shows real processing history; the configuration console saves controls for new uploads.
+**Runs** in the header reopens accepted uploads, with extraction and summary
+outcomes kept separate. Activity retains safe failure locations and individual
+summary attempts, including uncertain billing.
 Automatic summaries are implemented with checked persistence, budget and failure
 contracts. The current configuration completed summaries of three tested PDFs,
 including a 59-page report, without exhausting output. Source review still finds
@@ -35,7 +38,8 @@ The first parser build downloads model assets and can take several minutes. Proc
 those bundled assets locally; no inference API key is needed for ingestion.
 
 Open [Folio](http://localhost:3000) and choose your PDF. The document URL survives reload;
-processing continues after leaving the page. Light/dark themes and source-page links help
+processing continues after leaving the page. Use **Runs** to return to previous uploads.
+Light/dark themes and source-page links help
 inspect the recovered content. No sample documents or simulated workflows are built in.
 
 For local inspection, set `FOLIO_DEVELOPMENT_MODE=true` in your existing `.env`, recreate
@@ -90,6 +94,7 @@ stays charged against the allowance and why a late worker cannot replace a newer
 - [Skills](docs/skills.md): selected workflows, pinned upstream sources, and licenses.
 - [Configuration](docs/configuration.md): supported environment values and their meaning.
 - [Development console](docs/development-console.md): saved controls for new uploads and reproducible experiments.
+- [Processing runs](docs/processing-runs.md): history, saved failures and the query/index walkthrough.
 - [Summaries](docs/summaries.md): automatic complete-input behavior, citations, spending and source walkthrough.
 - [Interface contract](docs/interface.md): the small document workflow, design and verification boundaries.
 - [Interface walkthrough](docs/interface-walkthrough.md): follow a real upload through the UI and backend.

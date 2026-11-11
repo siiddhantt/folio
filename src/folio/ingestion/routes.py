@@ -11,6 +11,7 @@ from starlette.formparsers import MultiPartException
 from folio.configuration.store import capture_upload
 from folio.ingestion.acceptance import accept_pdf
 from folio.ingestion.development import inspect_request
+from folio.ingestion.history import list_requests
 from folio.ingestion.queries import (
     document_metadata,
     original_file,
@@ -105,6 +106,15 @@ def create_router(database, artifacts, settings):
                 idempotency_key,
                 request.scope["folio_configuration"],
             )
+
+    @router.get("/ingestion-requests")
+    def history(
+        limit: int = Query(25, ge=1, le=100), before: str | None = Query(None, max_length=512)
+    ):
+        try:
+            return list_requests(database, limit, before)
+        except ValueError as error:
+            raise HTTPException(422, str(error)) from error
 
     @router.get("/ingestion-requests/{request_id}")
     def status(request_id: UUID):

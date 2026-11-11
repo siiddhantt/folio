@@ -359,6 +359,38 @@ proven by that example. Citation correctness is reviewed separately. See the
 [model notes](models.md) for primary-source limitations and the
 [evaluation record](summary-evaluation.md) for actual results.
 
+## D18: Processing runs and saved failure details
+
+Status: accepted November 12; implemented and checked. See [status](status.md).
+
+The header has a Runs link to a separate processing-history page. Keep this apart
+from the home screen and future conversation history. One row represents an
+accepted upload; worker retries remain attempts inside it. Show extraction and
+summary outcomes separately, and reopen the existing document reader and Activity
+drawer. Read-only history remains available with development mode disabled;
+execution details retain the development gate.
+
+Reuse existing request, attempt, revision and summary records. List bounded pages
+ordered by acceptance time and request ID, using a cursor and one matching index.
+Do not add a generic runs table, filters, reprocessing or a new versioning flow.
+The current document link is valid for one accepted upload per document; future
+replacement/reprocessing must preserve the selected request's file and revision.
+
+Persist the same small safe exception metadata used in logs on failed ingestion
+and summary attempts: error type, optional errno and up to eight Folio module,
+function and line locations. Exclude arbitrary messages, source text, local
+variables and filesystem paths. Save failure diagnostics with the existing
+ownership-checked failure update. Older failures without this metadata cannot be
+reconstructed. Recorded attempt state is authoritative when best-effort events
+are missing. Show individual summary timings, token usage and known versus
+uncertain billing; do not invent internal stage timestamps or show unknown cost
+as zero.
+
+Verification extends the accepted HTTP, worker/PostgreSQL and browser interfaces:
+stable pagination and idempotent identity, separate outcomes, restart-safe failure
+details, development gating, and reopening a real uploaded PDF. No paid model
+call is needed. Retrieval models and chunking remain proposals.
+
 ## Slice order and remaining decisions
 
 November 11 planning recommendation, not an accepted implementation contract:

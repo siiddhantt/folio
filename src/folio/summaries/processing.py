@@ -49,7 +49,14 @@ def process_summary(run_id, *, settings=None, client=None):
             generation = client.generate(messages, schema)
             result = validate_output(generation, manifest["source_ids"])
         except BudgetError as error:
-            finish(database, claim, manifest=manifest, code=error.code, state="unavailable")
+            finish(
+                database,
+                claim,
+                manifest=manifest,
+                code=error.code,
+                state="unavailable",
+                error=error,
+            )
             return {"outcome": "unavailable", "code": error.code}
         except ProviderError as error:
             unavailable = error.code in {
@@ -65,18 +72,20 @@ def process_summary(run_id, *, settings=None, client=None):
                 code=error.code,
                 state=state,
                 retryable=error.retryable,
+                error=error,
             )
             return {"outcome": state, "code": error.code}
-        except OutputLimit:
+        except OutputLimit as error:
             finish(
                 database,
                 claim,
                 manifest=manifest,
                 generation=generation,
                 code="SUMMARY_OUTPUT_LIMIT",
+                error=error,
             )
             return {"outcome": "failed", "code": "SUMMARY_OUTPUT_LIMIT"}
-        except InvalidOutput:
+        except InvalidOutput as error:
             finish(
                 database,
                 claim,
@@ -84,6 +93,7 @@ def process_summary(run_id, *, settings=None, client=None):
                 generation=generation,
                 code="INVALID_OUTPUT",
                 retryable=True,
+                error=error,
             )
             return {"outcome": "failed", "code": "INVALID_OUTPUT"}
         except Exception as error:
@@ -102,6 +112,7 @@ def process_summary(run_id, *, settings=None, client=None):
                 generation=generation,
                 code="SUMMARY_PROCESSING_ERROR",
                 retryable=isinstance(error, (OSError, psycopg.OperationalError)),
+                error=error,
             )
             return {"outcome": "failed", "code": "SUMMARY_PROCESSING_ERROR"}
         published = finish(database, claim, result=result, manifest=manifest, generation=generation)

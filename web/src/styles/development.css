@@ -146,6 +146,20 @@
 .configuration-pair {
   display: contents;
 }
+.summary-execution {
+  margin-top: 24px;
+}
+.summary-execution h3 {
+  margin-bottom: 12px;
+}
+.failure-locations {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.failure-locations li + li {
+  margin-top: 8px;
+}
 @media (max-width: 480px) {
   .developer-content {
     padding: 20px;

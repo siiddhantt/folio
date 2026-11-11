@@ -140,7 +140,7 @@ test('an unsupported encrypted PDF has a useful failure and its original remains
   await page
     .getByRole('region', { name: 'Development inspection' })
     .locator('summary')
-    .filter({ hasText: 'Attempt 1' })
+    .filter({ hasText: 'Extraction attempt 1' })
     .click();
   await expect(page.getByRole('region', { name: 'Development inspection' })).toContainText(
     'ENCRYPTED_PDF',

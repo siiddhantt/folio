@@ -1,27 +1,41 @@
 import random
 from uuid import uuid4
 
+from psycopg.types.json import Jsonb
+
 from folio.ingestion.events import record_event
 from folio.ingestion.ownership import authorized, locked_attempt, owns
-from folio.observability import log_event
+from folio.observability import exception_details, log_event
 
 
-def finish_failure(database, claim, code, message, retryable, parser_status=None, diagnostic=None):
+def finish_failure(
+    database, claim, code, message, retryable, parser_status=None, diagnostic=None, *, error=None
+):
     with locked_attempt(database, claim.request_id, claim.attempt_id) as (conn, request, attempt):
         if not owns(conn, request, attempt, claim.token):
             return False
-        _record_failure(conn, request, attempt, code, message, retryable, parser_status, diagnostic)
+        _record_failure(
+            conn, request, attempt, code, message, retryable, parser_status, diagnostic, error
+        )
     log_event("attempt_failed", claim.request_id, claim.attempt_id, error_code=code)
     return True
 
 
 def _record_failure(
-    conn, request, attempt, code, message, retryable, parser_status=None, diagnostic=None
+    conn,
+    request,
+    attempt,
+    code,
+    message,
+    retryable,
+    parser_status=None,
+    diagnostic=None,
+    error=None,
 ):
     conn.execute(
         """UPDATE processing_attempts SET state='failed',finished_at=clock_timestamp(),
         error_code=%s,error_detail=%s,retryable=%s,parser_status=%s,
-        diagnostic_storage_key=%s,diagnostic_sha256=%s WHERE id=%s""",
+        diagnostic_storage_key=%s,diagnostic_sha256=%s,failure_diagnostics=%s WHERE id=%s""",
         (
             code,
             message[:500],
@@ -29,6 +43,7 @@ def _record_failure(
             parser_status,
             diagnostic.key if diagnostic else None,
             diagnostic.sha256 if diagnostic else None,
+            Jsonb(exception_details(error)) if error is not None else None,
             attempt["id"],
         ),
     )

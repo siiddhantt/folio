@@ -4,6 +4,8 @@ import { Activity, X } from 'lucide-react';
 import { Button, formatBytes, Notice } from '../components/ui';
 import { EventTimeline, localTime } from './EventTimeline';
 import { useInspection } from './useInspection';
+import { FailureDetails } from './FailureDetails';
+import { SummaryAttempts } from './SummaryAttempts';
 
 export function DeveloperPanel({ requestId }: { requestId: string }) {
   const [open, setOpen] = useState(false);
@@ -43,7 +45,7 @@ export function DeveloperPanel({ requestId }: { requestId: string }) {
             {data && (
               <div className="inspection-grid">
                 <div>
-                  <h3>Events</h3>
+                  <h3>Extraction events</h3>
                   {data.events.length ? (
                     <EventTimeline events={data.events} attempts={data.attempts} />
                   ) : (
@@ -76,7 +78,7 @@ export function DeveloperPanel({ requestId }: { requestId: string }) {
                   {data.attempts.map((attempt) => (
                     <details className="attempt-record" key={attempt.id}>
                       <summary>
-                        Attempt {attempt.attempt_no}
+                        Extraction attempt {attempt.attempt_no}
                         <span className={`attempt-state ${attempt.state}`}>{attempt.state}</span>
                       </summary>
                       <dl className="identity-list">
@@ -114,9 +116,29 @@ export function DeveloperPanel({ requestId }: { requestId: string }) {
                             </dd>
                           </>
                         )}
+                        {attempt.retryable !== null && (
+                          <>
+                            <dt>Retryable</dt>
+                            <dd>{attempt.retryable ? 'Yes' : 'No'}</dd>
+                          </>
+                        )}
+                        {attempt.parser_status && (
+                          <>
+                            <dt>Parser status</dt>
+                            <dd>{attempt.parser_status}</dd>
+                          </>
+                        )}
+                        {Object.entries(attempt.metrics ?? {}).map(([name, value]) => (
+                          <div className="configuration-pair" key={name}>
+                            <dt>{name.replaceAll('_', ' ')}</dt>
+                            <dd>{value}</dd>
+                          </div>
+                        ))}
+                        <FailureDetails diagnostics={attempt.failure_diagnostics} />
                       </dl>
                     </details>
                   ))}
+                  <SummaryAttempts summary={data.summary} />
                   <details className="configuration-record">
                     <summary>Configuration for this request</summary>
                     <dl className="identity-list">

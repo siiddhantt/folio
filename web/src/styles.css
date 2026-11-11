@@ -3,6 +3,7 @@
 @import './styles/pdf.css';
 @import './styles/development.css';
 @import './styles/configuration.css';
+@import './styles/runs.css';
 
 @custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
 
