@@ -1,11 +1,94 @@
 # Folio model selection notes
 
-Checked: November 11, 2026. These are observed provider specifications, not Folio quality measurements. Recheck availability, routes, prices, and capabilities before a live evaluation.
+Latest check: November 12, 2026; earlier investigations retain their dates below. These are observed provider specifications, not Folio quality measurements. Recheck availability, routes, prices, and capabilities before a live evaluation.
 
 OpenRouter is the accepted API gateway. DeepSeek V4.1 Flash 1017 is the current
 summary evaluation candidate. The owner delegated a cost-conscious
 choice; this does not establish model quality. Summary, later chat and embeddings
 have separate configuration and evaluation needs.
+
+## Retrieval and answer candidates — November 12
+
+Status: proposed, not accepted or implemented. This research used primary
+documentation and public catalogs; no inference, configuration change or paid
+evaluation occurred. Chunking, retrieval storage and answer behavior remain open
+in decisions D07–D10. OpenRouter remains the accepted gateway.
+
+### Embeddings
+
+| Candidate | Verified input limit / dimensions | Tradeoff |
+| --- | --- | --- |
+| OpenRouter `openai/text-embedding-3-small` | 8,192 tokens per input; 1,536 dimensions by default | $0.02 per million input tokens; simple hosted boundary, but requires external processing, network recovery and cost accounting. |
+| Local `intfloat/e5-small-v2` | 512 tokens; 384 dimensions; English only | No per-call API charge, but model assets, local resource use and tighter splitting limits. CPU latency is unmeasured. |
+
+Recommendation: evaluate OpenAI small at its default dimensions first. Embedding
+100,000 tokens would cost about $0.002 at the listed rate, including any repeated
+headings or overlap in the actual submitted text. OpenRouter documents a
+`dimensions` request field, but the observed OpenAI route metadata does not list
+supported parameters; dimension forwarding has not been tested. Default
+dimensions avoid depending on that unverified behavior. OpenAI's direct API also
+documents separate batch limits; do not infer gateway batch behavior from the
+per-input ceiling. Sources: [embedding catalog](https://openrouter.ai/api/v1/embeddings/models),
+[gateway request contract](https://openrouter.ai/docs/api/api-reference/embeddings/create-embeddings),
+[OpenAI embedding guide](https://developers.openai.com/api/docs/guides/embeddings).
+
+E5 requires `query: ` and `passage: ` prefixes and normalized vectors. Its model
+card warns that longer text truncates, so Folio would need an explicit bound
+including prefixes and headings. It is an older checkpoint usable through
+maintained SentenceTransformers runtimes, not evidence of ongoing weight updates
+or measured Folio quality. Choose it if local processing matters enough to justify
+that operational work. Changing embedding models or dimensions requires a
+compatible index rebuild. Sources: [E5 model card](https://huggingface.co/intfloat/e5-small-v2),
+[runtime options](https://sbert.net/docs/sentence_transformer/usage/efficiency.html).
+
+### Answer generation
+
+Prices are USD per million tokens on the named standard routes, not every route
+behind the same model ID. These candidates have not been compared on Folio chat.
+
+| OpenRouter ID / route | Input / output | Context / maximum output |
+| --- | --- | --- |
+| `openai/gpt-6-luna` / `openai` | $0.10 / $0.50 at short-input rates | 1,050,000 / 128,000; separate prompt cap 922,000 |
+| `anthropic/claude-haiku-5.5` / `anthropic` | $0.10 / $0.50 through 100,000 input tokens | 1,000,000 / 128,000; no numeric separate prompt cap listed |
+| `deepseek/deepseek-v4.1-flash-1017` / `together` | $0.30 / $1.20 | 1,048,576 / 943,718; no numeric separate prompt cap listed |
+
+Luna's cache-read/write rates are $0.01/$0.125. Above 272,000 input tokens,
+full-request rates become $0.20 input, $0.75 output, $0.02 cache read and $0.25
+cache write. The gateway encodes a threshold at 272,000; verify exact boundary
+behavior before approaching it. Haiku's short-input cache read, five-minute write
+and one-hour write rates are $0.01, $0.125 and $0.20; above 100,000 input tokens,
+rates become $0.50 input, $2.50 output, $0.05 read, $0.625 five-minute write and
+$1.00 one-hour write. Cache-write prices replace ordinary input prices for those
+tokens. Do not reserve spending using only headline input/output rates.
+
+Together's DeepSeek cache-read rate remains $0.006. The catalog's lower DeepSeek
+headline rate, $0.006 input / $0.50 output, belongs to `relace/fp4`, with $0.005
+cache reads. That is a different host and quantization, not a price reduction for
+the selected Together route. No route substitution is selected. Sources:
+[Luna official specifications](https://developers.openai.com/api/docs/models/gpt-6-luna),
+[Luna routes](https://openrouter.ai/api/v1/models/openai/gpt-6-luna/endpoints),
+[Haiku specifications](https://platform.claude.com/docs/en/models/haiku-5-5/overview),
+[Haiku routes](https://openrouter.ai/api/v1/models/anthropic/claude-haiku-5.5/endpoints),
+[DeepSeek routes](https://openrouter.ai/api/v1/models/deepseek/deepseek-v4.1-flash-1017/endpoints).
+
+Recommendation: Luna is the first cost-conscious answer candidate; Haiku is a
+reasonable comparison if source support disappoints. This needs deliberate
+compatibility work before live evaluation. The installed `tiktoken` 0.14.0 maps
+OpenAI small to `cl100k_base` but does not map `gpt-6-luna`; an exact Luna counting
+path and Haiku counting integration remain unverified. The current flat-price
+guard does not support these tiered/cache-write profiles. Changing only the model
+environment value is insufficient. Smaller retrieved inputs could reduce cost,
+but cannot substitute for citation and qualification review: the retained
+[DeepSeek summary results](summary-evaluation.md) still contain those errors.
+
+Docling's existing HybridChunker is the proposed alternative to a simple
+paragraph baseline, not a selected policy. It includes context in token counting,
+but embedding text does not retain all provenance. Split fragments may still
+refer to whole source items, and large tables can split. Verify pinned-version
+behavior and map chunk references to Folio evidence before claiming exact source
+locations. See [Docling's contract](https://docling-project.github.io/docling/concepts/chunking/)
+and D07. Human-reviewed questions must separately check retrieval of the right
+passages and whether answers preserve their facts and qualifications.
 
 ## Autoloops / DeepSeek investigation — November 11
 
@@ -140,9 +223,9 @@ Start with a small complete response, inspect local validation and reported
 reasoning usage, and retain local validation for every result. One accepted
 response cannot prove universal schema-keyword enforcement or factual quality.
 
-## Current summary candidate
+## Earlier GPT-5.1 summary comparison
 
-GPT-5.1 with `low` reasoning, prompt 5/schema 3/preparation 3 is the current
+GPT-5.1 with `low` reasoning, prompt 5/schema 3/preparation 3 was an earlier
 budgeted comparison. Its frozen final 59-page report run exhausted the 4,096-token
 output allowance and published no summary. The unseen historical summary was broadly
 grounded but introduced three precision errors: plural relocations, troops placed
