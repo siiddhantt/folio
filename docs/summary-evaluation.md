@@ -26,7 +26,7 @@ from the evaluation documents.
   source remains outside tracked files. Its source checklist is agent-proposed,
   not a human-approved reference. Its first Folio run uses the frozen final prompt.
 
-All runs use Docling 2.148.0, native PDF text plus English OCR; tiktoken 0.14.0;
+The first ten runs use Docling 2.148.0, native PDF text plus English OCR; tiktoken 0.14.0;
 OpenRouter's verified OpenAI standard route; maximum 4,096 output tokens and a
 64,000 input estimate including a 2,048-token margin. No fallback, retrieval or
 truncation. Prompt 2–3 runs use `minimal` reasoning and schema/preparation 2/2.
@@ -108,7 +108,7 @@ read-only authentication metadata; remaining provider allowance was $0.79274520.
 No cost was unknown or still reserved. Reloading the actual summary did not
 create a new run or charge.
 
-## Frozen final candidate
+## Earlier frozen GPT-5.1 candidate
 
 The 59-page report parsed in 102.58 seconds. Its complete input fitted admission,
 but the provider exhausted 4,096 output tokens. Read-only generation metadata
@@ -154,6 +154,82 @@ a general quality pass or a successful final large-report result. Keep those
 limitations visible at the owner checkpoint. Review actual claims and choose the
 next model/configuration experiment before expanding into retrieval; do not turn
 these document-specific corrections into production prompt rules.
+
+## DeepSeek completion comparison
+
+The owner accepted response-bound corrections and a DeepSeek comparison through
+OpenRouter, with generous fixed headroom and no adaptive retries. The generic
+prompt was frozen at 6, schema at 4 and preparation at 3 before these calls.
+The schema allows a 600-character overview, 400-character points and eight source
+references per statement. The visible word targets stay soft. Each call has a
+16,384-token completion ceiling and explicit `none` reasoning. The selected
+model is `deepseek/deepseek-v4.1-flash-1017`; read-only generation metadata
+resolves it to `deepseek/deepseek-v4.1-flash-20261017` on Together.
+
+The tokenizer is the pinned upstream DeepSeek asset loaded by `tokenizers`
+0.23.3; its revision/hash and route bounds are saved with each input manifest.
+Docling remains 2.148.0 with English OCR. No source content was truncated and
+no document-specific expectations were inserted in the prompt.
+
+Fireworks' standard route became unavailable during the Docker rebuild. An
+actual mixed-PDF upload preserved its six evidence elements and gap metadata,
+then stopped with `SUMMARY_MODEL_UNAVAILABLE` before any paid invocation or
+reservation. In-app browser inspection verified the unavailable state, original
+page navigation and reload. The comparison then explicitly selected Together's
+healthy standard route at the same listed rates; no automatic fallback was added.
+The first small response established observed request compatibility and passed
+local schema validation. It does not prove that every schema keyword is enforced
+by the provider. The [model notes](models.md) retain that documentation gap.
+
+The fresh input is [NIST SP 800-145, The NIST Definition of Cloud Computing](https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-145.pdf):
+seven physical pages, 85,781 bytes, SHA-256
+`7b0c1a9fdfc67218b8ba2098f448c100c27070db91736b3c87fed63bfa21d418`.
+Physical page 5 identifies it as not subject to copyright. A separate reviewer
+read the full original and froze source expectations before seeing this prompt,
+implementation or output. Those expectations remain agent-proposed, not
+human-approved. This is a fresh technical document, not a new genre.
+
+| Input | Input / completion tokens | Observed cost | Source review |
+| --- | ---: | ---: | --- |
+| Mixed three-page PDF | 736 / 184 | $0.0004416 | Amounts/date correct; a coverage warning cites the unrelated heading “Budget.” |
+| NIST SP 800-207, 59 pages | 45,769 / 387 | $0.0141951 | Five substantive points have support; part of the overview lacks the needed citation, and important access/risk ideas are omitted. |
+| Fresh NIST SP 800-145, seven pages | 3,939 / 350 | $0.001488804 | Selected citations support the text, but the hybrid-cloud definition loses its connecting-technology/data-portability condition. |
+
+All three stopped normally in one paid call, with zero reported reasoning
+tokens and no uncertain billing. The fresh call reports 384 cached input tokens;
+its bill is therefore below an all-uncached calculation. Combined new spending
+is **$0.016125504**. All 13 development calls total **$0.223380304**, matching
+PostgreSQL and OpenRouter account metadata; the remaining allowance is
+**$0.776619696**. Earlier spending was not reset. Each call was admitted against
+the conservative $0.3342336 reservation and settled to its known bill.
+
+Local parser times were 12.90, 95.43 and 17.09 seconds respectively. Elapsed time
+from committed invocation to saved result was about 2.23, 4.50 and 2.46 seconds;
+these observations exclude earlier queue wait and metadata checks. The report
+retained all 657 evidence elements and its complete-input estimate was 55,221
+tokens including the 2,048 margin. The fresh document retained 60 elements.
+These are single local observations, not latency guarantees.
+
+The mixed document's warning is real coverage metadata, but its document
+citation is false support; the overview repeats that same mismatch. NIST 207's
+overview describes threats and migration, which its chosen references do not
+fully establish even though another passage does. Its five substantive points
+are supported, but two appendix gaps displace explicit per-resource least
+privilege and the fact that zero trust does not eliminate every risk. This is
+also a salience/coverage weakness, not proof that the included points are false.
+NIST 145 spends a point on statutory background and only names service models,
+omitting their differing consumer control. Its shortened hybrid definition
+loses a defining connection condition. No substantive parser loss explains
+these findings.
+
+The reviewer checked all NIST 207 output claims and their cited original pages,
+plus relevant risk/access context, not every paragraph of the 59-page source.
+NIST 145 was checked against its full original and frozen expectations. In-app
+browser inspection verified the actual saved report summary, page-45 citation
+navigation and reload; reads did not create another call. The prompt was not
+tuned after these results. Completion/headroom improved on these examples;
+citation correctness, qualification preservation and content selection still
+need work before a general quality claim.
 
 ## Reproducing and reviewing
 

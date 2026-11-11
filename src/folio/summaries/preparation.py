@@ -1,26 +1,37 @@
 import hashlib
 import json
+from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
-PROMPT_VERSION = 5
-SCHEMA_VERSION = 3
+PROMPT_VERSION = 6
+SCHEMA_VERSION = 4
 PREPARATION_VERSION = 3
 
 
 class Statement(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
-    text: str = Field(min_length=1, max_length=2000)
-    source_ids: list[str] = Field(min_length=1, max_length=8)
+    text: str = Field(min_length=1, max_length=400)
+    source_ids: list[Annotated[str, Field(min_length=1, max_length=32)]] = Field(
+        min_length=1, max_length=8
+    )
+
+
+class Overview(Statement):
+    text: str = Field(min_length=1, max_length=600)
 
 
 class Summary(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
-    overview: Statement
+    overview: Overview
     points: list[Statement] = Field(min_length=1, max_length=5)
 
 
 class InvalidOutput(Exception):
+    pass
+
+
+class OutputLimit(Exception):
     pass
 
 
@@ -73,12 +84,13 @@ def prepare(database, revision_id):
             "role": "system",
             "content": (
                 "Summarize the supplied available evidence for a reader unfamiliar with the "
-                "document. Write an overview of 1 or 2 sentences, at most 60 words, "
+                "document. Write an overview of 1 or 2 sentences, aiming for at most 60 words, "
                 "without labels. "
                 "State the central substance directly, not a contents list or description of "
                 "document structure. Follow with distinct, substantive key points, normally "
                 "3 to 5. Each point conveys one central idea with its essential qualifiers, "
-                "in one sentence of at most 35 words. Do not turn a point into an exhaustive "
+                "in one sentence aiming for at most 35 words. Preserve essential qualifications "
+                "even if a few extra words are needed. Do not turn a point into an exhaustive "
                 "inventory. Use 1 or 2 points "
                 "when the "
                 "available content supports only that much; never add filler, repeat a point, "
@@ -139,6 +151,8 @@ def prepare(database, revision_id):
 
 
 def validate_output(generation, source_ids):
+    if generation.finish_reason == "length":
+        raise OutputLimit()
     if generation.finish_reason != "stop":
         raise InvalidOutput()
     try:

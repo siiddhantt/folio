@@ -146,9 +146,13 @@ Keep a narrow retrieval operation that accepts a question and permitted document
 Status: OpenRouter selected as the API gateway. Automatic-only, complete-input summary generation accepted November 10. The owner delegated cost-conscious model selection. After Nano and Mini source reviews exposed citation and qualification failures, GPT-5.1 on the verified OpenAI standard route became the current candidate. It is temporary, retires April 1, 2027, and does not establish general summary accuracy. See [verified model notes](models.md) and [recorded evaluations](summary-evaluation.md).
 
 On November 11 the owner reaffirmed OpenRouter and explicitly deferred switching
-to or testing Autoloops. DeepSeek through OpenRouter and better output-budget
-controls are under investigation; no new model configuration or adaptive retry
-policy is accepted by that research request alone.
+to or testing Autoloops. The owner subsequently accepted a minimal, test-first
+DeepSeek comparison through OpenRouter, aligned response bounds and generous
+completion headroom within the existing spending allowance. Adaptive retries
+remain explicitly excluded. The implementation choice is the researched
+V4.1-Flash-1017 Fireworks route, reasoning off and a fixed 16,384-token completion
+ceiling. Short prose targets remain guidance; character bounds provide room for
+qualifications rather than rejecting an answer for a few extra words.
 
 Options: direct SDK calls with explicit orchestration; a small LlamaIndex integration; a small LangChain integration. Compare source mapping, testability, dependencies, and how much control flow remains visible. No current need for an autonomous-agent runtime.
 
@@ -257,6 +261,23 @@ structured process records with time, severity, component, request/attempt ident
 and safe failure locations. Durable state remains authoritative: console output
 is not a second job ledger. Exclude arbitrary exception messages and document
 contents. A tracing collector and additional logging dependencies are deferred.
+
+## Summary integration host selection — November 11
+
+The accepted comparison remains DeepSeek V4.1 Flash 1017 through OpenRouter,
+within $0.40/document and $1 cumulative, using fixed output capacity and no
+adaptive retries. Fireworks was initially selected for its documented schema
+constraints, then reported unavailable during integration. Folio retained the
+actual failed admission and usable evidence without issuing a paid request.
+
+For the bounded comparison, Together was selected explicitly as another host
+behind OpenRouter for the same model and observed prices. This is an engineering
+selection within the delegated model comparison, not a new gateway or automatic
+fallback. The first small response completed with valid local schema and zero
+reported reasoning; individual server-side schema-keyword enforcement is not
+proven by that example. Citation correctness is reviewed separately. See the
+[model notes](models.md) for primary-source limitations and the
+[evaluation record](summary-evaluation.md) for actual results.
 
 ## Slice order and remaining decisions
 

@@ -2,8 +2,8 @@
 
 Checked: November 11, 2026. These are observed provider specifications, not Folio quality measurements. Recheck availability, routes, prices, and capabilities before a live evaluation.
 
-OpenRouter is the accepted API gateway. GPT-5.1 on the OpenAI standard route
-is the current summary evaluation candidate. The owner delegated a cost-conscious
+OpenRouter is the accepted API gateway. DeepSeek V4.1 Flash 1017 is the current
+summary evaluation candidate. The owner delegated a cost-conscious
 choice; this does not establish model quality. Summary, later chat and embeddings
 have separate configuration and evaluation needs.
 
@@ -63,8 +63,9 @@ No switch, new abstraction framework, budget reset or production claim is implie
 
 ## DeepSeek through OpenRouter — output-budget research
 
-Status: recommended comparison, not implemented or quality-tested. The owner
-reaffirmed OpenRouter and deferred Autoloops on November 11.
+Status: accepted for a bounded comparison after the owner reaffirmed OpenRouter
+and deferred Autoloops on November 11. Implementation uses the existing summary
+boundary; live outcomes are recorded separately in the evaluation report.
 
 The [OpenRouter catalog](https://openrouter.ai/api/v1/models) identifies
 `deepseek/deepseek-v4.1-flash-1017`, tokenizer family `DeepSeek`, optional reasoning
@@ -78,7 +79,7 @@ fixed fee, cache-write charge or pricing overrides. These are observed metadata,
 not Folio runtime measurements. Every inspected route omitted a numeric separate
 prompt ceiling; null must not be interpreted as unlimited.
 
-Fireworks is the proposed first route because its
+Fireworks was the first selected route because its
 [structured-response documentation](https://docs.fireworks.ai/structured-responses/structured-response-formatting)
 explicitly supports string and array size constraints during generation, while
 warning that output truncation can still leave incomplete JSON. Its
@@ -87,9 +88,9 @@ documents DeepSeek V4.1 thinking-off controls. These provider-wide documents and
 the [model listing](https://fireworks.ai/models/deepseek-ai/deepseek-v4p1-flash-1017)
 still need an exact-route compatibility check with Folio's schema.
 
-Proposed OpenRouter controls: select Fireworks, disable fallbacks, require
+Implemented OpenRouter controls: select one supported standard host, disable fallbacks, require
 supported parameters, set `reasoning.effort` to `none`, and start evaluation
-with `max_tokens=8192`. `only:["fireworks"]` also matches provider variants;
+with a fixed `max_tokens=16384`. `only:["fireworks"]` also matches provider variants;
 it does not uniquely pin the standard endpoint. Narrow the currently observed
 variants with `ignore:["fireworks/spot","fireworks/us"]` and rate ceilings
 of $0.30 input / $1.20 output per million, then recheck endpoint metadata.
@@ -102,17 +103,42 @@ the tokens or bill. A native Fireworks integer thinking cap is not proof that
 OpenRouter forwards `reasoning.max_tokens` as a hard DeepSeek cap.
 
 At those listed token rates, the full combined context as a conservative input billing
-upper bound plus 8,192 output tokens is $0.3244032. That fits $0.40, but does not
+upper bound plus 16,384 output tokens is $0.3342336. That fits $0.40, but does not
 establish a separate input allowance or prove every request size is accepted.
 Retain the local 64,000-token bound, model-specific counting and combined-context
-check; explicitly revise the current mandatory-prompt-cap policy before use.
-The existing GPT-only tokenizer/client also needs a concrete DeepSeek path.
+check. This explicit DeepSeek exception leaves the prompt cap unknown in its
+profile, rather than inventing a verified separate input limit.
+The client uses the official tokenizer JSON from immutable upstream revision
+`08c8657f02291e11b6f6b63e0e16014f8e748518`, SHA-256
+`c90dfa01249db1be4245780a052ede752e1361c612ac6d08e2bdada7d599476b`.
+Docker bundles the verified asset and MIT license; runtime loading is offline.
+The Rust tokenizer is pinned to 0.23.3; no weights or remote template code run.
 Missing billing remains unknown; the cumulative $1 allowance is not reset.
 
-The proposed ceiling provides completion headroom, not an accuracy or no-error
+The selected ceiling provides completion headroom, not an accuracy or no-error
 guarantee. Validate complete output and citations, then review source support on
 the regression document plus a fresh document. No hierarchy, input truncation,
-automatic model fallback or adaptive retry is implicitly selected.
+automatic model fallback or adaptive retry is selected. A length termination
+publishes no partial summary and retains its specific failure reason and bill.
+
+During integration Fireworks' standard route changed from status 0 to -2.
+The first mixed-PDF upload therefore published evidence but stopped summary
+admission as unavailable, with no paid invocation. A manual compatibility trial
+selects Together's healthy standard route through the same OpenRouter gateway,
+at the same observed prices and financial reservation. This is an explicit host
+selection, not automatic fallback; frozen Fireworks policies remain Fireworks.
+
+Together's [model catalog](https://docs.together.ai/docs/serverless/models) lists
+the exact model and structured outputs. Its context is described as 1,000,000
+versus OpenRouter's 1,048,576; Folio's 64,000 input plus 16,384 output is below
+both. [Together's schema guide](https://docs.together.ai/docs/inference/chat/structured-outputs)
+does not enumerate string/array size-keyword enforcement. Its
+[reasoning guide](https://docs.together.ai/docs/inference/chat/reasoning) describes
+hybrid-off controls without explicitly listing V4.1, while OpenRouter documents
+`reasoning.effort=none`. Metadata support is not proof of host-specific behavior.
+Start with a small complete response, inspect local validation and reported
+reasoning usage, and retain local validation for every result. One accepted
+response cannot prove universal schema-keyword enforcement or factual quality.
 
 ## Current summary candidate
 
@@ -196,7 +222,7 @@ pretend a different model's tokenizer is exact for Luna. Other configured models
 must have a supported tokenizer and a complete, compatible provider profile;
 unknown capabilities stop before generation.
 
-The current client accepts only a verified OpenAI standard route with numeric
+The earlier client accepted only a verified OpenAI standard route with numeric
 input/output/context limits, supported parameters and compatible flat pricing.
 It rejects price overrides and unsupported charges. The November 11 route check
 found no nondeprecated replacement satisfying those constraints and the then-$0.10
@@ -270,14 +296,14 @@ Illustration only: 8,000 uncached input tokens and 1,500 total billed output tok
 ## Summary evaluation checkpoint
 
 1. Agree human-reviewed summary expectations and supporting passages across different document types. Include important qualifications, numbers, contradictions, extraction gaps and embedded instructions.
-2. Evaluate GPT-5.1 on the verified OpenAI standard route with frozen prompt 5/schema 3/preparation 3 and `low` reasoning, within the persistent $1 deployment and $0.40 document allowances. Retain Nano and Mini results as development comparisons.
+2. Evaluate the accepted DeepSeek candidate on the explicitly selected Together standard route with frozen prompt 6/schema 4/preparation 3, `none` reasoning and 16,384 output capacity, within the persistent $1 deployment and $0.40 document allowances. Retain GPT-5.1, Nano and Mini results as development comparisons.
 3. Check extraction coverage separately from generation. This slice sends complete available evidence; retrieval is not implemented.
 4. Compare cheaper candidates only against the same expectations, recording supported claims, citations, useful abstention, failures, latency, and total billed usage.
 5. Choose the smallest model/configuration that meets the agreed quality boundary. Retain held-out examples before tuning and record all unsuccessful attempts too.
 
 Decide route/fallback and document-data policies before live calls. Record the actual model/provider/tier; a model ID alone does not identify every execution detail. Required parameters should be enforced rather than silently dropped. Credit availability is separate from an agreed evaluation spending limit. Sources: [OpenRouter routing](https://openrouter.ai/docs/guides/routing/provider-selection), [service tiers](https://openrouter.ai/docs/guides/features/service-tiers).
 
-Ten live development calls cost $0.20725480, matching PostgreSQL and OpenRouter
+The first ten live development calls cost $0.20725480, matching PostgreSQL and OpenRouter
 usage metadata, with no uncertain billing. The final NIST call exhausted its
 output allowance; its second attempt stopped before another paid call because
 the document allowance could not cover a new reservation. The unseen historical
@@ -287,6 +313,6 @@ These observations have exposed failures,
 not established a quality pass or general benchmark. No embeddings are implemented.
 Deterministic tests establish software contracts only. The [summary contract](summaries.md)
 records the generic prompt: document-specific reference facts are not production instructions.
-The next checkpoint should review these failures with the owner and use independent
-examples for any model/configuration comparison. The existing spending authorization
-remains $0.40 per document and $1 total; no additional calls were made in this checkpoint.
+The accepted DeepSeek checkpoint uses these failures as regression examples and
+adds an independently read fresh technical document. The existing spending
+authorization remains $0.40 per document and $1 total; it is not reset for this comparison.

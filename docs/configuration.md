@@ -52,18 +52,18 @@ worker receives `OPENROUTER_API_KEY`; no quality pass is implied.
 | Setting | Default / meaning |
 | --- | --- |
 | `FOLIO_SUMMARY_ENABLED` | `false`; capture automatic summary policy when usable extraction is published. |
-| `FOLIO_SUMMARY_MODEL_ID` | `openai/gpt-5.1`; temporary candidate retiring April 1, 2027. |
-| `FOLIO_SUMMARY_PROVIDER` | `openai`; verified standard route only. |
+| `FOLIO_SUMMARY_MODEL_ID` | `deepseek/deepseek-v4.1-flash-1017`; fixed comparison model. |
+| `FOLIO_SUMMARY_PROVIDER` | `together`; explicitly selected standard route through OpenRouter. The earlier Fireworks route remains supported, without automatic fallback. |
 | `FOLIO_SUMMARY_INPUT_LIMIT_TOKENS` | `64000`; complete evidence, instructions, schema and margin must fit. |
-| `FOLIO_SUMMARY_MAX_OUTPUT_TOKENS` | `4096`; includes reasoning, not a requested visible length. |
+| `FOLIO_SUMMARY_MAX_OUTPUT_TOKENS` | `16384`; generous fixed completion ceiling, not a requested visible length or automatic charge. |
 | `FOLIO_SUMMARY_TOKEN_MARGIN` | `2048`; positive allowance for uncertain provider framing. |
-| `FOLIO_SUMMARY_REASONING_EFFORT` | `low`; checked against model metadata. |
+| `FOLIO_SUMMARY_REASONING_EFFORT` | `none`; checked against model metadata. |
 | `FOLIO_SUMMARY_TIMEOUT_SECONDS` | `90`; provider request timeout. |
 | `FOLIO_SUMMARY_MAX_ATTEMPTS` | `2`; initial attempt plus at most one automatic retry. |
 | `FOLIO_SUMMARY_BUDGET_USD` | `1.00`; persistent deployment allowance, not reset by restart. |
 | `FOLIO_SUMMARY_DOCUMENT_BUDGET_USD` | `0.40`; owner-approved allowance including retries and uncertain calls. |
 
-Current prompt/schema/preparation versions are 5/3/3. Preparation preserves
+Current prompt/schema/preparation versions are 6/4/3. Preparation preserves
 parent links alongside text/table content, source IDs and page references. Output
 contains an overview and 1–5 cited points, normally 3–5 without padding short
 sources. Stored coverage supplies known extraction gaps. Complete available
@@ -78,13 +78,25 @@ code after a deployment, so the manifest is authoritative for actual provenance.
 
 Token admission uses the selected upstream tokenizer plus a margin. Monetary
 admission reserves the route's full prompt ceiling plus maximum output, not the
-estimated input bill: $0.38096 for the observed GPT-5.1 standard route. Unknown
+estimated input bill. The selected DeepSeek route omits its separate prompt cap;
+Folio conservatively reserves its combined context ceiling for input instead:
+$0.3342336 at the observed rates. This is an upper bound for financial admission,
+not a claim that the provider accepts that many input tokens. The smaller local
+64,000-token admission limit still applies. Unknown
 outcomes retain that reservation; retries require a fresh one. An uncertain
 call therefore leaves insufficient room for another full reservation under the
 $0.40 document cap, even with two attempts configured. Invalid summary
 configuration cannot prevent usable extraction publication. The client rejects
-missing limits, unsupported parameters and tiered pricing. Configurability does
+unsupported limits, parameters and tiered pricing. Output exhaustion is terminal
+with `SUMMARY_OUTPUT_LIMIT`; no adaptive retry increases the allowance. Configurability does
 not establish compatibility; see [model research and retirement limits](models.md).
+
+The DeepSeek tokenizer JSON and its MIT license are pinned to an immutable
+upstream revision and verified by SHA-256 at Docker build time. Runtime counting
+loads the verified asset offline. `FOLIO_TOKENIZER_DIRECTORY` sets its asset root
+outside Docker; Compose images use `/opt/tokenizers`. A missing or corrupt asset
+stops before paid work. JSON message/schema counting plus the margin is an
+estimate: provider-specific message framing is not reproduced exactly.
 
 ## Deferred chat and embedding controls
 

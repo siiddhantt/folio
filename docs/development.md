@@ -2,7 +2,8 @@
 
 The [README](../README.md) starts the application. The initial parser image uses the
 same pinned Docling/CPU/model configuration as the inspected extraction comparison.
-The API image contains no Docling runtime. Docker does not receive the local API key.
+The API image contains no Docling runtime. Builds do not receive the local API key;
+only the running summary worker receives it when configured.
 
 ## Read the slice
 
@@ -45,6 +46,12 @@ For fast tests on the host, set `FOLIO_DATABASE_URL` to
 `postgresql://folio:folio@127.0.0.1:55432/folio_test` and `FOLIO_REDIS_URL` to
 `redis://127.0.0.1:56379/15`, then run `uv run pytest -m "not parser and not supervision" -q`.
 Use process-local variables rather than replacing application configuration in `.env`.
+
+For host-side DeepSeek counting, install the verified tokenizer assets once with
+`PYTHONPATH=src uv run python -m folio.ai.deepseek` (PowerShell:
+`$env:PYTHONPATH='src'; uv run python -m folio.ai.deepseek`). This downloads the
+pinned tokenizer JSON and MIT license into ignored `.local/tokenizers`; it makes
+no inference call. Docker builds do this separately. Runtime counting is offline.
 
 ```sh
 uv run ruff check src tests scripts

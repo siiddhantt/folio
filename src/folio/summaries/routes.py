@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException
 from folio.summaries.preparation import coverage
 
 ERRORS = {
+    "SUMMARY_OUTPUT_LIMIT": "The model reached its response limit before finishing the summary.",
     "SUMMARY_DISABLED": "Automatic summaries are disabled for this document.",
     "SUMMARY_CONFIGURATION_INVALID": "Summary settings are invalid for this document.",
     "INVALID_OUTPUT": "The model did not return a complete summary with valid source references.",
@@ -99,6 +100,16 @@ def read_summary(database, revision_id):
                 "attempts": len(attempts),
                 "prompt_tokens": tokens("prompt_tokens"),
                 "completion_tokens": tokens("completion_tokens"),
+                "reasoning_tokens": tokens("reasoning_tokens"),
+                "response_characters": tokens("response_characters"),
+                "last_finish_reason": next(
+                    (
+                        attempt["usage"]["finish_reason"]
+                        for attempt in reversed(attempts)
+                        if "finish_reason" in attempt["usage"]
+                    ),
+                    None,
+                ),
                 "cost_usd": str(sum(known_costs, Decimal(0)))
                 if known_costs and not uncertain
                 else None,

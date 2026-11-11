@@ -57,9 +57,11 @@ conditions, numbers, units, attribution and uncertainty. It treats instructions
 inside the uploaded document as content. It requires citations supporting each
 whole claim and forbids invented facts, IDs and claims of reading missing pages.
 
-The current prompt/schema/preparation versions are 5/3/3. The prompt requests
+The current prompt/schema/preparation versions are 6/4/3. The prompt requests
 one central idea per point, a 60-word overview and 35-word points. These word
-targets are guidance, not mechanically enforced limits. The schema permits at
+targets are guidance, not mechanically enforced limits; essential qualifications
+can justify a few extra words. The schema permits a 600-character overview,
+400-character points, source identifiers of at most 32 characters, and at
 most eight source references per statement; the model must narrow an overbroad
 claim rather than omit support. Folio rejects an oversized reference list instead
 of silently trimming it. Preparation retains non-null parent links, including
@@ -79,15 +81,46 @@ document prompt injection.
 
 ## Recovery and spending
 
+### What each limit means
+
+| Control | Plain-language meaning | When it applies |
+| --- | --- | --- |
+| Visible summary target | Ask for a short overview and useful points. Word targets guide writing; a few extra words do not by themselves reject an answer. | In the prompt. |
+| Schema bounds | Limit the size and shape of the returned JSON: how long a text field can be and how many points/references it contains. Characters are not tokens or dollars. | During supported structured generation, then local validation. |
+| Input allowance | Room for all extracted evidence, instructions, source labels, schema and a counting margin. | Before calling the model; no silent source truncation. |
+| Completion ceiling | The most tokens generation may use, including the answer, JSON, and any billed reasoning/formatting. Reaching it can stop an unfinished answer. | Enforced by the provider while generating. |
+| Spending allowance | The maximum admitted financial exposure across known bills and uncertain calls. | Reserved in PostgreSQL before the request, not used to interrupt a running response. |
+
+The earlier 12,000-character figure meant six possible text fields, each allowed
+2,000 characters. It was not a 12,000-token limit or a requirement to fill them.
+The accepted change uses separate generous bounds for an overview and each point,
+while giving generation 16,384 tokens of headroom. These controls serve different
+purposes: compact useful prose and enough room for the model to finish its object.
+
+At the inspected DeepSeek token rates, a hypothetical call using 50,000 input
+and 1,000 output tokens costs $0.0162. If it uses those same tokens with an
+8,192 or 16,384 completion ceiling, the token bill is the same. The ceiling is
+permission to use room, not a purchase of every token in it. Those illustrative
+counts are not measured Folio results.
+
+For admission, the researched route's full combined-context ceiling as an input
+cost upper bound plus 16,384 maximum output tokens reserves $0.3342336 at listed
+rates. This deliberately exceeds the expected bill. After a known $0.0162 bill,
+the difference stops counting as held money. If the worker times out and cannot
+establish what was billed, the whole reservation continues counting against the
+allowance. Changing the output ceiling changes this reservation; it does not
+reset earlier spending. Existing limits remain $0.40 per document and $1 total.
+
 ### Output-exhaustion investigation — November 11
 
-Status: researched proposal, not implemented. OpenRouter remains selected;
-Autoloops testing is deferred by the owner.
+Status: the owner accepted response bounds, a DeepSeek/OpenRouter comparison and
+generous fixed completion headroom. The software path is implemented and checked;
+adaptive retries and Autoloops testing remain excluded.
 
 The failed NIST call reached 4,096 completion tokens, with only 50 reported
 reasoning tokens. Its complete input fitted. The raw incomplete response was not
 retained, so neither hidden reasoning nor verbose prose is a proven full diagnosis.
-The prompt requests at most 235 visible words, but the schema permits six text
+The earlier prompt requested at most 235 visible words, but its schema permitted six text
 fields of 2,000 characters each, plus up to 48 source references. This mismatch
 permits much more output than intended; it does not prove the cause of that call.
 
@@ -98,19 +131,19 @@ evidence; future generated text cannot be counted exactly in advance. Keep the
 complete-input design and source qualifications rather than discarding evidence
 or trimming sentences/citations to make the answer fit.
 
-Recommended first increment: align overview/point character bounds with the short
+Accepted increment: align overview/point character bounds with the short
 format, enforce supported schema constraints, configure reasoning explicitly and
-measure output usage across sources. An 8,192-token ceiling on the researched
-DeepSeek/OpenRouter route is a proposed starting allowance, not a measured need
+measure output usage across sources. A 16,384-token ceiling on the researched
+DeepSeek/OpenRouter route is the selected starting allowance, not a measured need
 or an instruction to produce that many tokens. Actual bills use generated tokens.
 Model-specific token accounting and provider support must be verified; keep the
 64,000 local input limit. See [route research](models.md#deepseek-through-openrouter--output-budget-research).
 
 Record finish reason and safe usage breakdowns without logging document contents.
-Classify `length` separately as an output-limit outcome. The current path maps it
-to generic `INVALID_OUTPUT`, attempts the same frozen specification again, then
-shows only the later budget-denial reason. Preserve the original cause so the
-owner can distinguish generation failure from insufficient retry allowance.
+Classify `length` separately as terminal `SUMMARY_OUTPUT_LIMIT`, retaining known
+cost and leaving evidence usable. The previous path mapped it to generic
+`INVALID_OUTPUT` and retried until admission showed a budget-denial reason.
+The corrected path preserves the original cause without another model call.
 
 An optional later recovery is one preplanned larger-cap attempt after a genuine
 length stop. This needs explicit acceptance: both attempt settings must be saved
@@ -134,7 +167,8 @@ $0.10 document limit on November 11 for a stronger-model comparison after
 source review found quality failures. A database row preserves the
 allowance across restarts. There are at most two attempts. Admission reserves
 the verified route's full prompt ceiling plus the configured maximum output,
-rather than treating a local token estimate as an exact billing bound.
+or its combined context as the conservative input bound when this DeepSeek route
+omits a separate prompt ceiling. A local token estimate is not an exact billing bound.
 
 A timeout can mean the provider finished and billed the request while Folio
 never received the answer. Such an attempt retains its entire reservation. A

@@ -145,6 +145,9 @@ def finish(
             else {
                 "prompt_tokens": generation.prompt_tokens,
                 "completion_tokens": generation.completion_tokens,
+                "reasoning_tokens": getattr(generation, "reasoning_tokens", None),
+                "finish_reason": generation.finish_reason,
+                "response_characters": len(generation.content),
                 "model": generation.model,
                 "provider": generation.provider,
             }

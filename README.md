@@ -14,8 +14,9 @@ English OCR are supported; encrypted inputs receive a clear error. Recoverable p
 content remains available. A minimal React interface supports upload, processing status,
 text/table evidence and the original PDF. An opt-in development view shows real processing
 history. Automatic summaries are implemented with checked persistence, budget and failure
-contracts. The current configuration did not finish a summary of a tested 59-page report;
-large-input capacity and model quality remain unresolved. Generation defaults to disabled.
+contracts. The current configuration completed summaries of three tested PDFs,
+including a 59-page report, without exhausting output. Source review still finds
+citation and qualification weaknesses; no general quality pass is claimed. Generation defaults to disabled.
 Chat and embeddings remain deferred.
 
 ## Run locally
@@ -59,12 +60,12 @@ unavailable reason. Reads never generate, and enabling summaries does not backfi
 revisions. The persistent allowance is $1 total and $0.40 per document, including retries
 and uncertain calls. See [summary behavior and source reading order](docs/summaries.md)
 and [configuration](docs/configuration.md) before enabling generation. Local evaluation
-is enabled with GPT-5.1, `low` reasoning and prompt/schema/preparation versions
-5/3/3; the template remains disabled. [Recorded live calls](docs/summary-evaluation.md)
-exposed citation and wording failures. The frozen final large-report run exhausted its
-output allowance and published no summary. The unseen historical summary was broadly
-grounded but blurred one relocation, the troops' location and the scope of log reuse.
-Summary quality remains unresolved; no general quality pass is claimed.
+is enabled with DeepSeek V4.1 Flash 1017 through OpenRouter/Together, reasoning
+`none`, a fixed 16,384-token completion ceiling and prompt/schema/preparation
+versions 6/4/3; the template remains disabled. [Recorded live calls](docs/summary-evaluation.md)
+separate completion, spending and source correctness. The latest three calls
+cost $0.016125504; cumulative measured spending is $0.223380304 with no unknown
+billing. These small development comparisons do not establish general accuracy.
 
 For the summary source walkthrough, read [preparation.py](src/folio/summaries/preparation.py),
 [processing.py](src/folio/summaries/processing.py), then [lifecycle.py](src/folio/summaries/lifecycle.py)

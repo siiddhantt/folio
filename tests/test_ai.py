@@ -34,6 +34,104 @@ SCHEMA = {
     "additionalProperties": False,
 }
 
+DEEPSEEK_POLICY = {
+    **POLICY,
+    "model_id": "deepseek/deepseek-v4.1-flash-1017",
+    "provider": "fireworks",
+    "max_output_tokens": 16384,
+    "reasoning_effort": "none",
+}
+
+
+@pytest.mark.parametrize("tokenizer_asset", ["available", "missing", "corrupt"])
+@pytest.mark.parametrize(
+    "provider,provider_name", [("fireworks", "Fireworks"), ("together", "Together")]
+)
+def test_deepseek_uses_its_tokenizer_and_a_bounded_selected_route(
+    provider, provider_name, tokenizer_asset, monkeypatch, tmp_path
+):
+    policy = {**DEEPSEEK_POLICY, "provider": provider}
+    if tokenizer_asset != "available":
+        monkeypatch.setenv("FOLIO_TOKENIZER_DIRECTORY", str(tmp_path))
+        if tokenizer_asset == "corrupt":
+            directory = tmp_path / "deepseek-v4.1-flash-1017"
+            directory.mkdir()
+            (directory / "tokenizer.json").write_text("{}")
+    posts = []
+
+    def respond(request):
+        if request.url.path == "/api/v1/models":
+            return httpx.Response(
+                200,
+                json=catalog(DEEPSEEK_POLICY["model_id"], ("none", "low", "high", "max")),
+            )
+        if request.method == "GET":
+            body = metadata(
+                tag=provider,
+                provider_name=provider_name,
+                context_length=1048576,
+                max_prompt_tokens=None,
+                max_completion_tokens=943718,
+                pricing={"prompt": "0.0000003", "completion": "0.0000012"},
+            )
+            body["data"]["id"] = DEEPSEEK_POLICY["model_id"]
+            body["data"]["endpoints"].extend(
+                [
+                    {"tag": f"{provider}/spot"},
+                    {"tag": f"{provider}/us"},
+                    {"tag": f"{provider}/future-region"},
+                ]
+            )
+            return httpx.Response(200, json=body)
+        posts.append(json.loads(request.content))
+        return httpx.Response(
+            200,
+            json={
+                "model": DEEPSEEK_POLICY["model_id"],
+                "provider": provider_name,
+                "choices": [{"finish_reason": "stop", "message": {"content": "{}"}}],
+                "usage": {
+                    "prompt_tokens": 100,
+                    "completion_tokens": 20,
+                    "completion_tokens_details": {"reasoning_tokens": 0},
+                    "cost": 0.000054,
+                },
+            },
+        )
+
+    client = OpenRouter(policy, "private-key", transport=httpx.MockTransport(respond))
+    profile = client.profile()
+    assert profile["max_prompt_tokens"] is None
+    if tokenizer_asset != "available":
+        with pytest.raises(BudgetError) as error:
+            client.generate(MESSAGES, SCHEMA)
+        assert error.value.code == "SUMMARY_TOKENIZER_UNAVAILABLE"
+        assert posts == []
+        return
+    budget = check_budget(MESSAGES, SCHEMA, policy, profile)
+    assert budget["tokenizer"] == "deepseek-v4.1-flash-1017"
+    assert budget["tokenizer_version"] == "0.23.3"
+    assert budget["input_tokens_reserved"] == 1048576
+    assert Decimal(budget["reservation_usd"]) == Decimal("0.3342336")
+    result = client.generate(MESSAGES, SCHEMA)
+    assert result.provider == provider
+    assert result.reasoning_tokens == 0
+    assert result.cost_usd == Decimal("0.000054")
+    assert len(posts) == 1
+    assert posts[0]["max_tokens"] == 16384
+    assert posts[0]["reasoning"] == {"effort": "none"}
+    assert "service_tier" not in posts[0]
+    assert posts[0]["provider"]["only"] == [provider]
+    assert posts[0]["provider"]["ignore"] == [
+        f"{provider}/future-region",
+        f"{provider}/spot",
+        f"{provider}/us",
+    ]
+    assert posts[0]["provider"]["allow_fallbacks"] is False
+    assert posts[0]["provider"]["require_parameters"] is True
+    assert Decimal(posts[0]["provider"]["max_price"]["prompt"]) == Decimal("0.30")
+    assert Decimal(posts[0]["provider"]["max_price"]["completion"]) == Decimal("1.20")
+
 
 def metadata(**route_changes):
     route = {
@@ -238,6 +336,7 @@ def test_configured_mapped_model_uses_its_own_verified_limits_and_prices(
     [
         ({"content": "partial"}, "length", "length"),
         ({"content": None, "refusal": "private refusal text"}, "stop", "refusal"),
+        ({"content": "partial"}, "private provider diagnostic", "unknown"),
     ],
 )
 def test_unsuccessful_completions_preserve_billing_metadata(message, finish, expected):

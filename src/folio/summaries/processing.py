@@ -9,7 +9,7 @@ from folio.database import Database
 from folio.observability import configure_logging, log_event
 from folio.summaries.config import SummaryCredentials
 from folio.summaries.lifecycle import claim_run, finish, reserve_invocation
-from folio.summaries.preparation import InvalidOutput, prepare, validate_output
+from folio.summaries.preparation import InvalidOutput, OutputLimit, prepare, validate_output
 
 
 def process_summary(run_id, *, settings=None, client=None):
@@ -67,6 +67,15 @@ def process_summary(run_id, *, settings=None, client=None):
                 retryable=error.retryable,
             )
             return {"outcome": state, "code": error.code}
+        except OutputLimit:
+            finish(
+                database,
+                claim,
+                manifest=manifest,
+                generation=generation,
+                code="SUMMARY_OUTPUT_LIMIT",
+            )
+            return {"outcome": "failed", "code": "SUMMARY_OUTPUT_LIMIT"}
         except InvalidOutput:
             finish(
                 database,

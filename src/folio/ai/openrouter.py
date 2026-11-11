@@ -1,4 +1,4 @@
-"""The single supported text-generation route; no implicit retries or fallback."""
+"""Explicit text-generation routes; no implicit retries or fallback."""
 
 from copy import deepcopy
 from dataclasses import dataclass
@@ -6,6 +6,7 @@ from decimal import Decimal, InvalidOperation
 
 import httpx
 
+from .deepseek import MODEL_ID as DEEPSEEK_MODEL_ID
 from .tokens import BudgetError, check_budget, tokenizer_name
 
 
@@ -26,6 +27,7 @@ class Generation:
     response_id: str | None
     model: str
     provider: str
+    reasoning_tokens: int | None = None
 
 
 class OpenRouter:
@@ -34,8 +36,13 @@ class OpenRouter:
         self._api_key = api_key
         self._transport = transport
         self._profile = None
+        self._deepseek = policy.get("model_id") == DEEPSEEK_MODEL_ID
+        self._provider = "fireworks" if self._deepseek else "openai"
+        self._provider_name = "Fireworks" if self._deepseek else "OpenAI"
+        if self._deepseek and policy.get("provider") == "together":
+            self._provider, self._provider_name = "together", "Together"
         if (
-            policy.get("provider") != "openai"
+            policy.get("provider") != self._provider
             or policy.get("base_url", "").rstrip("/") != "https://openrouter.ai/api/v1"
             or policy.get("reasoning_effort")
             not in {"none", "minimal", "low", "medium", "high", "xhigh", "max"}
@@ -82,14 +89,18 @@ class OpenRouter:
             data = body["data"]
             if data["id"] != self.policy["model_id"]:
                 raise ValueError
-            routes = [endpoint for endpoint in data["endpoints"] if endpoint["tag"] == "openai"]
+            endpoints = data["endpoints"]
+            tags = [endpoint["tag"] for endpoint in endpoints]
+            if any(not isinstance(tag, str) or not tag for tag in tags):
+                raise ValueError
+            routes = [endpoint for endpoint in endpoints if endpoint["tag"] == self._provider]
             if len(routes) != 1:
                 raise ValueError
             route = routes[0]
             if (
                 route.get("service_tier") is not None
                 or route.get("status") != 0
-                or route.get("provider_name") != "OpenAI"
+                or route.get("provider_name") != self._provider_name
             ):
                 raise ValueError
             context, prompt, output = (
@@ -97,9 +108,14 @@ class OpenRouter:
                 route["max_prompt_tokens"],
                 route["max_completion_tokens"],
             )
-            if any(type(value) is not int or value <= 0 for value in (context, prompt, output)):
+            limits = (
+                (context, output)
+                if self._deepseek and prompt is None
+                else (context, prompt, output)
+            )
+            if any(type(value) is not int or value <= 0 for value in limits):
                 raise ValueError
-            if prompt > context or output > context:
+            if (prompt is not None and prompt > context) or output > context:
                 raise ValueError
             catalog = self._request("GET", "models")
             models = [model for model in catalog["data"] if model["id"] == data["id"]]
@@ -136,16 +152,22 @@ class OpenRouter:
                 raise ValueError
             profile = {
                 "model_id": data["id"],
-                "provider": "openai",
+                "provider": self._provider,
                 "tokenizer": self._tokenizer,
                 "context_tokens": context,
                 "max_prompt_tokens": prompt,
                 "max_completion_tokens": output,
                 "input_price_per_million": str(input_price * 1_000_000),
                 "output_price_per_million": str(output_price * 1_000_000),
-                "service_tier": "default",
+                "service_tier": None if self._deepseek else "default",
                 "reasoning_effort": effort,
             }
+            if self._deepseek:
+                # Root provider tags also match subroutes. Explicitly exclude every
+                # observed variant so regional/spot pricing cannot replace this route.
+                profile["excluded_providers"] = sorted(
+                    {tag for tag in tags if tag.startswith(self._provider + "/")}
+                )
         except (AttributeError, KeyError, TypeError, ValueError, InvalidOperation):
             raise ProviderError("SUMMARY_MODEL_UNAVAILABLE") from None
         self._profile = profile
@@ -164,12 +186,11 @@ class OpenRouter:
                 "json_schema": {"name": "folio_summary", "strict": True, "schema": schema},
             },
             "max_tokens": self.policy["max_output_tokens"],
-            "service_tier": "default",
             "stream": False,
             "transforms": [],
             "plugins": [],
             "provider": {
-                "only": ["openai"],
+                "only": [self._provider],
                 "allow_fallbacks": False,
                 "require_parameters": True,
                 "data_collection": "deny",
@@ -179,6 +200,10 @@ class OpenRouter:
                 },
             },
         }
+        if self._deepseek:
+            payload["provider"]["ignore"] = profile["excluded_providers"]
+        else:
+            payload["service_tier"] = "default"
         if profile["reasoning_effort"] is not None:
             payload["reasoning"] = {"effort": profile["reasoning_effort"]}
         body = self._request(
@@ -198,7 +223,17 @@ class OpenRouter:
                 content = ""
             if not isinstance(content, str) or not isinstance(finish_reason, str):
                 raise ValueError
-            if body["model"] != self.policy["model_id"] or body["provider"] != "OpenAI":
+            if finish_reason not in {
+                "stop",
+                "length",
+                "content_filter",
+                "tool_calls",
+                "function_call",
+                "error",
+                "refusal",
+            }:
+                finish_reason = "unknown"
+            if body["model"] != self.policy["model_id"] or body["provider"] != self._provider_name:
                 raise ValueError
             usage = body.get("usage") or {}
             cost = usage.get("cost")
@@ -213,7 +248,10 @@ class OpenRouter:
                 cost_usd=cost,
                 response_id=body.get("id") if isinstance(body.get("id"), str) else None,
                 model=body["model"],
-                provider="openai",
+                provider=self._provider,
+                reasoning_tokens=_usage_count(
+                    (usage.get("completion_tokens_details") or {}).get("reasoning_tokens")
+                ),
             )
         except (AttributeError, KeyError, IndexError, TypeError, ValueError, InvalidOperation):
             raise ProviderError("SUMMARY_PROVIDER_RESPONSE_INVALID") from None

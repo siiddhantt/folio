@@ -7,6 +7,8 @@ from importlib.metadata import version
 
 import tiktoken
 
+from . import deepseek
+
 
 class BudgetError(Exception):
     def __init__(self, code: str):
@@ -16,6 +18,8 @@ class BudgetError(Exception):
 
 def tokenizer_name(model_id: str) -> str:
     """Use only upstream mappings, never a guessed fallback for a new model."""
+    if model_id == deepseek.MODEL_ID:
+        return deepseek.TOKENIZER_NAME
     if not isinstance(model_id, str) or not re.fullmatch(
         r"openai/[A-Za-z0-9][A-Za-z0-9._-]*", model_id
     ):
@@ -29,8 +33,9 @@ def tokenizer_name(model_id: str) -> str:
 def check_budget(messages: list[dict], schema: dict, policy: dict, profile: dict) -> dict:
     """Count complete text/schema; wrapper allowance is estimated, never exact.
 
-    Reserve the entire verified route input ceiling, regardless of the estimate.
-    This bounds money even when the provider's wrapper differs from ours.
+    Reserve the verified prompt ceiling, or the combined context when the
+    supported DeepSeek route leaves its prompt ceiling unknown. This bounds
+    money even when the provider's wrapper differs from ours.
     """
     if (
         not isinstance(messages, list)
@@ -52,15 +57,20 @@ def check_budget(messages: list[dict], schema: dict, policy: dict, profile: dict
     if profile.get("provider") != policy.get("provider"):
         raise BudgetError("SUMMARY_PROFILE_INVALID")
     try:
+        prompt_limit = profile["max_prompt_tokens"]
+        if prompt_limit is None and policy["model_id"] == deepseek.MODEL_ID:
+            prompt_limit = profile["context_tokens"]
         limits = [
             policy["input_limit_tokens"],
             policy["max_output_tokens"],
             policy["token_margin"],
             profile["context_tokens"],
-            profile["max_prompt_tokens"],
+            prompt_limit,
             profile["max_completion_tokens"],
         ]
         if any(type(value) is not int or value <= 0 for value in limits):
+            raise ValueError
+        if prompt_limit > profile["context_tokens"]:
             raise ValueError
         input_price = Decimal(profile["input_price_per_million"])
         output_price = Decimal(profile["output_price_per_million"])
@@ -72,27 +82,36 @@ def check_budget(messages: list[dict], schema: dict, policy: dict, profile: dict
     except (KeyError, TypeError, ValueError, InvalidOperation):
         raise BudgetError("SUMMARY_PROFILE_INVALID") from None
     try:
-        encoding = tiktoken.encoding_for_model(policy["model_id"].removeprefix("openai/"))
+        if policy["model_id"] == deepseek.MODEL_ID:
+            token_count = deepseek.count_tokens(serialized)
+            tokenizer_version = version("tokenizers")
+        else:
+            encoding = tiktoken.encoding_for_model(policy["model_id"].removeprefix("openai/"))
+            token_count = len(encoding.encode_ordinary(serialized))
+            tokenizer_version = version("tiktoken")
     except Exception:
         # A missing/corrupt vocabulary cache must fail before paid work starts.
         raise BudgetError("SUMMARY_TOKENIZER_UNAVAILABLE") from None
-    estimated = len(encoding.encode_ordinary(serialized)) + policy["token_margin"]
+    estimated = token_count + policy["token_margin"]
     if estimated > policy["input_limit_tokens"]:
         raise BudgetError("SUMMARY_INPUT_LIMIT")
     if (
-        estimated > profile["max_prompt_tokens"]
+        estimated > prompt_limit
         or policy["max_output_tokens"] > profile["max_completion_tokens"]
         or estimated + policy["max_output_tokens"] > profile["context_tokens"]
     ):
         raise BudgetError("SUMMARY_CONTEXT_LIMIT")
     reservation = (
-        profile["max_prompt_tokens"] * input_price + policy["max_output_tokens"] * output_price
+        prompt_limit * input_price + policy["max_output_tokens"] * output_price
     ) / Decimal(1_000_000)
-    return {
+    budget = {
         "input_tokens_estimate": estimated,
-        "input_tokens_reserved": profile["max_prompt_tokens"],
+        "input_tokens_reserved": prompt_limit,
         "output_tokens_reserved": policy["max_output_tokens"],
         "reservation_usd": str(reservation),
-        "tokenizer": encoding.name,
-        "tokenizer_version": version("tiktoken"),
+        "tokenizer": name,
+        "tokenizer_version": tokenizer_version,
     }
+    if policy["model_id"] == deepseek.MODEL_ID:
+        budget.update(tokenizer_revision=deepseek.REVISION, tokenizer_sha256=deepseek.SHA256)
+    return budget

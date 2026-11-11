@@ -6,10 +6,12 @@ from threading import Event
 from types import SimpleNamespace
 from uuid import uuid4
 
+import httpx
 import psycopg
 import pytest
 from fastapi.testclient import TestClient
 
+from folio.ai import OpenRouter
 from folio.api import create_app
 from folio.config import Settings
 from folio.ingestion.parsing.evidence import Element, Extraction, Location, Page
@@ -162,6 +164,85 @@ def test_automatic_summary_is_saved_and_reused_without_another_call(summary_docu
 
 
 @pytest.mark.integration
+def test_deepseek_summary_flows_from_prepared_evidence_to_saved_citations(
+    summary_document, monkeypatch
+):
+    from folio.summaries.config import SummarySettings
+    from folio.summaries.processing import process_summary
+
+    settings, client, publish = summary_document
+    for name, value in {
+        "MODEL_ID": "deepseek/deepseek-v4.1-flash-1017",
+        "PROVIDER": "fireworks",
+        "MAX_OUTPUT_TOKENS": "16384",
+        "REASONING_EFFORT": "none",
+        "DOCUMENT_BUDGET_USD": "0.40",
+    }.items():
+        monkeypatch.setenv(f"FOLIO_SUMMARY_{name}", value)
+    policy = SummarySettings().policy(settings)
+    content = Model().content
+    calls = []
+
+    def respond(request):
+        if request.url.path == "/api/v1/models":
+            data = [{"id": policy["model_id"], "reasoning": {"supported_efforts": ["none"]}}]
+        elif request.method == "GET":
+            data = {
+                "id": policy["model_id"],
+                "endpoints": [
+                    {
+                        "tag": "fireworks",
+                        "provider_name": "Fireworks",
+                        "status": 0,
+                        "context_length": 1048576,
+                        "max_prompt_tokens": None,
+                        "max_completion_tokens": 943718,
+                        "pricing": {"prompt": "0.0000003", "completion": "0.0000012"},
+                        "supported_parameters": [
+                            "max_tokens",
+                            "response_format",
+                            "structured_outputs",
+                            "reasoning",
+                        ],
+                    }
+                ],
+            }
+        else:
+            calls.append(json.loads(request.content))
+            return httpx.Response(
+                200,
+                json={
+                    "model": policy["model_id"],
+                    "provider": "Fireworks",
+                    "choices": [
+                        {"finish_reason": "stop", "message": {"content": json.dumps(content)}}
+                    ],
+                    "usage": {"prompt_tokens": 600, "completion_tokens": 200, "cost": 0.00042},
+                },
+            )
+        return httpx.Response(200, json={"data": data})
+
+    _, revision_id = publish()
+    url = f"/revisions/{revision_id}/summary"
+    run_id = client.get(url).json()["run_id"]
+    model = OpenRouter(policy, "test-key", transport=httpx.MockTransport(respond))
+    assert process_summary(run_id, settings=settings, client=model)["outcome"] == "ready"
+    saved = client.get(url).json()
+    assert saved["overview"] == content["overview"]
+    assert saved["points"] == content["points"]
+    assert {citation["source_id"]: citation["pages"] for citation in saved["citations"]} == {
+        "first": [1],
+        "last": [1],
+    }
+    assert Decimal(saved["usage"]["cost_usd"]) == Decimal("0.00042")
+    assert saved["usage"]["last_finish_reason"] == "stop"
+    assert process_summary(run_id, settings=settings, client=model)["outcome"] == "ignored"
+    assert len(calls) == 1
+    assert "The budget excludes tax." in calls[0]["messages"][1]["content"]
+    assert calls[0]["max_tokens"] == 16384
+
+
+@pytest.mark.integration
 def test_tiny_document_can_publish_one_meaningful_cited_point(summary_document):
     from folio.summaries.processing import process_summary
 
@@ -191,11 +272,12 @@ def test_tiny_document_can_publish_one_meaningful_cited_point(summary_document):
     "defect",
     [
         "foreign_source",
-        "truncated",
         "invalid_json",
         "no_points",
         "too_many_points",
         "too_many_sources",
+        "long_overview",
+        "long_point",
     ],
 )
 def test_invalid_output_retries_once_without_publishing_or_losing_evidence(
@@ -215,8 +297,11 @@ def test_invalid_output_retries_once_without_publishing_or_losing_evidence(
                 bad = json.loads(result.content)
                 bad["points"][0]["source_ids"] = ["another-document-source"]
                 result.content = json.dumps(bad)
-            elif defect == "truncated":
-                result.finish_reason = "length"
+            elif defect in ("long_overview", "long_point"):
+                bad = json.loads(result.content)
+                statement = bad["overview"] if defect == "long_overview" else bad["points"][0]
+                statement["text"] = "x" * (601 if defect == "long_overview" else 401)
+                result.content = json.dumps(bad)
             elif defect in ("no_points", "too_many_points"):
                 bad = json.loads(result.content)
                 bad["points"] = [] if defect == "no_points" else bad["points"] * 2
@@ -243,6 +328,42 @@ def test_invalid_output_retries_once_without_publishing_or_losing_evidence(
     assert Decimal(final["usage"]["cost_usd"]) == Decimal("0.00009")
     assert process_summary(run_id, settings=settings, client=model)["outcome"] == "ignored"
     assert len(model.calls) == 2
+    assert client.get(receipt["status_url"]).json()["state"] == "succeeded"
+    assert client.get(f"/revisions/{revision_id}/evidence").status_code == 200
+
+
+@pytest.mark.integration
+def test_output_limit_is_terminal_and_preserves_usage_and_evidence(summary_document):
+    from folio.summaries.processing import process_summary
+
+    settings, client, publish = summary_document
+    receipt, revision_id = publish()
+    url = f"/revisions/{revision_id}/summary"
+    run_id = client.get(url).json()["run_id"]
+
+    class Truncated(Model):
+        def generate(self, messages, schema):
+            result = super().generate(messages, schema)
+            result.content = '{"overview":'
+            result.finish_reason = "length"
+            result.completion_tokens = 4096
+            result.reasoning_tokens = 50
+            return result
+
+    model = Truncated()
+    process_summary(run_id, settings=settings, client=model)
+    saved = client.get(url).json()
+    assert saved["state"] == "failed"
+    assert saved["error"]["code"] == "SUMMARY_OUTPUT_LIMIT"
+    assert saved["overview"] is None
+    assert saved["usage"]["attempts"] == 1
+    assert saved["usage"]["last_finish_reason"] == "length"
+    assert saved["usage"]["reasoning_tokens"] == 50
+    assert saved["usage"]["response_characters"] == 12
+    assert saved["usage"]["completion_tokens"] == 4096
+    assert Decimal(saved["usage"]["cost_usd"]) == Decimal("0.000045")
+    assert process_summary(run_id, settings=settings, client=model)["outcome"] == "ignored"
+    assert len(model.calls) == 1
     assert client.get(receipt["status_url"]).json()["state"] == "succeeded"
     assert client.get(f"/revisions/{revision_id}/evidence").status_code == 200
 

@@ -18,12 +18,12 @@ class SummarySettings(SummaryCredentials):
     )
 
     enabled: bool = False
-    model_id: str = "openai/gpt-5.1"
-    provider: str = "openai"
+    model_id: str = "deepseek/deepseek-v4.1-flash-1017"
+    provider: str = "together"
     input_limit_tokens: int = Field(default=64000, gt=0)
-    max_output_tokens: int = Field(default=4096, gt=0)
+    max_output_tokens: int = Field(default=16384, gt=0)
     token_margin: int = Field(default=2048, gt=0)
-    reasoning_effort: str = "low"
+    reasoning_effort: str = "none"
     timeout_seconds: int = Field(default=90, gt=0)
     max_attempts: int = Field(default=2, ge=1, le=2)
     budget_usd: Decimal = Field(default=Decimal("1"), gt=0)

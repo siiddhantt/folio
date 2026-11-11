@@ -11,23 +11,53 @@ The complete first ingestion slice was accepted on November 7: FastAPI, PostgreS
 Docling processes PDF native text and English OCR. Usable partial evidence remains available with known coverage warnings. Encrypted PDFs receive a terminal unsupported-input result. DOCX and other formats are deferred. One selected PDF per conversation remains the later conversation boundary.
 
 OpenRouter is the selected initial model gateway. Automatic summaries use
-GPT-5.1 temporarily on its verified OpenAI standard route, with a persistent $1
-deployment and owner-approved $0.40 document allowance. GPT-5.1 retires April 1,
-2027; this is an evaluation candidate, not a validated long-term choice. Chat/embedding models,
+DeepSeek V4.1 Flash 1017 on the explicitly selected Together standard route through
+OpenRouter, with a persistent $1 deployment and owner-approved $0.40 document
+allowance. This is an evaluation candidate, not a general quality guarantee. Chat/embedding models,
 retrieval and vector storage remain deferred. Configuration uses a commentless
 ignored `.env` and a safe template.
 
-## Summary checkpoint — November 11
+## DeepSeek summary increment — November 11
+
+The owner accepted test-first response bounds and DeepSeek through OpenRouter,
+with generous fixed generation headroom and no adaptive retries. Prompt/schema/
+preparation versions are 6/4/3. Word targets stay soft; the schema permits a
+600-character overview, 400-character points and at most eight references per
+statement. Completion capacity is 16,384 tokens with reasoning explicitly off.
+`SUMMARY_OUTPUT_LIMIT` is terminal and retains the known bill and usable evidence.
+
+The native tokenizer is pinned by revision/hash, bundled with its MIT license,
+and loaded offline. The selected route's missing separate prompt cap remains unknown;
+financial admission conservatively reserves the full context as input plus the
+configured output ceiling ($0.3342336). The local 64,000-token input bound remains.
+Read-only current metadata and local tokenizer admission passed. The fast suite
+passed 74 tests (16 deselected) in 17.75 seconds; Ruff and formatting passed.
+Independent diff review fixed unsafe raw finish metadata and found no remaining
+blocking software defect. Docker caught an incompatible transitive dependency;
+constraining Hugging Face Hub to the parser image's 1.33.0 repaired the build.
+The running stack is healthy and the bundled tokenizer works with networking
+disabled. Fireworks became unavailable during integration; an actual mixed PDF
+retained evidence and source navigation without starting a paid call. A manually
+selected Together trial completed all three summaries in one paid call each,
+with normal termination and zero reported reasoning tokens. The 59-page report
+used 387 completion tokens and cost $0.0141951. The three new calls cost
+$0.016125504; all 13 development calls total $0.223380304, confirmed by both
+PostgreSQL and OpenRouter, with no held/unknown cost. The current report summary
+survives reload and its page-45 citation updates original-page navigation.
+Independent source review still finds citation and qualification weaknesses;
+these results establish successful bounded execution, not a general quality pass.
+
+## Earlier GPT-5.1 checkpoint — November 11
 
 Autoloops/DeepSeek-V4.1 Flash was subsequently investigated as a lower-cost
 candidate. The owner then explicitly deferred Autoloops testing or adoption and
-reaffirmed OpenRouter. Research recommends a constrained short output contract
-and a DeepSeek V4.1 Flash 1017 comparison through OpenRouter/Fireworks with an
-explicit reasoning mode and measured completion headroom; integration and any
-adaptive retry remain proposals. Read-only metadata for the failed NIST
+reaffirmed OpenRouter. The owner then accepted test-first response-bound fixes
+and a DeepSeek V4.1 Flash 1017 comparison through OpenRouter/Fireworks, with
+generous fixed generation headroom and no adaptive retries. That comparison is
+recorded above; the earlier checkpoint below remains historical. Read-only metadata for the failed NIST
 call reports only 50 reasoning tokens within 4,096 completion tokens, so reasoning
 exhaustion is not an established cause. No application settings, credentials or
-paid usage changed during this research.
+paid usage changed during the preceding research.
 
 The automatic complete-input summary slice is implemented and independently
 reviewed, with no blocking software defect found in the final review. Usable
@@ -173,9 +203,9 @@ the workflow, not the semantic accuracy of all extracted content. Native PDF
 rendering varies by browser; page pixels were not validated in the in-app viewer,
 and open/download actions remain available. Normal worker operation was restored.
 
-Review the known summary failures with the owner and select the next model/configuration
-decision before beginning grounded answers, chunking, retrieval or indexing.
-No further tuning or paid calls are planned for this frozen checkpoint.
+Finish the accepted DeepSeek comparison and review actual source support before
+beginning grounded answers, chunking, retrieval or indexing. Previous GPT-5.1
+results remain frozen; no document-specific prompt tuning is planned.
 Chat/history, global statistics,
 the final document-chat demonstration/video and selected optional capabilities
 remain unfinished; see the [requirements ledger](requirements.md). The current
