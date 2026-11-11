@@ -22,6 +22,11 @@ Filter for `/api/` to see the application requests:
 | `GET /api/revisions/{id}/evidence` | Recovered text/tables, source locations, page observations and a pagination cursor. |
 | `GET /api/documents/{id}/original?inline=true` | The preserved original used by the PDF preview. The download link omits `inline=true`. |
 
+Remove the `/api/` filter to inspect the PDF viewer's local worker and font/image
+decoder assets. The worker's `.mjs` response must be JavaScript. Missing
+`/pdf-assets/` files must return `404`, not the application's HTML shell with
+`200`; otherwise an asset problem becomes a confusing decoder error.
+
 `202` means Folio accepted the work durably. Parsing can still be waiting, running
 or unsuccessful. The document URL can be bookmarked and reopened; the browser
 reconstructs its view from saved state. Closing the tab does not cancel accepted
@@ -32,10 +37,21 @@ Inspect a recovered passage and use its page button to open the corresponding
 original page. Compare the actual wording. For a table, compare the headers as
 well as the values. Known coverage gaps stay visible even when useful evidence
 is available. A page with no recovered text is not automatically a damaged page;
-it could be blank. Native PDF preview support varies, so an open/download
-fallback remains available. Embedded preview loads after usable extraction; open
-and download links remain available during processing and after failure. This
-avoids automatically activating an encrypted PDF's native password viewer.
+it could be blank. The coverage notice shows a recovered-page count and known
+timeout reason where reported. Expand its bounded details to inspect missing
+page ranges and other diagnostics.
+
+Original renders one page locally with selectable text and Folio's page controls.
+On mobile, a source citation selects the Original tab; returning to Content keeps
+the loaded evidence and reading position. Preview loads after usable extraction;
+open/download fallbacks remain available during processing and after failure.
+The viewer does not render every page or rerun document extraction.
+
+There are two different workers here. Docling's backend worker extracts evidence
+and saves it in PostgreSQL. PDF.js uses a browser worker to read the original PDF
+and draw the page you selected. Clicking page 2 changes that browser view; it
+does not create another ingestion job or model call. The page image has a text
+layer so its words remain selectable.
 
 ## Where the work happens
 
@@ -75,13 +91,15 @@ second revision for the same request.
 Set `FOLIO_DEVELOPMENT_MODE=true` in the existing ignored `.env`, preserving its
 other values, then apply the configuration with `docker compose up -d`. This
 setting defaults to false. It enables a server-gated inspection endpoint and the
-**Development details** disclosure on the document page. It is a local debugging
+**Activity** side panel on the document page. It is a local debugging
 setting, not an authentication mechanism.
 
-Open that disclosure during an upload. It shows the request and attempt IDs,
+Open Activity during an upload. It shows the request and attempt IDs,
 original size/hash, frozen parser settings, delivery information, ownership
 deadline and observed events. The event list polls while the request is open and
-retains its recorded history after completion.
+retains its recorded history after completion. The panel scrolls independently;
+Escape closes it and returns keyboard focus to Activity. Closing the panel stops
+inspection polling without changing the processing job.
 
 Read the events as observations:
 
@@ -120,7 +138,7 @@ their own logging formats.
 On PowerShell, isolate the known request without dumping unrelated records:
 
 ```powershell
-$requestId = 'paste the request ID from Development details'
+$requestId = 'paste the request ID from Activity'
 docker compose logs --no-color --no-log-prefix --tail 500 api dispatcher worker |
     Select-String -SimpleMatch $requestId
 ```
@@ -175,6 +193,8 @@ cover that behavior and their timing limitations.
 | [`dispatcher.py`](../src/folio/ingestion/dispatcher.py), [`ownership.py`](../src/folio/ingestion/ownership.py) | Due work, queue delivery and conditional worker ownership. |
 | [`processing.py`](../src/folio/ingestion/processing.py), [`publication.py`](../src/folio/ingestion/publication.py), [`recovery.py`](../src/folio/ingestion/recovery.py) | Parser execution, publication and bounded failure/retry behavior. |
 | [`useDocument.ts`](../web/src/documents/useDocument.ts), [`EvidenceReader.tsx`](../web/src/documents/EvidenceReader.tsx) | Status polling, evidence pagination and source inspection. |
+| [`DocumentReader.tsx`](../web/src/documents/DocumentReader.tsx), [`PdfRenderer.tsx`](../web/src/documents/PdfRenderer.tsx) | Selected source page, responsive reading state, local PDF loading and bounded single-page rendering. |
+| [`CoverageNotice.tsx`](../web/src/documents/CoverageNotice.tsx), [`coverage.ts`](../web/src/documents/coverage.ts) | Compact coverage explanation, grouped ranges and bounded detail pages. |
 | [`development.py`](../src/folio/ingestion/development.py), [`DeveloperPanel.tsx`](../web/src/development/DeveloperPanel.tsx) | Safe database inspection and its development-only display. |
 
 Automated checks use controlled files so their expected content is independently
@@ -185,3 +205,9 @@ Owner exercise: trace one request across its API receipt and worker logs. Explai
 why `parse_completed` alone does not make it ready, and which saved event proves
 publication. In the stopped-worker exercise, explain which facts survive closing
 the tab and why a new idempotency key would create a new document.
+
+For the reading view, select a citation and watch Network. Explain why changing
+the displayed PDF page does not create another processing request. On a narrow
+screen, return to Content and check that your reading position survived. A
+preview failure should leave the extracted evidence and original download
+available; it does not change the saved extraction outcome.

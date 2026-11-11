@@ -10,7 +10,7 @@ ERRORS = {
     "SUMMARY_DISABLED": "Automatic summaries are disabled for this document.",
     "SUMMARY_CONFIGURATION_INVALID": "Summary settings are invalid for this document.",
     "INVALID_OUTPUT": "The model did not return a complete summary with valid source references.",
-    "SUMMARY_INPUT_LIMIT": "The complete available evidence exceeds this summary's input limit.",
+    "SUMMARY_INPUT_LIMIT": "The prepared summary input exceeds this summary's input limit.",
     "SUMMARY_CONTEXT_LIMIT": "The available evidence does not fit the selected model route.",
     "SUMMARY_GLOBAL_BUDGET": "The remaining summary allowance cannot cover this document.",
     "SUMMARY_DOCUMENT_BUDGET": "The summary cannot fit this document's spending limit.",

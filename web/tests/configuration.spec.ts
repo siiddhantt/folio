@@ -45,12 +45,13 @@ test('console saves limits for a real upload and rejects a stale form', async ({
       .setInputFiles('../tests/fixtures/text.pdf');
     await page.getByRole('button', { name: 'Open document', exact: true }).click();
     await expect(page.getByRole('status')).toContainText('Evidence available');
-    await page.getByText('Development details', { exact: true }).click();
+    await page.getByRole('button', { name: 'Activity', exact: true }).click();
     const inspection = page.getByRole('region', { name: 'Development inspection' });
     await inspection.getByText('Configuration for this request', { exact: true }).click();
     await expect(
       inspection.locator('.configuration-pair').filter({ hasText: 'settings revision' }),
     ).toContainText(String(ownedRevision));
+    await page.getByRole('button', { name: 'Close activity' }).click();
     await expect(page.getByRole('region', { name: 'Document summary' })).toContainText('disabled');
   } finally {
     if (ownedRevision !== null) {

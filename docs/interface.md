@@ -20,12 +20,20 @@ get new keys. A pending retry must not appear as a terminal failure.
 
 Source content is rendered as text, never executable HTML. Tables retain row,
 column, header and span relationships. Evidence pagination preserves order.
-Source-page links open the original; native PDF rendering has an explicit
-open/download fallback. Embedded preview loads after usable extraction; open and
+Source-page links open the original. The November 11 revision replaces native
+embedded PDF chrome with one locally rendered page and explicit open/download
+fallbacks. Preview loads after usable extraction; open and
 download links remain available while pending or failed. This avoids automatically
 activating an encrypted PDF's native password viewer before input validation.
 Evidence availability does not imply full coverage or
 that summary/chat capabilities exist.
+
+Accepted November 11: keep Content and Original side by side on desktop; switch
+between them with tabs on narrow screens. A citation selects the original page
+and its tab. Preserve loaded content and reading position across tab switches.
+Keep status separate from document actions. Partial extraction uses a compact
+recovered-page count, truthful reason where known, grouped missing-page ranges,
+and bounded expandable details. See D17 for dependency and verification choices.
 
 ## Small UI foundation
 
@@ -53,6 +61,11 @@ registry updates. Layout CSS belongs to the relevant feature. Avoid decorative
 dashboards and empty future-feature controls.
 
 ## Development inspection
+
+The November 11 revision moves inspection into an Activity side panel. Opening
+it does not move the reading layout; closing restores focus to its trigger.
+The panel has its own bounded scroll area, an accessible title and Escape
+dismissal. Detailed identifiers/settings remain secondary to the event timeline.
 
 An explicit server setting gates the inspection endpoint and UI. It is disabled
 by default and is not authentication. Inspect only on the existing localhost

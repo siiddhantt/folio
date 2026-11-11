@@ -17,6 +17,49 @@ allowance. This is an evaluation candidate, not a general quality guarantee. Cha
 retrieval and vector storage remain deferred. Configuration uses a commentless
 ignored `.env` and a safe template.
 
+## Reading workspace increment — November 11
+
+The accepted reading workspace now has desktop content/source columns, mobile
+Content/Original tabs, an Activity drawer and compact coverage. Source jumps
+preserve loaded evidence and mobile reading position; keyboard focus follows the
+selected view. Status is separated from actions, and a failed extraction stays
+failed even when its parser produced an intermediate partial result.
+
+React-PDF renders one selected page with selectable text, page/zoom controls and
+native open/download fallbacks. Drawing failures leave evidence usable. The
+matching PDF.js worker, fonts and decoders are served locally. The lazy renderer
+is about 634 kB minified (191 kB gzip), with a separate 1.27 MB worker; the build
+still reports its large-chunk warning. This is an explicit cost of replacing the
+native viewer, not a claim of a smaller bundle. See D17 in [decisions](decisions.md).
+All 16 browser checks passed against the Docker-served app in 4.0 minutes.
+Focused red-to-green checks covered compact large coverage, drawer keyboard use,
+real single-page rendering, mobile focus/scroll, drawing failure and truthful
+failed status. Types, formatting, Ruff and public-file checks passed. Independent
+review found no remaining actionable defect. The production check caught and
+fixed the PDF worker's MIME type, asset directory layout and missing-asset HTML
+fallback; actual worker/font/decoder requests now succeed and missing assets
+return 404. Backend parser/supervision suites were not rerun because that logic
+did not change. Summary UI checks substitute responses, not model-quality proof.
+
+The rebuilt API/web are healthy. Automatic summaries were temporarily disabled
+for browser uploads, then restored while preserving a concurrent settings edit.
+Recorded spending remained $0.223380304 with no held amount or new paid call.
+Aside inspected a stored document on desktop and at 390 pixels: compact coverage,
+original-page navigation, Activity, tab switching and readable content without
+horizontal overflow. Desktop light/dark, drawer and mobile dark screenshots were
+inspected; mobile drawer capture timed out. These observations supplement the deterministic
+browser checks and do not establish wider document-rendering accuracy.
+The [reading walkthrough](interface-walkthrough.md) explains the two workers,
+data flow, failure behavior and source reading order; owner visual review remains
+part of the handoff.
+
+Known summary-preparation issue discovered during this review: repeated revision
+and page diagnostics can dominate the prepared input and trigger the input
+limit despite much smaller recovered prose. Diagnostic compaction needs a
+separate behavior change and regression check. The evidence API also repeats
+coverage metadata with every paginated response. The current UX work bounds
+rendered warnings; it does not yet redesign those backend payloads.
+
 ## Development console increment — November 11
 
 Accepted: a local development console with changes applying only to new uploads.

@@ -1,47 +1,51 @@
-.developer-panel {
+.activity-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgb(0 0 0 / 22%);
+}
+.activity-panel {
+  position: fixed;
+  inset: 0 0 0 auto;
+  z-index: 41;
+  width: min(480px, 100vw);
+  background: var(--background);
+  border-left: 1px solid var(--line);
+  box-shadow: -12px 0 48px rgb(0 0 0 / 12%);
+  display: flex;
+  flex-direction: column;
+  outline: none;
+}
+.activity-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
   border-bottom: 1px solid var(--line);
 }
-.developer-panel > summary {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  padding: 12px 0;
-  width: fit-content;
-  color: var(--muted);
-  font-size: 12px;
-  list-style: none;
-}
-.developer-panel > summary::-webkit-details-marker {
-  display: none;
-}
-.developer-panel > summary::before {
-  content: '+';
-  width: 12px;
-  text-align: center;
-}
-.developer-panel[open] > summary::before {
-  content: '−';
+.activity-heading h2 {
+  font-size: 16px;
 }
 .developer-content {
+  overflow: auto;
+  overscroll-behavior: contain;
   padding: 24px;
-  margin-bottom: 20px;
-  background: var(--secondary);
-  border: 1px solid var(--line);
-  border-radius: 6px;
+  min-height: 0;
+}
+.developer-content:focus-visible {
+  outline-offset: -4px;
 }
 .inspection-note {
-  font-size: 11px;
   color: var(--muted);
-  margin-top: 16px;
+  font-size: 12px;
+  margin-top: 12px;
 }
 .inspection-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 40px;
+  gap: 28px;
 }
 .inspection-grid h3 {
-  font-size: 12px;
-  font-weight: 500;
+  font-size: 13px;
   margin-bottom: 20px;
 }
 .event-timeline {
@@ -51,10 +55,10 @@
 }
 .event-timeline li {
   display: grid;
-  grid-template-columns: 100px minmax(0, 1fr);
+  grid-template-columns: 88px minmax(0, 1fr);
   gap: 16px;
   position: relative;
-  padding-bottom: 20px;
+  padding-bottom: 24px;
 }
 .event-timeline time {
   color: var(--muted);
@@ -64,44 +68,48 @@
 }
 .event-timeline li > div {
   position: relative;
-  padding-left: 18px;
+  padding-left: 20px;
 }
 .event-timeline li > div::before {
   content: '';
   position: absolute;
-  top: 7px;
+  top: 6px;
   left: 0;
-  width: 5px;
-  height: 5px;
+  width: 7px;
+  height: 7px;
+  border: 1px solid var(--muted);
   border-radius: 50%;
-  background: var(--muted);
+  background: var(--background);
+  z-index: 1;
 }
 .event-timeline li:not(:last-child)::after {
   content: '';
   position: absolute;
-  left: 118px;
-  top: 17px;
-  bottom: -1px;
+  left: 107px;
+  top: 16px;
+  bottom: -5px;
   width: 1px;
   background: var(--line);
 }
 .event-timeline .event-warning > div::before {
   background: var(--danger);
+  border-color: var(--danger);
 }
 .event-name {
-  font-size: 12px;
+  font-size: 13px;
   line-height: 20px;
 }
 .event-description {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
-  line-height: 1.8;
+  line-height: 1.65;
+  margin-top: 4px;
   overflow-wrap: anywhere;
 }
 .identity-list {
   display: grid;
   grid-template-columns: minmax(100px, 0.7fr) minmax(0, 1fr);
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.7;
   gap: 8px 16px;
   margin: 0 0 20px;
@@ -115,7 +123,7 @@
   font-variant-numeric: tabular-nums;
 }
 .identity-list code {
-  font-size: 10px;
+  font-size: 11px;
 }
 .attempt-record,
 .configuration-record {
@@ -123,8 +131,8 @@
 }
 .attempt-record > summary,
 .configuration-record > summary {
-  padding: 12px 0;
-  font-size: 11px;
+  padding: 14px 0;
+  font-size: 12px;
 }
 .attempt-state {
   float: right;
@@ -136,19 +144,18 @@
 .configuration-pair {
   display: contents;
 }
-@media (max-width: 680px) {
-  .inspection-grid {
-    grid-template-columns: 1fr;
-    gap: 24px;
-  }
+@media (max-width: 480px) {
   .developer-content {
-    padding: 16px;
+    padding: 20px;
+  }
+  .activity-heading {
+    padding: 12px 20px;
   }
   .event-timeline li {
-    grid-template-columns: 88px minmax(0, 1fr);
-    gap: 10px;
+    grid-template-columns: 80px minmax(0, 1fr);
+    gap: 12px;
   }
   .event-timeline li:not(:last-child)::after {
-    left: 100px;
+    left: 95px;
   }
 }

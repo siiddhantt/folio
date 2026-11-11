@@ -21,13 +21,14 @@ test('usable content stays visible alongside a page coverage warning', async ({ 
     .getByLabel('PDF document', { exact: true })
     .setInputFiles('../tests/fixtures/mixed.pdf');
   await page.getByRole('button', { name: 'Open document', exact: true }).click();
-  await expect(page.getByRole('status')).toContainText('Evidence available');
+  await expect(page.getByRole('status')).toContainText('Partial extraction');
   await expect(page.getByRole('region', { name: 'Extracted evidence' })).toContainText(
     '30 September 2027',
   );
-  await expect(
-    page.getByText('No text or table content was recovered on page 3.', { exact: true }),
-  ).toBeVisible();
+  const coverage = page.getByRole('note', { name: 'Extraction coverage' });
+  await expect(coverage).toContainText('Content recovered from 2 of 3 pages');
+  await coverage.getByText('Coverage details', { exact: true }).click();
+  await expect(coverage.getByRole('button', { name: 'Inspect page 3' })).toBeVisible();
 });
 
 test('table cells retain their relationships and link to the original page', async ({ page }) => {
@@ -54,11 +55,12 @@ test('development view shows observed stages from this actual upload', async ({ 
     .setInputFiles('../tests/fixtures/text.pdf');
   await page.getByRole('button', { name: 'Open document', exact: true }).click();
   await expect(page).toHaveURL(/\/documents\/[0-9a-f-]+$/);
-  await page.getByText('Development details', { exact: true }).click();
+  await page.getByRole('button', { name: 'Activity', exact: true }).click();
   const inspection = page.getByRole('region', { name: 'Development inspection' });
   await expect(inspection.getByText('Upload accepted', { exact: true })).toBeVisible();
   await expect(inspection.getByText('Parsing completed', { exact: true })).toBeVisible();
   await expect(inspection.getByText('Evidence published', { exact: true })).toBeVisible();
+  await inspection.getByText('Document details', { exact: true }).click();
   await expect(inspection.getByText('SHA-256', { exact: true })).toBeVisible();
   await expect(inspection).not.toContainText('models_path');
 });
@@ -68,7 +70,7 @@ test('an upstream diagnostic without a code does not hide usable evidence', asyn
     const response = await route.fetch();
     const evidence = await response.json();
     evidence.diagnostics.push({ page_no: 2, error_message: 'Page decoding reported a limitation' });
-    evidence.diagnostics.push({ page_no: 2, error_message: 'A second independent limitation' });
+    evidence.diagnostics.push({ page_no: 2, error_message: 'Unrecognized timeout configuration' });
     await route.fulfill({ response, json: evidence });
   });
   await page.goto('/');
@@ -76,12 +78,16 @@ test('an upstream diagnostic without a code does not hide usable evidence', asyn
     .getByLabel('PDF document', { exact: true })
     .setInputFiles('../tests/fixtures/text.pdf');
   await page.getByRole('button', { name: 'Open document', exact: true }).click();
+  const coverage = page.getByRole('note', { name: 'Extraction coverage' });
+  await expect(coverage).toBeVisible();
+  await expect(coverage).not.toContainText('Processing reached its time limit');
+  await coverage.getByText('Coverage details', { exact: true }).click();
   await expect(page.getByRole('region', { name: 'Extracted evidence' })).toContainText(
     'Page decoding reported a limitation',
   );
   await expect(page.getByRole('region', { name: 'Extracted evidence' })).toContainText('125,000');
   await expect(page.getByRole('region', { name: 'Extracted evidence' })).toContainText(
-    'A second independent limitation',
+    'Unrecognized timeout configuration',
   );
 });
 
@@ -130,7 +136,12 @@ test('an unsupported encrypted PDF has a useful failure and its original remains
   await expect(page.getByRole('status')).toContainText('Could not extract this PDF');
   await expect(page.getByRole('alert')).toContainText('Your original remains available');
   await expect(page.getByRole('link', { name: 'Download PDF' })).toBeVisible();
-  await page.getByText('Development details', { exact: true }).click();
+  await page.getByRole('button', { name: 'Activity', exact: true }).click();
+  await page
+    .getByRole('region', { name: 'Development inspection' })
+    .locator('summary')
+    .filter({ hasText: 'Attempt 1' })
+    .click();
   await expect(page.getByRole('region', { name: 'Development inspection' })).toContainText(
     'ENCRYPTED_PDF',
   );

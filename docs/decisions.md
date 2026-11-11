@@ -1,6 +1,6 @@
 # Folio decision guide
 
-Updated: 2026-11-09. All recommendations below are proposals unless marked accepted.
+Updated: 2026-11-11. All recommendations below are proposals unless marked accepted.
 
 Each discussion should cover: the user's outcome, two or three realistic options, what each costs, a recommendation, an example, and evidence that could change the recommendation. Resolve dependent questions in order rather than approving the whole stack at once.
 
@@ -9,13 +9,13 @@ Each discussion should cover: the user's outcome, two or three realistic options
 - Name: Folio.
 - General-purpose document assistance, using fact-checking in reports/documents as initial examples. These examples do not constrain content domains.
 - Public source development; no public-service deployment implied.
-- OpenRouter as the initial API gateway. The first bounded summary evaluation uses GPT-5 Nano temporarily; its retirement and compatibility limits are recorded in the model notes. Chat and embedding models remain open.
+- OpenRouter as the initial API gateway. The current summary evaluation uses DeepSeek V4.1 Flash 1017 through the explicit Together route; earlier candidates and quality limitations are recorded in the model notes. Chat and embedding models remain open.
 - PDFs with native text and English OCR, with one selected PDF per conversation. Docling is the selected parser; DOCX and other formats remain deferred.
 - Preserve usable partial extraction with explicit coverage warnings; do not globally block summaries/chat when recoverable evidence exists.
 - Develop locally with Docker Compose. The completed Docling/LiteParse comparison informed parser selection.
 - Accepted November 7: the complete first ingestion slice uses FastAPI, PostgreSQL, RQ/Redis and a shared local artifact volume, with the schema, idempotency, retry/ownership rules, bounds and test interfaces in the [system design](ingestion-system.md). Retrieval and generation remain separate decisions.
 - Small testable vertical slices, behavior tests first, explanations and human ownership throughout.
-- A commentless local `.env` for secrets and adjustable runtime configuration, excluded from Git. A safe `.env.example` describes supported names through examples; explain their meaning in documentation.
+- A commentless local `.env` for secrets and deployment defaults, excluded from Git. Saved development controls override their initial defaults for new uploads. A safe `.env.example` describes supported names through examples; explain their meaning in documentation.
 
 ## D01: First useful outcome
 
@@ -299,6 +299,47 @@ saved settings across restart, stale/invalid saves, disabled development routes,
 snapshot consistency, upload bounds and budget preservation. A small real PDF
 demonstrates changed page limits; deterministic model substitutes exercise the
 summary configuration without paid inference.
+
+## D17: Document reading workspace
+
+Status: accepted November 11; implemented and checked. Owner visual review remains
+part of the handoff.
+
+The owner requested a more usable minimal reading experience and selected
+side-by-side extracted content and original on desktop, Content/Original tabs on
+narrow screens, and an Activity button opening processing history in a side
+panel. Keep neutral typography and familiar controls. Status belongs beneath
+the filename, separate from Download and Activity actions. Known incomplete
+coverage stays visible without pushing readable content below thousands of
+repeated warnings.
+
+Group missing physical pages into ranges and bound expanded diagnostic details.
+Distinguish a known timeout from unexplained missing content. A closed disclosure
+containing thousands of mounted rows is not sufficient. Mobile citation links
+select Original at the cited page; returning to Content preserves reading state.
+Use the existing Radix dialog primitives for named, keyboard-accessible Activity
+with Escape and focus restoration. Keep inspection polling conditional on opening.
+
+Use React-PDF 11.0.0 with its matching PDF.js 6.3.289 dependency to render one
+current page with selectable text, local worker/assets and Folio-owned controls.
+The existing React 19 foundation satisfies its peer requirement. Compared with
+direct PDF.js, this wrapper reduces lifecycle and text-layer code; compared with
+the native iframe, it permits a consistent page-only interface. This adds a
+browser dependency and asset budget. Never substitute a mismatched worker or
+render all document pages at once. Retain native open/download as fallbacks and
+gate preview appropriately for failed/encrypted inputs.
+
+Verification uses the accepted browser seam: real small-PDF rendering and source
+navigation, mobile tab state, Activity keyboard behavior, and synthetic large
+coverage metadata. Software tests disable automatic summaries. Parser capacity,
+summary metadata compaction and evidence payload redesign remain separate work;
+this increment does not expand ingestion or model limits.
+
+Primary references: [React-PDF release and integration](https://github.com/wojtekmaj/react-pdf/tree/v11.0.0),
+[PDF.js examples](https://mozilla.github.io/pdf.js/examples/),
+[Radix Dialog](https://www.radix-ui.com/primitives/docs/components/dialog),
+[Radix Tabs](https://www.radix-ui.com/primitives/docs/components/tabs), and
+[Vercel's pinned interface checklist](https://github.com/vercel-labs/web-interface-guidelines/blob/4ecfb9fb8d1d3b7009674869b3aaee2f904042e1/command.md).
 
 ## Summary integration host selection — November 11
 

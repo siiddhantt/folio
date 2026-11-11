@@ -68,3 +68,27 @@ The four folders are ordinary repository files, so they travel with a clone.
 Compatible agents discover `.agents/skills` according to their own support for the
 [Agent Skills format](https://agentskills.io/home). Discovery, execution tooling,
 authentication and updates remain separate concerns.
+
+## Interface review references
+
+The November 11 reading-workspace review used Aside to inspect maintained primary
+sources. These are reviewed references, not additional installed skill packs:
+
+- Vercel's [interface checklist](https://github.com/vercel-labs/web-interface-guidelines/blob/4ecfb9fb8d1d3b7009674869b3aaee2f904042e1/command.md)
+  at `4ecfb9f` (October 5, MIT) is the closest fit: semantic controls, visible
+  focus, long-content handling, bounded large lists and preserved navigation.
+  The separate [web-design-guidelines skill](https://github.com/vercel-labs/agent-skills/blob/ba46938889d4e58635362fb8f618e1178ac3ec46/skills/web-design-guidelines/SKILL.md)
+  fetches a mutable guidelines URL. Its separate wrapper license was not
+  established in this review, so it was not vendored. Folio references the
+  inspected checklist revision instead.
+- Anthropic's [frontend-design](https://github.com/anthropics/skills/blob/41bbe19d1a1a7eaab5e7bb9050a417e5c6cffc8f/skills/frontend-design/SKILL.md)
+  at `41bbe19` (September 3, skill-local Apache-2.0) includes useful readability
+  and restraint guidance. Its broader visual-direction workflow was not needed
+  to change the accepted neutral design.
+- The official [shadcn skill](https://github.com/shadcn-ui/ui/blob/4233ed1caded8c38f4bc14b14afe1f93ebcaf966/skills/shadcn/SKILL.md)
+  at `4233ed1` (October 14, repository MIT) provides component-composition
+  guidance. Implementation uses the existing shadcn/Radix foundation and primary
+  Dialog/Tabs documentation, without importing a component collection.
+
+Apply relevant guidance to the accepted behavior; a checklist is not authority
+to add unrelated dependencies, redesign the product, or change its scope.

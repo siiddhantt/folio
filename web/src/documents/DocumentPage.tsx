@@ -1,15 +1,12 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, ArrowUpRight, Download, FileText } from 'lucide-react';
+import { ArrowLeft, Download } from 'lucide-react';
 import { originalUrl } from '../api';
 import { Button, Notice } from '../components/ui';
-import { Badge } from '../components/ui/badge';
-import { Separator } from '../components/ui/separator';
 import type { Capabilities, RequestStatus } from '../types';
 import { useDocument } from './useDocument';
-import { EvidenceReader } from './EvidenceReader';
 import { DeveloperPanel } from '../development/DeveloperPanel';
-import { SummaryPanel } from '../summaries/SummaryPanel';
+import { DocumentReader } from './DocumentReader';
 
 function processingLabel(status: RequestStatus): string {
   if (status.state === 'succeeded') return 'Evidence available';
@@ -24,8 +21,18 @@ function processingLabel(status: RequestStatus): string {
 
 export function DocumentPage({ capabilities }: { capabilities: Capabilities }) {
   const { documentId = '' } = useParams();
+  return <DocumentWorkspace key={documentId} documentId={documentId} capabilities={capabilities} />;
+}
+
+function DocumentWorkspace({
+  documentId,
+  capabilities,
+}: {
+  documentId: string;
+  capabilities: Capabilities;
+}) {
   const { document, status, error } = useDocument(documentId);
-  const [sourcePage, setSourcePage] = useState(1);
+  const [partial, setPartial] = useState(false);
   const latest = status?.attempts.at(-1);
   return (
     <div className="document-page">
@@ -41,95 +48,40 @@ export function DocumentPage({ capabilities }: { capabilities: Capabilities }) {
                   <ArrowLeft aria-hidden="true" />
                 </Link>
               </Button>
-              <h1>{document.display_name}</h1>
+              <div className="document-title-copy">
+                <h1>{document.display_name}</h1>
+                <p
+                  role="status"
+                  className={`document-status ${status?.state === 'failed' ? 'text-destructive' : ''}`}
+                >
+                  {status?.state === 'succeeded' &&
+                  (partial || latest?.parser_status === 'partial_success')
+                    ? 'Partial extraction'
+                    : status
+                      ? processingLabel(status)
+                      : 'Loading…'}
+                </p>
+              </div>
             </div>
             <div className="document-actions">
-              <Badge
-                variant="secondary"
-                role="status"
-                className={status?.state === 'failed' ? 'text-destructive' : ''}
-              >
-                {status ? processingLabel(status) : 'Loading…'}
-              </Badge>
               <Button variant="outline" size="sm" asChild>
                 <a href={originalUrl(documentId)}>
                   <Download aria-hidden="true" />
                   Download PDF
                 </a>
               </Button>
+              {capabilities.development_mode && status && (
+                <DeveloperPanel key={status.request_id} requestId={status.request_id} />
+              )}
             </div>
           </div>
-          <Separator />
           {status?.state === 'failed' && (
             <Notice error>
               {latest?.error_detail || 'No usable evidence could be recovered.'} Your original
               remains available.
             </Notice>
           )}
-          {capabilities.development_mode && status && (
-            <DeveloperPanel key={status.request_id} requestId={status.request_id} />
-          )}
-          <div className="reading-layout">
-            <div className="evidence-column">
-              {status?.revision_id && (
-                <SummaryPanel
-                  key={status.revision_id}
-                  revisionId={status.revision_id}
-                  onSourcePage={setSourcePage}
-                />
-              )}
-              <section aria-label="Extracted evidence">
-                <div className="section-caption">
-                  <h2>Content</h2>
-                </div>
-                {status?.revision_id ? (
-                  <EvidenceReader
-                    key={status.revision_id}
-                    revisionId={status.revision_id}
-                    onSourcePage={setSourcePage}
-                  />
-                ) : (
-                  <div className="waiting-copy">
-                    <p>
-                      {status?.state === 'failed'
-                        ? 'No extracted content.'
-                        : 'Waiting for extracted content…'}
-                    </p>
-                  </div>
-                )}
-              </section>
-            </div>
-            <section className="source-column" aria-label="Original PDF">
-              <div className="source-heading">
-                <h2>Original</h2>
-                <Button variant="ghost" size="sm" asChild>
-                  <a
-                    href={`${originalUrl(documentId, true)}#page=${sourcePage}`}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Open page {sourcePage} <ArrowUpRight aria-hidden="true" />
-                  </a>
-                </Button>
-              </div>
-              {status?.state === 'succeeded' ? (
-                <iframe
-                  key={`${documentId}-${sourcePage}`}
-                  title={`Original PDF, page ${sourcePage}`}
-                  src={`${originalUrl(documentId, true)}#page=${sourcePage}`}
-                />
-              ) : (
-                <div className="source-placeholder">
-                  <FileText aria-hidden="true" />
-                  <p>
-                    {status?.state === 'failed'
-                      ? 'Preview unavailable'
-                      : 'Preview available after processing'}
-                  </p>
-                </div>
-              )}
-            </section>
-          </div>
+          <DocumentReader documentId={documentId} status={status} onCoverage={setPartial} />
         </>
       )}
     </div>

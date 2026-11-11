@@ -1,5 +1,6 @@
 @import 'tailwindcss';
 @import './styles/document.css';
+@import './styles/pdf.css';
 @import './styles/development.css';
 @import './styles/configuration.css';
 

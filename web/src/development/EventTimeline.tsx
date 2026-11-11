@@ -55,7 +55,8 @@ export function EventTimeline({
                 {typeof event.details.duration_seconds === 'number' &&
                   ` · ${event.details.duration_seconds.toFixed(3)} s measured`}
                 {typeof event.details.error_code === 'string' && ` · ${event.details.error_code}`}
-                {typeof event.details.pages === 'number' && ` · ${event.details.pages} pages`}
+                {typeof event.details.pages === 'number' &&
+                  ` · ${event.details.pages} source pages`}
                 {typeof event.details.elements === 'number' &&
                   ` · ${event.details.elements} elements`}
                 {typeof event.details.delay_seconds === 'number' &&

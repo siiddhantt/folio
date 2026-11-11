@@ -12,8 +12,10 @@ The first ingestion slice runs locally in Docker. FastAPI accepts a PDF, Postgre
 durable work, RQ/Redis delivers it, and a Docling worker publishes evidence. Native text and
 English OCR are supported; encrypted inputs receive a clear error. Recoverable partial
 content remains available. A minimal React interface supports upload, processing status,
-text/table evidence and the original PDF. An opt-in development view shows real processing
-history; its configuration console saves processing controls for new uploads.
+text/table evidence and a locally rendered original page. Content and Original
+sit side by side on desktop and use tabs on mobile. Compact coverage notices
+retain known gaps without overwhelming the reading view. An opt-in Activity panel
+shows real processing history; the configuration console saves controls for new uploads.
 Automatic summaries are implemented with checked persistence, budget and failure
 contracts. The current configuration completed summaries of three tested PDFs,
 including a 59-page report, without exhausting output. Source review still finds
@@ -37,7 +39,7 @@ processing continues after leaving the page. Light/dark themes and source-page l
 inspect the recovered content. No sample documents or simulated workflows are built in.
 
 For local inspection, set `FOLIO_DEVELOPMENT_MODE=true` in your existing `.env`, recreate
-services with `docker compose up -d`, and open **Development details** on a document.
+services with `docker compose up -d`, and open **Activity** on a document.
 The header control beside the theme toggle opens [development settings](http://localhost:3000/development/settings).
 Saves survive restarts and apply to new uploads, including their later summaries.
 The development routes default to disabled. See the [hands-on walkthrough](docs/interface-walkthrough.md)

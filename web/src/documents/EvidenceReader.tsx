@@ -5,13 +5,16 @@ import type { Evidence, SourceElement } from '../types';
 import { CoverageNotice } from './CoverageNotice';
 import { EvidenceTable } from './EvidenceTable';
 import { SourcePages } from './SourcePages';
+import { describeCoverage } from './coverage';
 
 export function EvidenceReader({
   revisionId,
   onSourcePage,
+  onCoverage,
 }: {
   revisionId: string;
   onSourcePage: (page: number) => void;
+  onCoverage: (partial: boolean) => void;
 }) {
   const [evidence, setEvidence] = useState<Evidence | null>(null);
   const [error, setError] = useState('');
@@ -25,6 +28,7 @@ export function EvidenceReader({
         `/revisions/${revisionId}/evidence?after_order=${after}`,
         { signal },
       );
+      if (!signal?.aborted) onCoverage(describeCoverage(next).partial);
       if (!signal?.aborted)
         setEvidence((previous) => ({
           ...next,

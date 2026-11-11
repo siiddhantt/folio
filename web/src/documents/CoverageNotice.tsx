@@ -1,12 +1,45 @@
-import { Notice } from '../components/ui';
-import type { Diagnostic, Evidence } from '../types';
+import { useMemo, useState } from 'react';
+import { Button } from '../components/ui';
+import type { Evidence } from '../types';
+import { describeCoverage, diagnosticText, rangeLabel } from './coverage';
 
-function diagnosticText(item: Diagnostic): string {
-  if (typeof item.message === 'string' && item.message) return item.message;
-  if (typeof item.error_message === 'string' && item.error_message) return item.error_message;
-  if (typeof item.code === 'string' && item.code)
-    return item.code.replaceAll('_', ' ').toLowerCase();
-  return 'The parser reported an extraction limitation';
+function PageControls({
+  page,
+  total,
+  label,
+  onChange,
+}: {
+  page: number;
+  total: number;
+  label: string;
+  onChange: (page: number) => void;
+}) {
+  if (total <= 10) return null;
+  return (
+    <div className="coverage-pagination">
+      <Button
+        variant="ghost"
+        size="sm"
+        disabled={page === 0}
+        aria-label={`Previous ${label} page`}
+        onClick={() => onChange(page - 1)}
+      >
+        Previous
+      </Button>
+      <span>
+        {page + 1} / {Math.ceil(total / 10)}
+      </span>
+      <Button
+        variant="ghost"
+        size="sm"
+        disabled={(page + 1) * 10 >= total}
+        aria-label={`Next ${label} page`}
+        onClick={() => onChange(page + 1)}
+      >
+        Next
+      </Button>
+    </div>
+  );
 }
 
 export function CoverageNotice({
@@ -16,37 +49,77 @@ export function CoverageNotice({
   evidence: Evidence;
   onSourcePage: (page: number) => void;
 }) {
-  const emptyPages = evidence.pages.filter(
-    (page) => page.content_observation === 'no_content_recovered',
-  );
-  const diagnostics = [
-    ...new Map(
-      [...evidence.diagnostics, ...evidence.pages.flatMap((page) => page.diagnostics)]
-        .filter((item) => item.code !== 'NO_CONTENT_RECOVERED')
-        .map((item) => [JSON.stringify(item), item]),
-    ).entries(),
-  ];
-  if (!emptyPages.length && !diagnostics.length) return null;
+  const coverage = useMemo(() => describeCoverage(evidence), [evidence]);
+  const [open, setOpen] = useState(false);
+  const [rangePage, setRangePage] = useState(0);
+  const [diagnosticPage, setDiagnosticPage] = useState(0);
+  if (!coverage.partial) return null;
   return (
-    <Notice>
-      <strong>Some content may be missing</strong>
-      {emptyPages.map((page) => (
-        <div className="coverage-gap" key={page.page_no}>
-          <p>No text or table content was recovered on page {page.page_no}.</p>
-          <button className="page-link" onClick={() => onSourcePage(page.page_no)}>
-            Inspect page {page.page_no} ↗
-          </button>
-        </div>
-      ))}
-      {diagnostics.map(([key, item]) => (
-        <p key={key}>
-          {diagnosticText(item)}
-          {typeof item.page_no === 'number' ? ` (page ${item.page_no})` : ''}.
-        </p>
-      ))}
-      <p className="coverage-explanation">
-        Gaps may be blank or unreadable content; the cause is unknown.
+    <aside className="coverage-notice" role="note" aria-label="Extraction coverage">
+      <p>
+        <strong>
+          Content recovered from {coverage.recovered.toLocaleString()} of{' '}
+          {coverage.total.toLocaleString()} pages.
+        </strong>
       </p>
-    </Notice>
+      <p>
+        {coverage.timedOut
+          ? 'Processing reached its time limit. Some content may be missing.'
+          : 'Some content may be missing. Gaps may be blank or unreadable; their cause is unknown.'}
+      </p>
+      <details onToggle={(event) => setOpen(event.currentTarget.open)}>
+        <summary>Coverage details</summary>
+        {open && (
+          <div className="coverage-details">
+            {coverage.ranges.length > 0 && (
+              <>
+                <h3>No text or table content recovered</h3>
+                <div className="coverage-ranges">
+                  {coverage.ranges.slice(rangePage * 10, (rangePage + 1) * 10).map((range) => (
+                    <Button
+                      key={range.start}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onSourcePage(range.start)}
+                    >
+                      Inspect {rangeLabel(range)}
+                    </Button>
+                  ))}
+                </div>
+                <PageControls
+                  page={rangePage}
+                  total={coverage.ranges.length}
+                  label="range"
+                  onChange={setRangePage}
+                />
+              </>
+            )}
+            {coverage.diagnostics.length > 0 && (
+              <>
+                <h3>Reported limitations ({coverage.diagnostics.length.toLocaleString()})</h3>
+                <ul>
+                  {coverage.diagnostics
+                    .slice(diagnosticPage * 10, (diagnosticPage + 1) * 10)
+                    .map((item, index) => (
+                      <li key={diagnosticPage * 10 + index}>
+                        {diagnosticText(item)}
+                        {typeof item.page_no === 'number'
+                          ? ` (page ${item.page_no.toLocaleString()})`
+                          : ''}
+                      </li>
+                    ))}
+                </ul>
+                <PageControls
+                  page={diagnosticPage}
+                  total={coverage.diagnostics.length}
+                  label="diagnostic"
+                  onChange={setDiagnosticPage}
+                />
+              </>
+            )}
+          </div>
+        )}
+      </details>
+    </aside>
   );
 }
