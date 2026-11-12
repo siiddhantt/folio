@@ -4,7 +4,13 @@ import { ApiError, errorMessage, request } from '../api';
 import { Button, Notice } from '../components/ui';
 import { QuestionInput } from './QuestionComposer';
 import type { Conversation, Turn } from './types';
-import { questionDraftKey, questionIntentKey } from './useConversation';
+import {
+  questionDraftKey,
+  questionIntentKey,
+  newChatDraftKey as draftKey,
+  newChatIntentKey as intentKey,
+  clearSubmittedDraft,
+} from './storage';
 
 interface DocumentChoice {
   document_id: string;
@@ -27,8 +33,6 @@ interface NewChatIntent extends Draft {
   questionKey: string;
   conversationId?: string;
 }
-const draftKey = 'folio:new-chat-draft';
-const intentKey = 'folio:new-chat-intent';
 
 function savedDraft(): Draft {
   try {
@@ -79,16 +83,6 @@ function ownsIntent(operation: NewChatIntent): boolean {
   }
 }
 
-function clearSubmittedDraft(operation: NewChatIntent) {
-  try {
-    if (JSON.parse(sessionStorage.getItem(draftKey) || 'null')?.id === operation.id) {
-      sessionStorage.removeItem(draftKey);
-    }
-  } catch {
-    /* An unrelated unreadable draft is not this submission's state. */
-  }
-}
-
 function clearTransferredIntent(operation: NewChatIntent) {
   if (!operation.conversationId) return;
   const key = questionIntentKey(operation.conversationId);
@@ -108,7 +102,9 @@ export function NewConversationPage() {
   const preselected = params.get('document');
   const mounted = useRef(true);
   const [intent, setIntent] = useState(savedIntent);
-  const [draft, setDraft] = useState<Draft>(() => intent || savedDraft());
+  const [draft, setDraft] = useState<Draft>(() =>
+    intent ? { id: intent.id, document: intent.document, question: intent.question } : savedDraft(),
+  );
   const [documents, setDocuments] = useState<DocumentChoice[]>([]);
   const [before, setBefore] = useState<string | null>(null);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -243,6 +239,19 @@ export function NewConversationPage() {
           navigate(`/conversations/${id}`, { state: { createdConversation: id } });
       }
     } catch (reason) {
+      if (reason instanceof ApiError && [404, 410].includes(reason.status)) {
+        if (ownsIntent(operation)) {
+          sessionStorage.removeItem(intentKey);
+          clearTransferredIntent(operation);
+          if (mounted.current) {
+            setIntent(null);
+            setError(
+              'This chat is no longer available. Your question is ready to send in a new chat.',
+            );
+          }
+        }
+        return;
+      }
       if (
         reason instanceof ApiError &&
         [400, 409, 422].includes(reason.status) &&

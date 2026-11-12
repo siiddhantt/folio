@@ -505,6 +505,23 @@ browser/API test boundary covers navigation, list recovery and mobile focus;
 visual inspection covers long content, narrow widths, themes and zoom. This is
 an interface refinement, not evidence that model quality or throughput changed.
 
+## Conversation completion — November 12
+
+The owner accepted separate New chat/Upload entry, a growing composer with its
+document selector, a short title generated in the first answer call, rename and
+soft deletion, followed by ordered follow-ups and hybrid history compression.
+The [conversation contract](conversations.md#accepted-conversation-completion--november-12)
+records the passing checkpoints separately from unfinished work.
+
+Deletion hides the chat and prevents new work/publication, retaining internal
+transcript, diagnostics and billing. Manual renaming wins over delayed title
+generation. GPT-5.2 also handles contextualization and occasional memory calls
+within the unchanged allowance; titles require no separate call. Initial history
+settings are 6,000 trigger / roughly 3,000 target / 8,000 hard tokens, with the
+two latest exchanges unchanged. Every assembled provider request is checked too.
+Background memory must leave allowance for the next question. These are tunable
+starting values, not lossless-memory or latency guarantees.
+
 ## Slice order and remaining decisions
 
 November 11 planning recommendation, not an accepted implementation contract:

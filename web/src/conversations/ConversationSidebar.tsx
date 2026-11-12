@@ -1,17 +1,29 @@
 import { Link, NavLink } from 'react-router-dom';
+import { useState } from 'react';
 import { Dialog } from 'radix-ui';
 import { FilePlus2, RefreshCw, X } from 'lucide-react';
 import { Button } from '../components/ui';
 import { useConversationList } from './useConversationList';
+import type { Conversation } from './types';
+import {
+  ConversationActionDialog,
+  ConversationMenu,
+  type ConversationAction,
+} from './ConversationActions';
 
 export function ConversationSidebar({
   revision,
+  onChanged,
+  onRenamed,
   onNavigate,
 }: {
   revision: number;
+  onChanged: () => void;
+  onRenamed: (conversation: Conversation) => void;
   onNavigate: () => void;
 }) {
   const history = useConversationList(revision);
+  const [action, setAction] = useState<ConversationAction | null>(null);
   const content = (
     <>
       <Button variant="outline" className="sidebar-open-document" asChild>
@@ -57,14 +69,14 @@ export function ConversationSidebar({
         ) : (
           <ul>
             {history.data.items.map((conversation) => (
-              <li key={conversation.id}>
+              <li key={conversation.id} className="conversation-history-row">
                 <NavLink
                   to={`/conversations/${conversation.id}`}
                   onClick={onNavigate}
-                  title={conversation.question || conversation.document_name}
+                  title={conversation.title || conversation.question || conversation.document_name}
                 >
                   <span className="history-title">
-                    {conversation.question || conversation.document_name}
+                    {conversation.title || conversation.question || conversation.document_name}
                   </span>
                   <span className="history-detail">
                     <span>
@@ -75,6 +87,7 @@ export function ConversationSidebar({
                     )}
                   </span>
                 </NavLink>
+                <ConversationMenu conversation={conversation} onAction={setAction} />
               </li>
             ))}
           </ul>
@@ -136,6 +149,22 @@ export function ConversationSidebar({
           <div className="history-drawer-body">{content}</div>
         </Dialog.Content>
       </Dialog.Portal>
+      {action && (
+        <ConversationActionDialog
+          action={action}
+          onClose={() => setAction(null)}
+          onNavigate={onNavigate}
+          onDeleted={history.remove}
+          onRenamed={(conversation) => {
+            history.update(conversation);
+            onRenamed(conversation);
+          }}
+          onChanged={() => {
+            history.reload();
+            onChanged();
+          }}
+        />
+      )}
     </>
   );
 }

@@ -8,6 +8,9 @@ export interface Conversation {
   revision_id: string;
   index_id: string;
   document_name: string;
+  title: string;
+  title_source: 'generated' | 'manual' | null;
+  title_version: number;
   created_at: string;
   question: string | null;
   state: 'empty' | TurnState;

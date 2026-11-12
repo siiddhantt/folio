@@ -7,28 +7,61 @@ import { NewChatButton } from './NewChatButton';
 import { QuestionComposer } from './QuestionComposer';
 import { SourcePanel } from './SourcePanel';
 import { useConversation } from './useConversation';
-import type { Citation } from './types';
+import type { Citation, Conversation } from './types';
 
-export function ConversationPage({ onTurnChanged }: { onTurnChanged: () => void }) {
+export function ConversationPage({
+  revision,
+  renamedConversation,
+  onTurnChanged,
+}: {
+  revision: number;
+  renamedConversation: Conversation | null;
+  onTurnChanged: () => void;
+}) {
   const { conversationId = '' } = useParams();
   return (
-    <ConversationWorkspace key={conversationId} id={conversationId} onTurnChanged={onTurnChanged} />
+    <ConversationWorkspace
+      key={conversationId}
+      id={conversationId}
+      revision={revision}
+      renamedConversation={renamedConversation}
+      onTurnChanged={onTurnChanged}
+    />
   );
 }
 
-function ConversationWorkspace({ id, onTurnChanged }: { id: string; onTurnChanged: () => void }) {
-  const { conversation, turn, error, loaded, setTurn, reload } = useConversation(id, onTurnChanged);
+function ConversationWorkspace({
+  id,
+  revision,
+  renamedConversation,
+  onTurnChanged,
+}: {
+  id: string;
+  revision: number;
+  renamedConversation: Conversation | null;
+  onTurnChanged: () => void;
+}) {
+  const { conversation, turn, error, loaded, setTurn, reload } = useConversation(
+    id,
+    revision,
+    onTurnChanged,
+    renamedConversation,
+  );
   const [source, setSource] = useState<Citation | null>(null);
   const active = turn?.state === 'pending' || turn?.state === 'running';
   useEffect(() => {
-    if (conversation) document.title = `${conversation.document_name} · Folio`;
-  }, [conversation?.document_name]);
+    if (conversation)
+      document.title = `${conversation.title || conversation.document_name} · Folio`;
+  }, [conversation?.title, conversation?.document_name]);
   return (
     <div className="chat-page">
       <div className="chat-heading">
         <div className="chat-heading-title">
           <FileText aria-hidden="true" />
-          <h1>{conversation?.document_name || 'Conversation'}</h1>
+          <div>
+            <h1>{conversation?.title || conversation?.document_name || 'Conversation'}</h1>
+            {conversation && <p className="chat-document-name">{conversation.document_name}</p>}
+          </div>
         </div>
         {conversation && (
           <Button variant="outline" size="sm" asChild>

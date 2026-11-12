@@ -75,6 +75,14 @@ def settle(database, claim, stage, *, cost=None, metadata=None, vector=None, ans
                 (json.dumps(vector, allow_nan=False), claim["id"]),
             )
         if answer is not None:
+            title = answer.get("title")
+            if title:
+                conn.execute(
+                    "UPDATE conversations SET title=%s,title_source='generated' "
+                    "WHERE id=%s AND title_source IS DISTINCT FROM 'manual'",
+                    (title, row["conversation_id"]),
+                )
+            answer = {key: value for key, value in answer.items() if key != "title"}
             conn.execute(
                 "UPDATE turn_attempts SET finished_at=clock_timestamp() WHERE id=%s",
                 (claim["attempt_id"],),

@@ -4,11 +4,13 @@ from folio.summaries.preparation import coverage
 def conversation(connection, conversation_id):
     return connection.execute(
         """SELECT c.id,c.index_id,c.created_at,i.document_id,i.revision_id,
+        COALESCE(c.title,left(t.question,60),left(d.display_name,60)) AS title,
+        c.title_source,c.title_version,
         d.display_name AS document_name,t.question,COALESCE(t.state,'empty') AS state,1 AS max_turns
         FROM conversations c JOIN document_indexes i ON i.id=c.index_id
         JOIN documents d ON d.id=i.document_id
         LEFT JOIN conversation_turns t ON t.conversation_id=c.id AND t.sequence=1
-        WHERE c.id=%s""",
+        WHERE c.id=%s AND c.deleted_at IS NULL""",
         (conversation_id,),
     ).fetchone()
 
@@ -31,8 +33,10 @@ def turn(connection, turn_id):
     row = connection.execute(
         """SELECT t.id,t.conversation_id,t.sequence,t.question,t.state,t.result AS answer,
         t.created_at,t.started_at,t.finished_at,t.error_code,i.revision_id,r.diagnostics
-        FROM conversation_turns t JOIN document_indexes i ON i.id=t.index_id
-        JOIN extraction_revisions r ON r.id=i.revision_id WHERE t.id=%s""",
+        FROM conversation_turns t JOIN conversations c ON c.id=t.conversation_id
+        JOIN document_indexes i ON i.id=t.index_id
+        JOIN extraction_revisions r ON r.id=i.revision_id
+        WHERE t.id=%s AND c.deleted_at IS NULL""",
         (turn_id,),
     ).fetchone()
     if row is None:

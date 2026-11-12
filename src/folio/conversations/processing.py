@@ -98,7 +98,8 @@ def process_turn(turn_id, *, settings=None, embedder=None, generator=None):
             return {"outcome": "superseded"}
         if not passages:
             raise AdmissionError("CHAT_EVIDENCE_UNAVAILABLE")
-        messages, schema = prepare(claim["question"], passages, gaps)
+        include_title = policy["schema_version"] >= 2 and claim["sequence"] == 1
+        messages, schema = prepare(claim["question"], passages, gaps, include_title=include_title)
         if generator is None:
             if not key:
                 raise AdmissionError("CHAT_PROVIDER_NOT_CONFIGURED")
@@ -131,7 +132,7 @@ def process_turn(turn_id, *, settings=None, embedder=None, generator=None):
         )
         stage = "answer"
         result = generator.generate(messages, schema, schema_name="folio_answer")
-        answer = validate(result, passages)
+        answer = validate(result, passages, include_title=include_title)
         published = settle(
             database,
             claim,

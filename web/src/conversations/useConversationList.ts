@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { errorMessage, request } from '../api';
 import type { Conversation } from './types';
@@ -15,6 +15,7 @@ export function useConversationList(revision: number) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [refresh, setRefresh] = useState(0);
+  const removed = useRef(new Set<string>());
   useEffect(() => {
     if (state?.createdConversation) setBefore(null);
   }, [state?.createdConversation]);
@@ -35,7 +36,7 @@ export function useConversationList(revision: number) {
     )
       .then((value) => {
         if (!controller.signal.aborted) {
-          setData(value);
+          setData({ ...value, items: value.items.filter((item) => !removed.current.has(item.id)) });
           setLoading(false);
         }
       })
@@ -54,5 +55,23 @@ export function useConversationList(revision: number) {
     before,
     setBefore,
     reload: () => setRefresh((value) => value + 1),
+    update: (conversation: Conversation) => {
+      setData((previous) =>
+        previous
+          ? {
+              ...previous,
+              items: previous.items.map((item) =>
+                item.id === conversation.id ? conversation : item,
+              ),
+            }
+          : null,
+      );
+    },
+    remove: (id: string) => {
+      removed.current.add(id);
+      setData((previous) =>
+        previous ? { ...previous, items: previous.items.filter((item) => item.id !== id) } : null,
+      );
+    },
   };
 }

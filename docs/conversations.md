@@ -75,6 +75,30 @@ partial-message truncation. Actual assembled requests still undergo model/stage
 fit checks. Background work must leave allowance for foreground answering.
 Lossy memory never becomes document evidence or a substitute for original turns.
 
+### Titles and removing chats
+
+The first answer requests a short topic title in the same provider response.
+The answer and usable title publish in one transaction. Title metadata is
+auxiliary: if unusable, keep the valid cited answer and fall back to a shortened
+first question or document name. This fallback also covers existing chats.
+
+`PATCH /conversations/{id}` accepts `title` and `expected_version`. Imagine two
+tabs both reading version 0: the first save creates version 1; the second receives
+a conflict and keeps its typed title for review. A short row lock protects that
+comparison and update. The lock lasts for database work, not for model generation
+or the time a person spends editing. Generated titles never overwrite a manual
+rename and do not advance the manual-edit version.
+
+`DELETE /conversations/{id}` sets a deletion timestamp and cancels unfinished
+work. Normal reads exclude that chat, while the internal records remain available
+to accounting. A provider call already admitted may still finish: its charge is
+saved, but its answer and title cannot publish. Replaying the original creation
+key cannot restore the chat. Repeating Delete is safe.
+
+Owner exercise: open the same chat in two tabs, rename it in one, then save an
+older edit from the other. Find the HTTP 409 response in browser developer tools.
+Explain why blindly retrying with the newest version would erase the protection.
+
 Accepted test interfaces extend the existing HTTP/persistence, database/worker
 lifecycle and provider contracts. Test one saved cited answer first, then replay,
 scope isolation, malformed/truncated output and recovery. Model responses are
@@ -337,9 +361,9 @@ for that job. Reuse PostgreSQL/RQ/Redis rather than an in-process fire-and-forge
 task that can disappear on restart.
 
 Use three validated history settings: an early trigger, a lower target after
-compression, and a hard history allowance. Illustration only: trigger at 6,000
-history tokens, aim for 3,000 after compression, and permit at most 8,000. These
-are not selected defaults or percentages of the model's advertised window. The
+compression, and a hard history allowance. The owner selected starting defaults
+of 6,000 history tokens, roughly 3,000 after compression, and at most 8,000. These
+are application allowances, not percentages of the model's advertised window. The
 gap leaves room for more exchanges and prevents recompressing after every answer.
 
 Count the selected memory plus the raw suffix, not the entire archived transcript.
@@ -354,13 +378,13 @@ smaller contextualization stage.
 ### A concrete timeline
 
 1. Answer 12 is saved. History crosses the early trigger. The background job
-   snapshots older complete turns 1–8; turns 9–12 remain unchanged.
+   snapshots older complete turns 1–10; the two latest exchanges stay unchanged.
 2. Question 13 arrives before compaction finishes. If the old memory plus its
    entire raw suffix and the prepared request still fit, proceed immediately.
    Freeze that context for turn 13; do not switch versions halfway through it.
-3. Memory covering turns 1–8 finishes while turn 13 runs. Publish it against its
+3. Memory covering turns 1–10 finishes while turn 13 runs. Publish it against its
    expected predecessor version. Turn 13 keeps its selected context.
-4. Question 14 can use the new memory plus raw turns 9–13. No new turn is lost.
+4. Question 14 can use the new memory plus raw turns 11–13. No new turn is lost.
 5. If the next request instead cannot fit, it depends on the existing memory job.
    Do not launch a duplicate summarizer. If none exists, create the same job on
    demand. Bound the wait and job retries; report context-preparation failure if

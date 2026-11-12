@@ -22,8 +22,8 @@ class ChatSettings(BaseSettings):
             | {
                 "base_url": "https://openrouter.ai/api/v1",
                 "reservation_version": 2,
-                "prompt_version": 1,
-                "schema_version": 1,
+                "prompt_version": 2,
+                "schema_version": 2,
                 "retrieval_version": 1,
                 "job_timeout_seconds": runtime.job_timeout_seconds,
                 "lease_seconds": runtime.lease_seconds,

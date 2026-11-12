@@ -1,6 +1,6 @@
 # Folio requirements agreement
 
-Status: ingestion accepted November 7; minimal interface and development inspection accepted November 9; automatic-only summary trigger accepted November 10; complete-input summaries, short-source output, revised spending limits and a development configuration console accepted by November 11; separate processing-run history, saved failure details and document indexing accepted November 12. First-answer retrieval and saved conversations are accepted; follow-ups remain the next increment. Updated: 2026-11-12.
+Status: ingestion accepted November 7; minimal interface and development inspection accepted November 9; automatic-only summary trigger accepted November 10; complete-input summaries, short-source output, revised spending limits and a development configuration console accepted by November 11; separate processing-run history, saved failure details and document indexing accepted November 12. First-answer retrieval and saved conversations are implemented. Conversation management, follow-ups and hybrid memory are accepted and proceeding through separate checkpoints. Updated: 2026-11-12.
 
 This agreement separates product outcomes, engineering constraints, proposed behavior, and optional capabilities. A proposed detail is not accepted merely because it appears here.
 
@@ -133,5 +133,15 @@ Start with human-reviewed documents and questions. Observe extraction, evidence 
 Consider thousands of documents in design discussion through asynchronous work, scoped retrieval, bounded resource use, pagination, and measured bottlenecks. Do not claim throughput or production readiness before measurement.
 
 ## Agreement rule
+
+The November 12 conversation completion accepts a ready-document selector inside
+the growing composer, separate New chat/Upload entry, short generated titles,
+manual rename and deletion from the app with retained internal records. Follow-ups
+must retain the full transcript, resolve references using bounded history and
+retrieve fresh evidence from the same index. Automatic history compression uses
+the accepted 6,000/3,000/8,000 starting thresholds, keeps two latest exchanges raw
+and has a before-request fallback. GPT-5.2 handles contextualization and memory
+within the unchanged shared allowance. See [the checkpoint contract](conversations.md#accepted-conversation-completion--november-12)
+and [verified status](status.md); acceptance does not imply completed software.
 
 Accept an option in the decision log before implementing dependent behavior. Change this agreement when scope changes, recording the reason and consequence. Keep working capability and proposed capability visibly distinct.

@@ -40,9 +40,23 @@ Aside verified real Home/New chat/Upload routes, the dropdown and textarea growt
 from 72 to 200 pixels before internal scrolling at desktop/mobile widths, without
 submitting or uploading. API/web were rebuilt; no model call was needed.
 
-Next active checkpoint: title/rename/delete. Follow-ups and hybrid memory remain
-unfinished. Do not present the old one-question flow as supporting conversation
-context.
+Title/rename/delete backend checks passed: 25 targeted PostgreSQL checks cover
+manual-edit conflicts, generated-title fallback, deletion during paid execution,
+retained unknown charges and legacy frozen policies. Migration 011 preserved the
+existing document, turn and invocation hashes. API/chat worker/dispatcher were
+recreated together. Aside verified rename persistence and mobile deletion using
+one empty chat, without model calls. Independent review found and resolved
+malformed auxiliary titles, deleted submission recovery across tabs, leaked
+submission metadata in restored drafts, and acknowledged renames during failed
+refreshes. Twenty-one mocked browser cases passed, with all sixteen affected
+entry/management cases repeated after the final fix. TypeScript, formatting,
+Ruff and builds passed. No review blockers remain. The allowance is unchanged:
+$0.748239806 available, with no outstanding holds.
+
+Next active checkpoint: follow-ups. Hybrid memory remains unfinished. Do not present the old
+one-question flow as supporting conversation context. The owner accepted a live
+FEMA check covering a garage follow-up, a corrected subject, missing policy
+information and exact recall of the first question; it has not run yet.
 
 ## Answer default — November 12
 

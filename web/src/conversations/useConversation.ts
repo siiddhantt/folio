@@ -1,29 +1,53 @@
 import { useEffect, useState } from 'react';
 import { ApiError, errorMessage, request } from '../api';
 import type { Conversation, Turn } from './types';
+import { questionDraftKey, questionIntentKey } from './storage';
 
-export const questionIntentKey = (conversationId: string) => `folio:question:${conversationId}`;
-export const questionDraftKey = (conversationId: string) => `folio:draft:${conversationId}`;
-
-export function useConversation(id: string, onTurnChanged: () => void) {
+export function useConversation(
+  id: string,
+  revision: number,
+  onTurnChanged: () => void,
+  renamedConversation: Conversation | null,
+) {
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [turn, setTurn] = useState<Turn | null>(null);
   const [error, setError] = useState('');
   const [loaded, setLoaded] = useState(false);
   const [refresh, setRefresh] = useState(0);
+  const [missing, setMissing] = useState(false);
+  useEffect(() => {
+    if (renamedConversation?.id === id) setConversation(renamedConversation);
+  }, [id, renamedConversation]);
+  function hideMissing(reason: unknown) {
+    if (reason instanceof ApiError && reason.status === 404) {
+      setMissing(true);
+      setConversation(null);
+      setTurn(null);
+    }
+  }
+  useEffect(() => {
+    const controller = new AbortController();
+    request<Conversation>(`/conversations/${id}`, { signal: controller.signal })
+      .then((next) => {
+        if (!controller.signal.aborted) setConversation(next);
+      })
+      .catch((e) => {
+        if (!controller.signal.aborted) {
+          hideMissing(e);
+          setError(errorMessage(e));
+        }
+      });
+    return () => controller.abort();
+  }, [id, revision, refresh]);
   useEffect(() => {
     const controller = new AbortController();
     setError('');
-    Promise.all([
-      request<Conversation>(`/conversations/${id}`, { signal: controller.signal }),
-      request<{ items: Turn[]; next_after: number | null }>(
-        `/conversations/${id}/turns?after=0&limit=20`,
-        { signal: controller.signal },
-      ),
-    ])
-      .then(([next, history]) => {
+    request<{ items: Turn[]; next_after: number | null }>(
+      `/conversations/${id}/turns?after=0&limit=20`,
+      { signal: controller.signal },
+    )
+      .then((history) => {
         if (controller.signal.aborted) return;
-        setConversation(next);
         setTurn(history.items[0] || null);
         setLoaded(true);
         if (history.items.length) {
@@ -32,7 +56,10 @@ export function useConversation(id: string, onTurnChanged: () => void) {
         }
       })
       .catch((e) => {
-        if (!controller.signal.aborted) setError(errorMessage(e));
+        if (!controller.signal.aborted) {
+          hideMissing(e);
+          setError(errorMessage(e));
+        }
       });
     return () => controller.abort();
   }, [id, refresh]);
@@ -54,6 +81,7 @@ export function useConversation(id: string, onTurnChanged: () => void) {
         else onTurnChanged();
       } catch (e) {
         if (controller.signal.aborted) return;
+        hideMissing(e);
         setError(errorMessage(e));
         if (!(e instanceof ApiError && e.status === 404)) timer = setTimeout(poll, 3000);
       }
@@ -65,11 +93,14 @@ export function useConversation(id: string, onTurnChanged: () => void) {
     };
   }, [id, turnId, active, onTurnChanged]);
   return {
-    conversation,
-    turn,
+    conversation: missing ? null : conversation,
+    turn: missing ? null : turn,
     error,
-    loaded,
+    loaded: loaded && !!conversation && !missing,
     setTurn,
-    reload: () => setRefresh((value) => value + 1),
+    reload: () => {
+      setMissing(false);
+      setRefresh((value) => value + 1);
+    },
   };
 }

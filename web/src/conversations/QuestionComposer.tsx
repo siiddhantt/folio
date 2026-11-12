@@ -1,9 +1,10 @@
 import { useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { ArrowUp } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { ApiError, errorMessage, request } from '../api';
 import { Button, Notice } from '../components/ui';
 import type { Turn } from './types';
-import { questionDraftKey, questionIntentKey } from './useConversation';
+import { questionDraftKey, questionIntentKey } from './storage';
 
 export interface QuestionIntent {
   key: string;
@@ -34,8 +35,13 @@ export function QuestionComposer({
   );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [missing, setMissing] = useState(false);
+  function ownsIntent(operation: QuestionIntent) {
+    const current = savedIntent(conversationId);
+    return current?.key === operation.key && current?.question === operation.question;
+  }
   async function send() {
-    if (busy || !question.trim()) return;
+    if (busy || missing || !question.trim()) return;
     const operation = intent || { key: crypto.randomUUID(), question: question.trim() };
     setIntent(operation);
     sessionStorage.setItem(questionIntentKey(conversationId), JSON.stringify(operation));
@@ -47,14 +53,17 @@ export function QuestionComposer({
         headers: { 'Content-Type': 'application/json', 'Idempotency-Key': operation.key },
         body: JSON.stringify({ question: operation.question }),
       });
+      if (!ownsIntent(operation)) return;
       sessionStorage.removeItem(questionIntentKey(conversationId));
       sessionStorage.removeItem(questionDraftKey(conversationId));
       onAccepted(turn);
     } catch (e) {
+      if (!ownsIntent(operation)) return;
       setError(errorMessage(e));
-      if (e instanceof ApiError && [400, 409, 422].includes(e.status)) {
+      if (e instanceof ApiError && [400, 404, 409, 410, 422].includes(e.status)) {
         sessionStorage.removeItem(questionIntentKey(conversationId));
         setIntent(null);
+        if ([404, 410].includes(e.status)) setMissing(true);
         if (e.status === 409) onConflict();
       }
     } finally {
@@ -62,19 +71,27 @@ export function QuestionComposer({
     }
   }
   return (
-    <QuestionInput
-      question={question}
-      onChange={(value) => {
-        setQuestion(value);
-        sessionStorage.setItem(questionDraftKey(conversationId), value);
-      }}
-      onSend={send}
-      busy={busy}
-      locked={!!intent}
-      retry={!!intent}
-      error={error && `${error}${intent ? ' Retry sends the same question.' : ''}`}
-      scope={<span className="subtle">One question per chat for now.</span>}
-    />
+    <>
+      <QuestionInput
+        question={question}
+        onChange={(value) => {
+          setQuestion(value);
+          sessionStorage.setItem(questionDraftKey(conversationId), value);
+        }}
+        onSend={send}
+        busy={busy}
+        locked={!!intent}
+        retry={!!intent}
+        unavailable={missing}
+        error={error && `${error}${intent ? ' Retry sends the same question.' : ''}`}
+        scope={<span className="subtle">One question per chat for now.</span>}
+      />
+      {missing && (
+        <p className="subtle">
+          <Link to="/new-chat">Start a new chat</Link> to ask this question.
+        </p>
+      )}
+    </>
   );
 }
 

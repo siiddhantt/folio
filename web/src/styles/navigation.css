@@ -82,6 +82,91 @@
 .conversation-history-list li + li {
   margin-block-start: 4px;
 }
+.conversation-history-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.conversation-history-row > a {
+  flex: 1;
+  min-width: 0;
+}
+.history-actions-trigger {
+  flex-shrink: 0;
+}
+.conversation-action-menu {
+  min-width: 140px;
+  padding: 4px;
+  z-index: 70;
+  background: var(--background);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px #0002;
+}
+.conversation-action-menu [role='menuitem'] {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 8px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.conversation-action-menu [data-highlighted] {
+  background: var(--secondary);
+}
+.conversation-action-menu svg {
+  width: 16px;
+  height: 16px;
+}
+.conversation-delete-action {
+  color: var(--danger);
+}
+.conversation-action-overlay {
+  position: fixed;
+  inset: 0;
+  background: #0006;
+  z-index: 80;
+}
+.conversation-action-dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 81;
+  width: min(440px, calc(100% - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--background);
+}
+.conversation-action-dialog h2 {
+  font-size: 1rem;
+}
+.conversation-action-dialog p {
+  color: var(--muted);
+  line-height: 1.6;
+  margin-block: 12px 20px;
+}
+.conversation-action-dialog label {
+  display: block;
+  margin-block-end: 8px;
+}
+.conversation-action-dialog input {
+  font-size: 1rem;
+}
+.conversation-action-dialog [role='alert'] {
+  margin-block-start: 12px;
+}
+.conversation-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-block-start: 24px;
+}
 .conversation-history-list a {
   display: block;
   text-decoration: none;

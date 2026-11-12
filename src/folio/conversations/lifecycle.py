@@ -5,8 +5,21 @@ from psycopg.types.json import Jsonb
 from folio.observability import exception_details
 
 
+def lock_conversation(conn, conversation_id):
+    """Account, when needed, precedes this gate; turn locks always follow it."""
+    row = conn.execute(
+        "SELECT * FROM conversations WHERE id=%s FOR UPDATE", (conversation_id,)
+    ).fetchone()
+    return row if row and row["deleted_at"] is None else None
+
+
 def claim_turn(database, turn_id):
     with database.transaction() as conn:
+        identity = conn.execute(
+            "SELECT conversation_id FROM conversation_turns WHERE id=%s", (turn_id,)
+        ).fetchone()
+        if not identity or lock_conversation(conn, identity["conversation_id"]) is None:
+            return None
         row = conn.execute(
             "SELECT * FROM conversation_turns WHERE id=%s AND state='pending' "
             "AND available_at<=clock_timestamp() FOR UPDATE",
@@ -30,6 +43,8 @@ def claim_turn(database, turn_id):
 
 
 def owned(conn, claim):
+    if lock_conversation(conn, claim["conversation_id"]) is None:
+        return None
     row = conn.execute(
         "SELECT * FROM conversation_turns WHERE id=%s AND state='running' AND "
         "claim_token=%s FOR UPDATE",

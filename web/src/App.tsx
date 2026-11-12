@@ -10,6 +10,7 @@ import { HomePage } from './conversations/HomePage';
 import { NewConversationPage } from './conversations/NewConversationPage';
 import { ConversationPage } from './conversations/ConversationPage';
 import { ConversationSidebar } from './conversations/ConversationSidebar';
+import type { Conversation } from './conversations/types';
 import { DocumentPage } from './documents/DocumentPage';
 import { UploadPage } from './documents/UploadPage';
 import { SettingsPage } from './configuration/SettingsPage';
@@ -21,6 +22,7 @@ export function App() {
   const [reload, setReload] = useState(0);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historyRevision, setHistoryRevision] = useState(0);
+  const [renamedConversation, setRenamedConversation] = useState<Conversation | null>(null);
   const refreshHistory = useCallback(() => setHistoryRevision((value) => value + 1), []);
   const location = useLocation();
   useEffect(() => {
@@ -32,6 +34,7 @@ export function App() {
     return () => media.removeEventListener('change', close);
   }, []);
   useEffect(() => {
+    setRenamedConversation(null);
     const titles: Record<string, string> = {
       '/runs': 'Processing runs',
       '/new-chat': 'New chat',
@@ -106,6 +109,8 @@ export function App() {
         {capabilities && (
           <ConversationSidebar
             revision={historyRevision}
+            onChanged={refreshHistory}
+            onRenamed={setRenamedConversation}
             onNavigate={() => setHistoryOpen(false)}
           />
         )}
@@ -126,7 +131,13 @@ export function App() {
               <Route path="/upload" element={<UploadPage capabilities={capabilities} />} />
               <Route
                 path="/conversations/:conversationId"
-                element={<ConversationPage onTurnChanged={refreshHistory} />}
+                element={
+                  <ConversationPage
+                    revision={historyRevision}
+                    renamedConversation={renamedConversation}
+                    onTurnChanged={refreshHistory}
+                  />
+                }
               />
               <Route path="/runs" element={<RunsPage />} />
               {capabilities.development_mode && (

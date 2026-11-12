@@ -25,7 +25,7 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
         : validation || `Request failed (${response.status}).`;
     throw new ApiError(message, response.status);
   }
-  return response.json() as Promise<T>;
+  return response.status === 204 ? (undefined as T) : (response.json() as Promise<T>);
 }
 
 export function errorMessage(error: unknown): string {
