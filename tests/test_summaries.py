@@ -115,8 +115,6 @@ def summary_document(tmp_path, monkeypatch):
         retry_delays_seconds=(0,),
         retry_jitter_seconds=0,
     )
-    with psycopg.connect(settings.database_url) as connection:
-        connection.execute("DELETE FROM summary_budget_account")
     with TestClient(create_app(settings), base_url="http://localhost") as client:
 
         def publish(parser=available_evidence):
@@ -222,8 +220,9 @@ def test_summary_attempt_history_retains_safe_failures_and_uncertain_billing(sum
 
 
 @pytest.mark.integration
+@pytest.mark.parametrize("response_kind", ["valid", "invalid_content", "provider_error"])
 def test_deepseek_summary_flows_from_prepared_evidence_to_saved_citations(
-    summary_document, monkeypatch
+    summary_document, monkeypatch, response_kind
 ):
     from folio.summaries.config import SummarySettings
     from folio.summaries.processing import process_summary
@@ -270,10 +269,22 @@ def test_deepseek_summary_flows_from_prepared_evidence_to_saved_citations(
             return httpx.Response(
                 200,
                 json={
+                    **(
+                        {"error": {"message": "unusable response"}}
+                        if response_kind == "provider_error"
+                        else {}
+                    ),
                     "model": policy["model_id"],
                     "provider": "Fireworks",
                     "choices": [
-                        {"finish_reason": "stop", "message": {"content": json.dumps(content)}}
+                        {
+                            "finish_reason": "stop",
+                            "message": {
+                                "content": []
+                                if response_kind == "invalid_content"
+                                else json.dumps(content)
+                            },
+                        }
                     ],
                     "usage": {"prompt_tokens": 600, "completion_tokens": 200, "cost": 0.00042},
                 },
@@ -284,15 +295,22 @@ def test_deepseek_summary_flows_from_prepared_evidence_to_saved_citations(
     url = f"/revisions/{revision_id}/summary"
     run_id = client.get(url).json()["run_id"]
     model = OpenRouter(policy, "test-key", transport=httpx.MockTransport(respond))
-    assert process_summary(run_id, settings=settings, client=model)["outcome"] == "ready"
+    outcome = process_summary(run_id, settings=settings, client=model)["outcome"]
     saved = client.get(url).json()
+    assert Decimal(saved["usage"]["cost_usd"]) == Decimal("0.00042")
+    assert Decimal(saved["usage"]["uncertain_cost_usd"]) == 0
+    if response_kind != "valid":
+        assert outcome == "failed"
+        assert saved["error"]["code"] == "SUMMARY_PROVIDER_RESPONSE_INVALID"
+        assert saved["overview"] is None
+        return
+    assert outcome == "ready"
     assert saved["overview"] == content["overview"]
     assert saved["points"] == content["points"]
     assert {citation["source_id"]: citation["pages"] for citation in saved["citations"]} == {
         "first": [1],
         "last": [1],
     }
-    assert Decimal(saved["usage"]["cost_usd"]) == Decimal("0.00042")
     assert saved["usage"]["last_finish_reason"] == "stop"
     assert process_summary(run_id, settings=settings, client=model)["outcome"] == "ignored"
     assert len(calls) == 1
@@ -577,7 +595,7 @@ def test_concurrent_work_cannot_reuse_reserved_global_or_document_allowance(
     from folio.summaries.processing import process_summary
 
     settings, client, publish = summary_document
-    monkeypatch.setenv("FOLIO_SUMMARY_BUDGET_USD", "0.02")
+    monkeypatch.setenv("FOLIO_SUMMARY_BUDGET_USD", "0.006")
     _, first_revision = publish()
     _, second_revision = publish()
     first = client.get(f"/revisions/{first_revision}/summary").json()["run_id"]
@@ -619,7 +637,7 @@ def test_concurrent_work_cannot_reuse_reserved_global_or_document_allowance(
 @pytest.mark.integration
 @pytest.mark.parametrize(
     "budget,expected,late_failure",
-    [("0.04", "ready", False), ("0.02", "unavailable", False), ("0.04", "ready", True)],
+    [("0.012", "ready", False), ("0.006", "unavailable", False), ("0.012", "ready", True)],
 )
 def test_expired_invocation_keeps_its_reservation_and_rejects_late_publication(
     summary_document, monkeypatch, budget, expected, late_failure
@@ -658,7 +676,7 @@ def test_expired_invocation_keeps_its_reservation_and_rejects_late_publication(
             dispatch_once(settings)
             recovered = client.get(url).json()
             assert recovered["state"] == "pending"
-            assert Decimal(recovered["usage"]["uncertain_cost_usd"]) == Decimal("0.0152384")
+            assert Decimal(recovered["usage"]["uncertain_cost_usd"]) == Decimal("0.0048384")
             process_summary(run_id, settings=settings, client=new_model)
             completed = client.get(url).json()
             assert completed["state"] == expected
@@ -666,19 +684,31 @@ def test_expired_invocation_keeps_its_reservation_and_rejects_late_publication(
         finally:
             release.set()
         assert old.result(timeout=5)["outcome"] == ("failed" if late_failure else "superseded")
-    assert client.get(url).json() == completed
-    assert Decimal(completed["usage"]["uncertain_cost_usd"]) == Decimal("0.0152384")
-    assert completed["usage"]["cost_usd"] is None
+    final = client.get(url).json()
+    assert {k: v for k, v in final.items() if k != "usage"} == {
+        k: v for k, v in completed.items() if k != "usage"
+    }
+    if late_failure:
+        assert Decimal(final["usage"]["uncertain_cost_usd"]) == Decimal("0.0048384")
+        assert final["usage"]["cost_usd"] is None
+    else:
+        assert Decimal(final["usage"]["uncertain_cost_usd"]) == 0
+        assert Decimal(final["usage"]["cost_usd"]) == Decimal(
+            "0.000090" if expected == "ready" else "0.000045"
+        )
     inspected = client.get(f"/development/ingestion-requests/{receipt['request_id']}").json()
     expired = inspected["summary"]["attempts"][0]
     assert expired["error_code"] == "SUMMARY_WORKER_LOST"
     assert expired["failure_diagnostics"] is None
+    assert expired["billing_state"] == ("unknown" if late_failure else "known")
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("stage", ["profile", "generation"])
+@pytest.mark.parametrize(
+    "stage,legacy", [("profile", False), ("generation", False), ("generation", True)]
+)
 def test_provider_timeout_retries_immediately_and_missing_credentials_never_reserve(
-    summary_document, monkeypatch, stage
+    summary_document, monkeypatch, stage, legacy
 ):
     from folio.ai.openrouter import ProviderError
     from folio.summaries.processing import process_summary
@@ -687,6 +717,11 @@ def test_provider_timeout_retries_immediately_and_missing_credentials_never_rese
     _, revision_id = publish()
     url = f"/revisions/{revision_id}/summary"
     run_id = client.get(url).json()["run_id"]
+    if legacy:
+        with psycopg.connect(settings.database_url) as connection:
+            connection.execute(
+                "UPDATE summary_runs SET policy=policy-'reservation_version' WHERE id=%s", (run_id,)
+            )
 
     class Timeout(Model):
         def profile(self):
@@ -701,7 +736,7 @@ def test_provider_timeout_retries_immediately_and_missing_credentials_never_rese
     pending = client.get(url).json()
     assert pending["state"] == "pending"
     assert Decimal(pending["usage"]["uncertain_cost_usd"]) == (
-        Decimal("0.0152384") if stage == "generation" else Decimal(0)
+        Decimal("0.0152384" if legacy else "0.0048384") if stage == "generation" else Decimal(0)
     )
     process_summary(run_id, settings=settings, client=Model())
     assert client.get(url).json()["state"] == "ready"

@@ -23,6 +23,7 @@ export interface Configuration {
     summary_timeout_seconds: number | null;
     document_budget_usd: string | null;
     budget_usd: string;
+    admission_error: string | null;
     spent_usd: string;
     held_usd: string;
     remaining_usd: string;

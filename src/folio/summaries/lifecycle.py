@@ -5,7 +5,7 @@ from uuid import uuid4
 
 from psycopg.types.json import Jsonb
 
-from folio.ai.budget import admission_error, lock_account
+from folio.ai.budget import admission_error, check_settlement, lock_account
 from folio.observability import exception_details
 
 
@@ -126,8 +126,6 @@ def finish(
             "SELECT id FROM summary_budget_account WHERE id=true FOR UPDATE"
         ).fetchone()
         run = owned(connection, claim)
-        if run is None:
-            return False
         usage = (
             {}
             if generation is None
@@ -141,18 +139,43 @@ def finish(
                 "provider": generation.provider,
             }
         )
-        connection.execute(
-            """UPDATE summary_attempts SET finished_at=clock_timestamp(),error_code=%s,
-            usage=%s,response_id=%s,cost_usd=%s,failure_diagnostics=%s,
-            billing_state=CASE WHEN %s::numeric IS NOT NULL THEN 'known'
-                WHEN invoked_at IS NOT NULL THEN 'unknown' ELSE billing_state END WHERE id=%s""",
+        # Billing belongs to the invocation even after its permission to publish expires.
+        settled = connection.execute(
+            """UPDATE summary_attempts a
+            SET usage=CASE WHEN cost_usd IS NULL THEN usage || jsonb_strip_nulls(%s)
+                ELSE usage END,
+            response_id=COALESCE(response_id,%s),cost_usd=COALESCE(cost_usd,%s),
+            billing_state=CASE WHEN COALESCE(cost_usd,%s) IS NOT NULL THEN 'known'
+                ELSE 'unknown' END
+            FROM summary_runs r WHERE a.id=%s AND a.run_id=%s AND a.claim_token=%s
+            AND a.invoked_at IS NOT NULL AND r.id=a.run_id
+            RETURNING a.reserved_usd,a.cost_usd,a.usage,r.input_manifest""",
             (
-                code,
                 Jsonb(usage),
                 generation.response_id if generation else None,
                 generation.cost_usd if generation else None,
-                Jsonb(exception_details(error)) if error is not None else None,
                 generation.cost_usd if generation else None,
+                claim.attempt_id,
+                claim.run_id,
+                claim.token,
+            ),
+        ).fetchone()
+        if settled:
+            check_settlement(
+                connection,
+                reserved_usd=settled["reserved_usd"],
+                cost_usd=settled["cost_usd"],
+                reserved_input=(settled["input_manifest"] or {}).get("input_tokens_reserved"),
+                reported_input=settled["usage"].get("prompt_tokens"),
+            )
+        if run is None:
+            return False
+        connection.execute(
+            """UPDATE summary_attempts SET finished_at=clock_timestamp(),error_code=%s,
+            failure_diagnostics=%s WHERE id=%s""",
+            (
+                code,
+                Jsonb(exception_details(error)) if error is not None else None,
                 claim.attempt_id,
             ),
         )

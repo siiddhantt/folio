@@ -62,6 +62,7 @@ def process_index(index_id, *, settings=None, client=None):
             unavailable = error.code in {
                 "INDEX_DOCUMENT_BUDGET",
                 "INDEX_GLOBAL_BUDGET",
+                "INDEX_RESERVATION_EXCEEDED",
                 "INDEX_CHUNK_LIMIT",
                 "EMBEDDING_PROVIDER_NOT_CONFIGURED",
                 "EMBEDDING_MODEL_UNAVAILABLE",

@@ -32,6 +32,7 @@ class SummarySettings(SummaryCredentials, BudgetSettings):
     def policy(self, runtime):
         policy = self.model_dump(mode="json", exclude={"api_key"})
         policy.update(
+            reservation_version=2,
             prompt_version=PROMPT_VERSION,
             schema_version=SCHEMA_VERSION,
             preparation_version=PREPARATION_VERSION,

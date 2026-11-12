@@ -24,6 +24,12 @@ export function RuntimeDetails({ runtime }: Pick<Configuration, 'runtime'>) {
     <aside className="settings-runtime" aria-labelledby="runtime-title">
       <h2 id="runtime-title">Execution & spending</h2>
       <p className="subtle">Read-only</p>
+      {runtime.admission_error && (
+        <Notice error>
+          New AI calls are paused: reported usage exceeded a reservation. Review the saved costs and
+          token counts before resuming. Calls already running can still finish.
+        </Notice>
+      )}
       {runtime.summary_configuration_error && (
         <Notice error>
           Summary configuration needs repair in the environment:{' '}

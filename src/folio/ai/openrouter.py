@@ -1,7 +1,7 @@
 """Explicit text-generation routes; no implicit retries or fallback."""
 
 from copy import deepcopy
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from decimal import Decimal, InvalidOperation
 
 import httpx
@@ -11,9 +11,10 @@ from .tokens import BudgetError, check_budget, tokenizer_name
 
 
 class ProviderError(Exception):
-    def __init__(self, code: str, retryable: bool = False):
+    def __init__(self, code: str, retryable: bool = False, *, generation=None):
         self.code = code
         self.retryable = retryable
+        self.generation = generation
         super().__init__(code)
 
 
@@ -67,19 +68,20 @@ class OpenRouter:
             raise ProviderError("SUMMARY_PROVIDER_TIMEOUT", retryable=True) from None
         except httpx.TransportError:
             raise ProviderError("SUMMARY_PROVIDER_UNAVAILABLE", retryable=True) from None
-        if response.status_code == 429:
-            raise ProviderError("SUMMARY_PROVIDER_RATE_LIMIT", retryable=True)
-        if response.status_code >= 500:
-            raise ProviderError("SUMMARY_PROVIDER_UNAVAILABLE", retryable=True)
-        if not 200 <= response.status_code < 300:
-            raise ProviderError("SUMMARY_PROVIDER_REJECTED")
         try:
             body = response.json()
-            if not isinstance(body, dict) or "error" in body:
-                raise ValueError
-            return body
-        except (ValueError, TypeError):
-            raise ProviderError("SUMMARY_PROVIDER_RESPONSE_INVALID") from None
+        except ValueError:
+            body = None
+        billing = _billing(body) if method == "POST" and isinstance(body, dict) else None
+        if response.status_code == 429:
+            raise ProviderError("SUMMARY_PROVIDER_RATE_LIMIT", retryable=True, generation=billing)
+        if response.status_code >= 500:
+            raise ProviderError("SUMMARY_PROVIDER_UNAVAILABLE", retryable=True, generation=billing)
+        if not 200 <= response.status_code < 300:
+            raise ProviderError("SUMMARY_PROVIDER_REJECTED", generation=billing)
+        if not isinstance(body, dict) or "error" in body:
+            raise ProviderError("SUMMARY_PROVIDER_RESPONSE_INVALID", generation=billing)
+        return body
 
     def profile(self) -> dict:
         if self._profile is not None:
@@ -212,6 +214,7 @@ class OpenRouter:
             json=payload,
             headers={"Authorization": f"Bearer {self._api_key}"},
         )
+        billing = _billing(body)
         try:
             choice = body["choices"][0]
             message = choice["message"]
@@ -236,25 +239,43 @@ class OpenRouter:
             if body["model"] != self.policy["model_id"] or body["provider"] != self._provider_name:
                 raise ValueError
             usage = body.get("usage") or {}
-            cost = usage.get("cost")
-            cost = Decimal(str(cost)) if cost is not None else None
-            if cost is not None and (not cost.is_finite() or cost < 0):
+            if usage.get("cost") is not None and billing.cost_usd is None:
                 raise ValueError
-            return Generation(
+            return replace(
+                billing,
                 content=content,
                 finish_reason=finish_reason,
-                prompt_tokens=_usage_count(usage.get("prompt_tokens")),
-                completion_tokens=_usage_count(usage.get("completion_tokens")),
-                cost_usd=cost,
-                response_id=body.get("id") if isinstance(body.get("id"), str) else None,
-                model=body["model"],
                 provider=self._provider,
-                reasoning_tokens=_usage_count(
-                    (usage.get("completion_tokens_details") or {}).get("reasoning_tokens")
-                ),
             )
         except (AttributeError, KeyError, IndexError, TypeError, ValueError, InvalidOperation):
-            raise ProviderError("SUMMARY_PROVIDER_RESPONSE_INVALID") from None
+            raise ProviderError("SUMMARY_PROVIDER_RESPONSE_INVALID", generation=billing) from None
+
+
+def _billing(body: dict) -> Generation:
+    """Retain safe usage independently of whether the answer is usable."""
+    usage = body.get("usage") if isinstance(body.get("usage"), dict) else {}
+    details = usage.get("completion_tokens_details")
+    cost = None
+    try:
+        if usage.get("cost") is not None:
+            cost = Decimal(str(usage["cost"]))
+            if not cost.is_finite() or cost < 0:
+                cost = None
+    except InvalidOperation:
+        pass
+    return Generation(
+        content="",
+        finish_reason="unknown",
+        prompt_tokens=_usage_count(usage.get("prompt_tokens")),
+        completion_tokens=_usage_count(usage.get("completion_tokens")),
+        cost_usd=cost,
+        response_id=body.get("id") if isinstance(body.get("id"), str) else None,
+        model=body.get("model") if isinstance(body.get("model"), str) else "",
+        provider=body.get("provider", "").lower() if isinstance(body.get("provider"), str) else "",
+        reasoning_tokens=_usage_count(details.get("reasoning_tokens"))
+        if isinstance(details, dict)
+        else None,
+    )
 
 
 def _usage_count(value) -> int | None:

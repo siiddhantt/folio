@@ -72,6 +72,7 @@ def process_summary(run_id, *, settings=None, client=None):
                 code=error.code,
                 state=state,
                 retryable=error.retryable,
+                generation=error.generation,
                 error=error,
             )
             return {"outcome": state, "code": error.code}

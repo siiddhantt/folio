@@ -53,9 +53,28 @@ def admission_error(connection, document_id, amount, global_limit, document_limi
     amount = Decimal(amount)
     if not amount.is_finite() or amount < 0:
         raise ValueError("The reservation must be finite and nonnegative")
+    account = connection.execute(
+        "SELECT admission_error FROM summary_budget_account WHERE id=true"
+    ).fetchone()
+    if account and account["admission_error"]:
+        return account["admission_error"]
     used = spending(connection, document_id)
     if used["document_usd"] + amount > Decimal(document_limit):
         return "DOCUMENT_BUDGET"
     if used["spent_usd"] + used["held_usd"] + amount > Decimal(global_limit):
         return "GLOBAL_BUDGET"
     return None
+
+
+def check_settlement(connection, *, reserved_usd, cost_usd, reserved_input, reported_input):
+    """Caller holds the account lock. Pause new calls, never in-flight settlement."""
+    cost_exceeded = cost_usd is not None and cost_usd > reserved_usd
+    input_exceeded = (
+        type(reported_input) is int
+        and type(reserved_input) is int
+        and reported_input > reserved_input
+    )
+    if cost_exceeded or input_exceeded:
+        connection.execute(
+            "UPDATE summary_budget_account SET admission_error='RESERVATION_EXCEEDED' WHERE id=true"
+        )

@@ -46,8 +46,9 @@ def extracted_document(path, config):
 
 
 class Embeddings:
-    def __init__(self):
+    def __init__(self, cost="0.0000004"):
         self.calls = []
+        self.cost = Decimal(cost)
 
     def profile(self):
         return {
@@ -67,7 +68,7 @@ class Embeddings:
                 "prompt_tokens": 20,
                 "response_id": "synthetic-response",
             },
-            cost_usd=Decimal("0.000001"),
+            cost_usd=self.cost,
         )
 
 
@@ -104,7 +105,10 @@ def indexed_document(tmp_path, monkeypatch):
 
 @pytest.mark.integration
 @pytest.mark.parser
-def test_batches_become_readable_only_after_complete_index_and_replays_reuse_it(indexed_document):
+@pytest.mark.parametrize("cost", ["0.0000004", "0.01"])
+def test_batches_become_readable_only_after_complete_index_and_replays_reuse_it(
+    indexed_document, cost
+):
     settings, client, revision = indexed_document
     url = f"/revisions/{revision}/index"
     pending = client.get(url)
@@ -113,11 +117,19 @@ def test_batches_become_readable_only_after_complete_index_and_replays_reuse_it(
 
     from folio.indexing.processing import process_index
 
-    model = Embeddings()
+    model = Embeddings(cost)
     index_id = pending.json()["index_id"]
     assert process_index(index_id, settings=settings, client=model)["outcome"] == "pending"
     assert client.get(url).json()["embedded_chunks"] == 1
     assert client.get(url + "/chunks").status_code == 409
+    if cost == "0.01":
+        assert process_index(index_id, settings=settings, client=model)["outcome"] == "unavailable"
+        assert client.get(url).json()["error_code"] == "INDEX_RESERVATION_EXCEEDED"
+        runtime = client.get("/development/settings").json()["runtime"]
+        assert Decimal(runtime["spent_usd"]) == Decimal("0.01")
+        assert runtime["admission_error"] == "RESERVATION_EXCEEDED"
+        assert len(model.calls) == 1
+        return
     assert process_index(index_id, settings=settings, client=model)["outcome"] == "ready"
     chunks = client.get(url + "/chunks").json()["chunks"]
     assert len(chunks) == 2
@@ -192,7 +204,7 @@ def test_lost_worker_resumes_only_missing_batch_and_late_charge_is_kept(indexed_
     request_id = client.get(f"/revisions/{revision}/evidence").json()["request_id"]
     inspection = client.get(f"/development/ingestion-requests/{request_id}").json()["indexing"]
     assert inspection["attempts"][-1]["billing_state"] == "known"
-    assert Decimal(str(inspection["attempts"][-1]["cost_usd"])) == Decimal("0.000001")
+    assert Decimal(str(inspection["attempts"][-1]["cost_usd"])) == Decimal("0.0000004")
     assert process_index(index_id, settings=settings, client=model)["outcome"] == "ready"
     assert model.calls[-1] == late.calls[0]
     assert model.calls[0] != late.calls[0]

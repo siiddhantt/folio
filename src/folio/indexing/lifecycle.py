@@ -7,7 +7,7 @@ from uuid import uuid4
 
 from psycopg.types.json import Jsonb
 
-from folio.ai.budget import admission_error, lock_account
+from folio.ai.budget import admission_error, check_settlement, lock_account
 from folio.observability import exception_details
 
 
@@ -184,16 +184,25 @@ def finish(
 ):
     with database.transaction() as conn:
         conn.execute("SELECT id FROM summary_budget_account WHERE id=true FOR UPDATE")
+        run = owned(conn, claim)
         cost = getattr(result or error, "cost_usd", None)
         metadata = getattr(result or error, "metadata", {})
-        conn.execute(
+        settled = conn.execute(
             """UPDATE embedding_invocations
             SET cost_usd=COALESCE(cost_usd,%s),metadata=metadata || %s,
             finished_at=clock_timestamp(),billing_state=CASE WHEN COALESCE(cost_usd,%s) IS NULL
-            THEN 'unknown' ELSE 'known' END WHERE attempt_id=%s AND index_id=%s""",
+            THEN 'unknown' ELSE 'known' END WHERE attempt_id=%s AND index_id=%s
+            RETURNING reserved_usd,cost_usd,metadata""",
             (cost, Jsonb(metadata), cost, claim["attempt_id"], claim["id"]),
-        )
-        run = owned(conn, claim)
+        ).fetchall()
+        for invocation in settled:
+            check_settlement(
+                conn,
+                reserved_usd=invocation["reserved_usd"],
+                cost_usd=invocation["cost_usd"],
+                reserved_input=invocation["metadata"].get("input_tokens"),
+                reported_input=invocation["metadata"].get("prompt_tokens"),
+            )
         if run is None:
             return "superseded"
         code = getattr(error, "code", None)

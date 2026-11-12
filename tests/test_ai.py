@@ -180,6 +180,25 @@ def test_admission_reserves_the_verified_route_ceiling_and_counts_the_schema():
 
 
 @pytest.mark.parametrize(
+    "limits,reserved,cost",
+    [
+        ({}, 64000, "0.0048384"),
+        ({"max_prompt_tokens": 32000}, 32000, "0.0032384"),
+        ({"context_tokens": 10000, "max_prompt_tokens": 10000}, 5904, "0.0019336"),
+    ],
+)
+def test_stage_reservation_keeps_output_headroom_and_respects_provider_limits(
+    limits, reserved, cost
+):
+    budget = check_budget(
+        MESSAGES, SCHEMA, {**POLICY, "reservation_version": 2}, {**PROFILE, **limits}
+    )
+    assert budget["input_tokens_reserved"] == reserved
+    assert budget["output_tokens_reserved"] == 4096
+    assert Decimal(budget["reservation_usd"]) == Decimal(cost)
+
+
+@pytest.mark.parametrize(
     "changes",
     [
         {},
@@ -367,6 +386,7 @@ def test_unsuccessful_completions_preserve_billing_metadata(message, finish, exp
     "policy,profile_changes,code",
     [
         ({**POLICY, "input_limit_tokens": 10}, {}, "SUMMARY_INPUT_LIMIT"),
+        ({**POLICY, "reservation_version": 3}, {}, "SUMMARY_PROFILE_INVALID"),
         (POLICY, {"max_completion_tokens": 100}, "SUMMARY_CONTEXT_LIMIT"),
         (
             POLICY,

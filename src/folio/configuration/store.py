@@ -99,7 +99,7 @@ def describe(database, settings, current=None):
     policy = capture_policy(settings)
     with database.transaction() as connection:
         account = connection.execute(
-            "SELECT budget_usd FROM summary_budget_account WHERE id=true"
+            "SELECT budget_usd,admission_error FROM summary_budget_account WHERE id=true"
         ).fetchone()
         used = spending(connection)
     allowance = Decimal(policy.get("budget_usd", "0"))
@@ -118,6 +118,7 @@ def describe(database, settings, current=None):
             "summary_timeout_seconds": policy.get("timeout_seconds"),
             "document_budget_usd": policy.get("document_budget_usd"),
             "budget_usd": str(allowance),
+            "admission_error": account["admission_error"] if account else None,
             "spent_usd": str(used["spent_usd"]),
             "held_usd": str(used["held_usd"]),
             "remaining_usd": str(max(Decimal(0), allowance - used["spent_usd"] - used["held_usd"])),

@@ -33,9 +33,8 @@ def tokenizer_name(model_id: str) -> str:
 def check_budget(messages: list[dict], schema: dict, policy: dict, profile: dict) -> dict:
     """Count complete text/schema; wrapper allowance is estimated, never exact.
 
-    Reserve the verified prompt ceiling, or the combined context when the
-    supported DeepSeek route leaves its prompt ceiling unknown. This bounds
-    money even when the provider's wrapper differs from ours.
+    New policies reserve Folio's stage input allowance plus maximum output.
+    Frozen legacy policies retain their provider-ceiling calculation.
     """
     if (
         not isinstance(messages, list)
@@ -57,6 +56,9 @@ def check_budget(messages: list[dict], schema: dict, policy: dict, profile: dict
     if profile.get("provider") != policy.get("provider"):
         raise BudgetError("SUMMARY_PROFILE_INVALID")
     try:
+        reservation_version = policy.get("reservation_version", 1)
+        if type(reservation_version) is not int or reservation_version not in (1, 2):
+            raise ValueError
         prompt_limit = profile["max_prompt_tokens"]
         if prompt_limit is None and policy["model_id"] == deepseek.MODEL_ID:
             prompt_limit = profile["context_tokens"]
@@ -101,12 +103,19 @@ def check_budget(messages: list[dict], schema: dict, policy: dict, profile: dict
         or estimated + policy["max_output_tokens"] > profile["context_tokens"]
     ):
         raise BudgetError("SUMMARY_CONTEXT_LIMIT")
+    reserved_input = prompt_limit
+    if reservation_version == 2:
+        reserved_input = min(
+            policy["input_limit_tokens"],
+            prompt_limit,
+            profile["context_tokens"] - policy["max_output_tokens"],
+        )
     reservation = (
-        prompt_limit * input_price + policy["max_output_tokens"] * output_price
+        reserved_input * input_price + policy["max_output_tokens"] * output_price
     ) / Decimal(1_000_000)
     budget = {
         "input_tokens_estimate": estimated,
-        "input_tokens_reserved": prompt_limit,
+        "input_tokens_reserved": reserved_input,
         "output_tokens_reserved": policy["max_output_tokens"],
         "reservation_usd": str(reservation),
         "tokenizer": name,

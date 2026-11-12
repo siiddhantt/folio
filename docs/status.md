@@ -43,8 +43,34 @@ output limits remain to resolve before live use. The immediate prerequisite is
 the [reservation correction](ai-budget.md), accepted as a separate test-first
 increment before chat. It includes late summary billing and preserves legacy
 holds. Version 2 now prices the stage input allowance plus maximum output, with
-visible admission pauses on overruns. Worker verification and independent review
-are in progress. No paid calls or budget increases are needed for this correction.
+visible admission pauses on overruns. The accounting increment is complete;
+conversation implementation remains next.
+
+## Reservation and late-billing correction — November 12
+
+New upload policies reserve the configured stage input ceiling plus unchanged
+maximum output. Legacy manifests keep their old calculation. Known summary bills
+settle after ownership expires without stale publication; malformed provider
+responses retain valid billing metadata. Unknown calls keep their holds. Overruns
+pause new summary/embedding admissions through the existing account and appear
+in the development console; running calls can finish. Migration 009 adds only
+that account flag, preserving all prior costs and allowances.
+
+Test-first failures were observed for stage-sized holds, late summary charges,
+overrun handling and unusable-response billing. The isolated Docker suite passed
+129 tests plus two subtests; the opt-in supervision test was excluded. Ruff and
+frontend type/build/format checks passed. Independent diff review found no
+remaining actionable defect. The broader run exposed an unrealistic embedding
+stub charge, corrected while retaining an explicit overrun case. Existing
+upstream deprecation and PDF bundle-size warnings remain.
+
+Compose was rebuilt and migration 009 applied. Before/after row hashes confirmed
+the existing document, extraction, saved summary, 62 chunks/vectors and charges
+were unchanged. Read-only preparation of that PDF produced a $0.0388608 new hold
+versus the legacy $0.3342336, with the same 16,384 output-token maximum. No paid
+model call occurred; cumulative spend remains $0.232598024 and available allowance
+$0.767401976. Aside confirmed the console values and existing PDF/summary were
+accessible without an unexpected pause; screenshot automation was intermittent.
 
 ## Source-linked indexing increment — November 12
 

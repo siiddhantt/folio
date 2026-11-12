@@ -14,6 +14,10 @@ ERRORS = {
     "SUMMARY_CONTEXT_LIMIT": "The available evidence does not fit the selected model route.",
     "SUMMARY_GLOBAL_BUDGET": "The remaining summary allowance cannot cover this document.",
     "SUMMARY_DOCUMENT_BUDGET": "The summary cannot fit this document's spending limit.",
+    "SUMMARY_RESERVATION_EXCEEDED": (
+        "New AI calls are paused because reported usage exceeded a reservation. "
+        "Review spending in the development console."
+    ),
     "SUMMARY_WORKER_LOST": "Summary processing was interrupted before a result was saved.",
     "SUMMARY_DELIVERY_FAILED": "Summary processing could not start after repeated queue failures.",
     "SUMMARY_PROVIDER_NOT_CONFIGURED": "A summary provider credential is not configured.",
