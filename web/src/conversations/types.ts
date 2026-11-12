@@ -14,7 +14,8 @@ export interface Conversation {
   created_at: string;
   question: string | null;
   state: 'empty' | TurnState;
-  max_turns: 1;
+  head_sequence: number;
+  max_turns: null;
 }
 
 export interface Citation {
@@ -28,6 +29,8 @@ export interface Turn {
   id: string;
   conversation_id: string;
   sequence: number;
+  parent_sequence: number;
+  resolved_question: string | null;
   question: string;
   state: TurnState;
   created_at: string;
@@ -35,8 +38,8 @@ export interface Turn {
   finished_at: string | null;
   error: { code: string; message: string } | null;
   answer: {
-    outcome: 'answer' | 'clarification' | 'insufficient_evidence';
-    statements: { text: string; source_ids: string[] }[];
+    outcome: 'answer' | 'clarification' | 'insufficient_evidence' | 'transcript';
+    statements: { text: string; source_ids: string[]; turn_ids?: string[] }[];
   } | null;
   citations: Citation[];
   coverage: { pages_without_content: number[]; diagnostics: Diagnostic[] };

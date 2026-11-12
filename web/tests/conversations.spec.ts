@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 
-test('a saved chat accepts one question, reloads its answer and opens the cited PDF', async ({
+test('a saved chat reloads its answer, keeps its composer and opens the cited PDF', async ({
   page,
 }) => {
   const time = '2026-01-01T12:00:00Z';
@@ -105,8 +105,8 @@ test('a saved chat accepts one question, reloads its answer and opens the cited 
   await expect(
     page.getByText('The building limit includes garage coverage.', { exact: true }),
   ).toBeVisible();
-  await expect(page.getByRole('textbox', { name: 'Your question' })).toHaveCount(0);
-  await expect(page.getByText('One question per chat for now.', { exact: true })).toBeVisible();
+  await expect(page.getByRole('textbox', { name: 'Your question' })).toHaveValue('');
+  await expect(page.getByText('One question per chat for now.', { exact: true })).toHaveCount(0);
   await page.reload();
   await expect(
     page.getByRole('main').getByText('Does the garage have a separate limit?', { exact: true }),
@@ -172,7 +172,10 @@ test('an uncertain question can be retried after reload without creating a new i
     const path = new URL(route.request().url()).pathname.replace('/api', '');
     if (route.request().method() === 'POST') {
       expect(path).toBe('/conversations/retry-chat/turns');
-      expect(route.request().postDataJSON()).toEqual({ question: failed.question });
+      expect(route.request().postDataJSON()).toEqual({
+        question: failed.question,
+        observed_head: 0,
+      });
       keys.push(route.request().headers()['idempotency-key']);
       if (keys.length === 1) await route.abort('connectionfailed');
       else await route.fulfill({ status: 202, json: { ...failed, state: 'pending', error: null } });
@@ -205,7 +208,7 @@ test('an uncertain question can be retried after reload without creating a new i
   expect(keys[1]).toBe(keys[0]);
   await page.reload();
   await expect(page.getByRole('alert')).toContainText(failed.error.message);
-  await expect(page.getByRole('textbox', { name: 'Your question' })).toHaveCount(0);
+  await expect(page.getByRole('textbox', { name: 'Your question' })).toBeEditable();
 });
 
 test('clarification and evidence limits remain readable without invented source buttons', async ({
@@ -273,6 +276,6 @@ test('clarification and evidence limits remain readable without invented source 
   );
   await expect(page.getByRole('button', { name: /^Source / })).toHaveCount(0);
   await expect(page.getByRole('note')).toContainText('Some document content may be missing.');
-  await expect(page.getByRole('textbox', { name: 'Your question' })).toHaveCount(0);
+  await expect(page.getByRole('textbox', { name: 'Your question' })).toBeEditable();
   await expect(page.getByRole('link', { name: 'New chat', exact: true })).toBeVisible();
 });

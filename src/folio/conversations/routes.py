@@ -20,6 +20,7 @@ class NewConversation(BaseModel):
 class NewQuestion(BaseModel):
     model_config = ConfigDict(extra="forbid")
     question: str = Field(min_length=1, max_length=4000)
+    observed_head: int = Field(default=0, ge=0, strict=True)
 
 
 class RenameConversation(BaseModel):
@@ -163,32 +164,44 @@ def create_router(database, settings):
             if chat is None:
                 raise HTTPException(404, "Conversation not found.")
             previous = conn.execute(
-                "SELECT id,question FROM conversation_turns WHERE conversation_id=%s AND "
+                "SELECT id,question,parent_sequence FROM conversation_turns "
+                "WHERE conversation_id=%s AND "
                 "idempotency_key=%s",
                 (conversation_id, idempotency_key),
             ).fetchone()
             if previous:
-                if previous["question"] != question:
+                if (
+                    previous["question"] != question
+                    or previous["parent_sequence"] != body.observed_head
+                ):
                     raise HTTPException(409, "This submission key belongs to another question.")
                 return turn(conn, previous["id"])
-            if conn.execute(
-                "SELECT 1 FROM conversation_turns WHERE conversation_id=%s", (conversation_id,)
-            ).fetchone():
+            latest = conn.execute(
+                "SELECT sequence,state FROM conversation_turns WHERE conversation_id=%s "
+                "ORDER BY sequence DESC LIMIT 1",
+                (conversation_id,),
+            ).fetchone()
+            head = latest["sequence"] if latest else 0
+            if body.observed_head != head:
                 raise HTTPException(
                     409,
-                    "This version supports one question per chat. Start a new chat for "
-                    "another question.",
+                    "This chat has newer messages. Reload it before sending your question.",
                 )
+            if latest and latest["state"] in {"pending", "running"}:
+                raise HTTPException(409, "An answer is already in progress in this chat.")
             policy = ChatSettings().policy(settings)
             turn_id = uuid4()
             conn.execute(
                 "INSERT INTO conversation_turns "
-                "(id,conversation_id,index_id,sequence,idempotency_key,question,policy) "
-                "VALUES (%s,%s,%s,1,%s,%s,%s)",
+                "(id,conversation_id,index_id,sequence,parent_sequence,"
+                "idempotency_key,question,policy) "
+                "VALUES (%s,%s,%s,%s,%s,%s,%s,%s)",
                 (
                     turn_id,
                     conversation_id,
                     chat["index_id"],
+                    head + 1,
+                    head,
                     idempotency_key,
                     question,
                     Jsonb(policy),
@@ -202,20 +215,37 @@ def create_router(database, settings):
 
     @router.get("/conversations/{conversation_id}/turns")
     def history(
-        conversation_id: UUID, after: int = Query(0, ge=0), limit: int = Query(20, ge=1, le=100)
+        conversation_id: UUID,
+        after: int | None = Query(None, ge=0),
+        before_sequence: int | None = Query(None, ge=1),
+        limit: int = Query(20, ge=1, le=100),
     ):
+        if after is not None and before_sequence is not None:
+            raise HTTPException(400, "Choose one history cursor.")
         with database.transaction() as conn:
             conn.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY")
             if conversation(conn, conversation_id) is None:
                 raise HTTPException(404, "Conversation not found.")
-            rows = conn.execute(
-                "SELECT id,sequence FROM conversation_turns WHERE conversation_id=%s AND "
-                "sequence>%s ORDER BY sequence LIMIT %s",
-                (conversation_id, after, limit + 1),
-            ).fetchall()
+            if after is not None:
+                rows = conn.execute(
+                    "SELECT id,sequence FROM conversation_turns WHERE conversation_id=%s AND "
+                    "sequence>%s ORDER BY sequence LIMIT %s",
+                    (conversation_id, after, limit + 1),
+                ).fetchall()
+                page = rows[:limit]
+            else:
+                rows = conn.execute(
+                    "SELECT id,sequence FROM conversation_turns WHERE conversation_id=%s AND "
+                    "(%s::int IS NULL OR sequence<%s) ORDER BY sequence DESC LIMIT %s",
+                    (conversation_id, before_sequence, before_sequence, limit + 1),
+                ).fetchall()
+                page = list(reversed(rows[:limit]))
             return {
-                "items": [turn(conn, r["id"]) for r in rows[:limit]],
-                "next_after": rows[limit - 1]["sequence"] if len(rows) > limit else None,
+                "items": [turn(conn, r["id"]) for r in page],
+                "next_after": page[-1]["sequence"]
+                if after is not None and len(rows) > limit
+                else None,
+                "next_before": page[0]["sequence"] if after is None and len(rows) > limit else None,
             }
 
     @router.get("/conversations/{conversation_id}/turns/{turn_id}")

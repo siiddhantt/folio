@@ -1,6 +1,6 @@
 # Document conversations
 
-Design checkpoint: November 12, 2026. **First-answer software implemented; GPT-5.2 selected after a limited comparison.** The owner
+Design checkpoint: November 13, 2026. **Saved follow-ups implemented; hybrid memory is next.** The owner
 requested a complete question/answer flow with persisted history, bounded context,
 compression when needed, recovery and an explanation of scaling. One PDF per
 conversation and the existing immutable index are accepted. The owner has now
@@ -9,11 +9,11 @@ question embeddings, rewriting, answers and memory calls. Hybrid timing and
 stage-allowance reservations are accepted. Initial chat model/token limits below
 passed a read-only compatibility check; quality is evaluated separately.
 
-## Accepted first-answer increment
+## Original first-answer increment
 
 The owner selected one question and its terminal answer per saved conversation,
 with follow-ups and the accepted hybrid memory behavior in the next increment.
-The UI must state this temporary boundary and offer a new chat, never accept a
+The original UI stated this temporary boundary and offered a new chat, never accepting a
 second question while silently ignoring history. Saved conversations live in a
 desktop sidebar or a mobile drawer; Runs remains processing history. The source
 reader remains accessible, and home opens a document.
@@ -99,12 +99,54 @@ Owner exercise: open the same chat in two tabs, rename it in one, then save an
 older edit from the other. Find the HTTP 409 response in browser developer tools.
 Explain why blindly retrying with the newest version would erase the protection.
 
+### Follow-up contract
+
+`POST /conversations/{id}/turns` adds `observed_head`: the sequence of the latest
+exchange the caller loaded (0 for an empty chat). Under the conversation lock,
+the API first checks the submission key, then checks that head and that no answer
+is already running. Exact replay returns the original turn even after later
+messages exist. A different question or head under the same key conflicts.
+
+The saved turn records its `parent_sequence`, original question, frozen context
+and successful resolution. A document question embeds the resolved search query,
+retrieves fresh evidence and answers using both original and resolved questions.
+Clarification and transcript recall finish from the resolution call without PDF
+search. Transcript references point to loaded original exchanges, separately from
+PDF citations. Failed questions remain visible and enter later context as unanswered.
+
+The history route defaults to the latest 20 exchanges in chronological display
+order. `before_sequence` requests an earlier page and `next_before` reports its
+cursor. Explicit `after` pagination remains available; callers cannot combine
+both cursors. Conversation metadata adds `head_sequence`; it does not replace
+loading the actual messages before submitting a follow-up.
+
+The resolver uses GPT-5.2 with 16,384 input and 1,024 output tokens, configurable
+separately under `FOLIO_CHAT_REWRITE_*`. The unchanged answer limits are
+16,384/4,096. `FOLIO_CHAT_HISTORY_LIMIT_TOKENS=8000` bounds conversation context;
+complete provider requests are checked separately. The existing gated development
+trace exposes the saved context/hash, resolved question, supplied evidence and
+per-stage charges. Normal chat reading need not show those execution details.
+
+The existing unique `(conversation_id, sequence)` database index serves three
+jobs: prevent duplicate positions, find the newest exchange in one conversation,
+and fetch earlier pages. For `WHERE conversation_id = ? AND sequence < ? ORDER BY
+sequence DESC LIMIT 20`, PostgreSQL can narrow to one conversation and walk that
+index backward. We do not need a separate index for each combination of those
+columns. An unrelated query filtering only by sequence has a different access
+pattern and would need its own measured justification.
+
+Owner exercise: open two tabs at the same conversation position and send two
+different questions. One should be accepted; the other should retain its draft
+and ask you to reload. Compare the HTTP 409 with a retry after a network failure:
+the latter reuses its submission key so it cannot create a second accepted turn.
+
 Accepted test interfaces extend the existing HTTP/persistence, database/worker
 lifecycle and provider contracts. Test one saved cited answer first, then replay,
 scope isolation, malformed/truncated output and recovery. Model responses are
 controlled in software tests; real answer support is reviewed separately.
 
-HTTP/UI contract for this increment:
+HTTP/UI contract for the original one-answer increment (retained for older saved
+policies; the follow-up checkpoint extends it):
 
 - `POST /conversations` with `{index_id}` and `Idempotency-Key` returns a saved
   conversation; `GET /conversations?before=<id>&limit=20` lists newest created
@@ -239,6 +281,36 @@ reserved amounts. After this comparison, the owner accepted GPT-5.2 as the answe
 default on November 12. This changes newly accepted questions; existing turn
 policies and answers remain intact. Summary and embedding settings, prompts,
 retrieval and spending allowances are unchanged.
+
+## Follow-up development sequence — November 13
+
+The owner selected five questions using the same public FEMA PDF/index. New
+turns used answer prompt/schema 3, retrieval policy 2 and the initial resolver
+prompt. GPT-5.2/OpenAI, reasoning off, served answers and resolution; embeddings
+were unchanged. These were real browser submissions, without automatic prompt
+retries. An independent review compared outputs with previously checked source
+expectations.
+
+| Question | Observed behavior | Known cost, including all stages |
+| --- | --- | --- |
+| Detached garage amount | Supported 10% ceiling, optional use, reduced building limit and exclusions; supporting chunk ranked first. | $0.00630370 |
+| Business-use follow-up | Correctly resolved the garage and cited its exclusion. The search query added unsupported “Other Structures” terminology. | $0.00844555 |
+| Correction to main dwelling | Correctly distinguished the garage sublimit from dwelling coverage, but the query again added an unsupported classification. | $0.00917518 |
+| Personal policy number | Safely invented no number, but asked for clarification based on missing chat information without searching the available PDF, and suggested an unsupported image workflow. | $0.00233275 |
+| Quote the first question | Exact quotation with the correct original-turn reference and no PDF calls; unnecessarily exposed an internal turn identifier in prose. | $0.00281050 |
+
+Total known cost was $0.02906768, with no uncertain holds. Acceptance-to-terminal
+times were 4.39–10.94 seconds in these five runs, not a latency benchmark. The
+first three answers use the same clause on physical page 5 (chunk spans 5–6).
+All six candidates fit each document answer, maximum supplied history was 480
+tokens, and the known page-2 extraction gap remained visible. This does not
+evaluate long-history compression, broad retrieval quality or a held-out set.
+
+These observations motivate one general resolver-prompt revision: distinguish
+an unclear question from a factual answer absent from history, use the already
+selected PDF for factual lookup, avoid invented categories and keep reference
+identifiers out of prose. Saved policies retain the original instructions. A
+comparison is development-set tuning and must not replace these original results.
 
 ## Outcome and example
 
@@ -505,9 +577,9 @@ input allowance plus maximum output. This remains an estimate-based spending
 control; don't invent an exact tokenizer or assume a gateway hard dollar cap.
 
 Initial research considered DeepSeek V4.1 Flash 1017/Together for all three
-generation jobs. Subsequent answer evaluation led to the accepted GPT-5.2 answer
-default. Rewriting and memory model choices remain open; the answer selection
-does not establish their quality. Luna has lower advertised unit
+generation jobs. Subsequent evaluation and owner decisions selected GPT-5.2 for
+answers, rewriting and memory. Each stage still needs its own quality checks;
+the answer selection does not establish memory quality. Luna has lower advertised unit
 prices but needs verified token accounting and tier/cache-write support; Haiku
 also needs a new provider boundary. Changing an environment value is insufficient.
 

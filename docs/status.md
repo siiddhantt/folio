@@ -1,6 +1,6 @@
 # Folio status
 
-Updated: 2026-11-12
+Updated: 2026-11-13
 
 ## Accepted direction
 
@@ -18,7 +18,7 @@ First-answer conversations are implemented. The owner accepted GPT-5.2 for new
 answers after three independently supported examples; broader quality remains
 unproven. Indexing uses Docling peer merging with heading
 preservation, OpenRouter OpenAI small embeddings and PostgreSQL/pgvector. Scoped question
-retrieval and one saved answer are implemented; follow-ups remain next. Configuration uses a commentless
+retrieval and saved follow-ups are implemented; hybrid memory remains next. Configuration uses a commentless
 ignored `.env` and a safe template.
 
 ## Conversation completion in progress — November 12
@@ -50,13 +50,25 @@ malformed auxiliary titles, deleted submission recovery across tabs, leaked
 submission metadata in restored drafts, and acknowledged renames during failed
 refreshes. Twenty-one mocked browser cases passed, with all sixteen affected
 entry/management cases repeated after the final fix. TypeScript, formatting,
-Ruff and builds passed. No review blockers remain. The allowance is unchanged:
-$0.748239806 available, with no outstanding holds.
+Ruff and builds passed. No review blockers remain. This management checkpoint
+needed no paid calls.
 
-Next active checkpoint: follow-ups. Hybrid memory remains unfinished. Do not present the old
-one-question flow as supporting conversation context. The owner accepted a live
-FEMA check covering a garage follow-up, a corrected subject, missing policy
-information and exact recall of the first question; it has not run yet.
+Follow-up software is now implemented: ordered acceptance, frozen context,
+versioned question resolution, fresh whole-chunk evidence, transcript references
+and bounded history pages. Eighty targeted backend cases passed across focused
+runs, along with 28 mocked browser cases, types, formatting, Ruff and builds.
+Review found and fixed JSONB ordering changing retry prompts, metadata advancing
+the submission head beyond loaded messages, lost drafts and a pagination race
+that made a history gap unreachable. Migration 012 preserved existing answer,
+policy, vector, input-manifest and invocation hashes.
+
+The first real five-turn development sequence cost $0.02906768. Three answers
+were source-supported; the resolver unnecessarily expanded terminology, redirected
+a policy-number question without searching the PDF, and exposed an internal ID
+while correctly quoting the first question. A generic resolver prompt revision
+preserves old frozen instructions and is under live comparison. See [the recorded
+observations](conversations.md#follow-up-development-sequence--november-13).
+Hybrid memory remains unfinished; this short sequence does not test compaction.
 
 ## Answer default — November 12
 

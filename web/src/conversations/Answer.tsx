@@ -1,7 +1,15 @@
 import { Button, Notice } from '../components/ui';
 import type { Citation, Turn } from './types';
 
-export function Answer({ turn, onSource }: { turn: Turn; onSource: (citation: Citation) => void }) {
+export function Answer({
+  turn,
+  onSource,
+  onTurnReference,
+}: {
+  turn: Turn;
+  onSource: (citation: Citation) => void;
+  onTurnReference: (turnId: string) => void;
+}) {
   const active = turn.state === 'pending' || turn.state === 'running';
   return (
     <>
@@ -22,7 +30,9 @@ export function Answer({ turn, onSource }: { turn: Turn; onSource: (citation: Ci
             <p className="answer-outcome">
               {turn.answer.outcome === 'clarification'
                 ? 'More detail needed'
-                : 'Insufficient evidence'}
+                : turn.answer.outcome === 'transcript'
+                  ? 'From this conversation'
+                  : 'Insufficient evidence'}
             </p>
           )}
           {turn.answer.statements.map((statement, index) => (
@@ -47,17 +57,25 @@ export function Answer({ turn, onSource }: { turn: Turn; onSource: (citation: Ci
                   })}
                 </div>
               )}
+              {!!statement.turn_ids?.length && (
+                <div className="answer-citations">
+                  {statement.turn_ids.map((id) => (
+                    <Button
+                      key={id}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onTurnReference(id)}
+                    >
+                      View original exchange
+                    </Button>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
         </article>
       ) : (
         <Notice error>No answer was saved for this question.</Notice>
-      )}
-      {(turn.coverage.pages_without_content.length > 0 || turn.coverage.diagnostics.length > 0) && (
-        <p className="chat-coverage" role="note">
-          Some document content may be missing.{' '}
-          <span>Check the document’s extraction details when verifying this answer.</span>
-        </p>
       )}
     </>
   );

@@ -128,7 +128,7 @@ def test_first_answer_is_scoped_cited_and_readable_after_reload(chat_document):
 
 
 @pytest.mark.integration
-def test_submission_replay_and_one_question_limit_are_explicit(chat_document):
+def test_submission_replay_and_stale_head_are_explicit(chat_document):
     settings, client, indexes = chat_document
     key = {"Idempotency-Key": str(uuid4())}
     chat = client.post("/conversations", json={"index_id": indexes[0]}, headers=key).json()

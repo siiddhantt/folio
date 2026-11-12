@@ -35,10 +35,10 @@ The first journey is verified through APIs. On November 9, a minimal upload/deta
 | R02 | Asynchronous document processing | Extraction, summaries and indexing run through RQ/Redis with durable PostgreSQL intent and bounded recovery. Indexing checkpoints one bounded embedding batch per job and publishes readiness only after every planned chunk has a vector. Request/attempt history remains inspectable. |
 | R03 | Document retrieval | Metadata, processing state, original bytes and paginated revision evidence are available. A bounded Runs page lists accepted uploads and reopens documents separately from conversations. Filtering and content search remain open. |
 | R04 | Summaries and AI insights | Automatically prepare a saved short overview and normally 3–5 cited key points (1–2 for short documents) from complete available evidence in one call per attempt, showing known gaps. No manual generation controls or generation on reads. Inputs over the selected limit remain readable with a summary-unavailable reason. Summaries and embeddings share the existing $1 cumulative and $0.40 document allowance, including retries/uncertain calls; indexing received no allowance increase. |
-| R05 | Start a chat session | Save a conversation pinned to one ready PDF index. The first increment accepts one question; the sidebar lists saved conversations separately from Runs. |
+| R05 | Start a chat session | Save a conversation pinned to one ready PDF index. New chat selects a ready document; the sidebar lists generated or manually renamed titles separately from Runs. Soft deletion hides the chat and blocks further work while retaining internal records. |
 | R06 | Ask a grounded question | Exact search retrieves at most six chunks from the pinned index. Return concise cited statements, clarification or insufficient evidence; preserve known gaps and validate citation membership. Semantic support is evaluated separately. |
-| R07 | Chat history | Store and retrieve ordered user/assistant turns and their source context/citations. Specify persistence behavior when a model call fails. |
-| R08 | Multi-turn context | Resolve a follow-up using relevant conversation context without changing the permitted document scope or treating a previous answer as independent evidence. |
+| R07 | Chat history | Persist ordered questions, terminal answers/failures and per-turn source context. Read the latest 20 exchanges and load earlier pages; replay cannot create a duplicate turn. |
+| R08 | Multi-turn context | Resolve follow-ups using frozen conversation context, then retrieve fresh evidence from the pinned index. Transcript references are separate from PDF citations. Hybrid history compression is the next accepted checkpoint. |
 | R09 | Document statistics API | Return real persisted document counts/status totals and agreed aggregate information. Do not substitute a static dashboard. |
 | R10 | Processing metrics API | Request status exposes attempts, failures and measured parser duration. That duration includes admission, imports/setup, conversion and mapping, not queue wait or publication. Development inspection also exposes individual summary/indexing attempts, timing and known/uncertain billing. Aggregate metrics remain unfinished. |
 | R11 | Durable data structures | Store document metadata/status, summaries/insights, conversations, messages/context/citations, processing history/metrics, and system performance observations. |
@@ -61,7 +61,7 @@ The first journey is verified through APIs. On November 9, a minimal upload/deta
 | RAG library | Summaries and indexing use direct provider calls and explicit orchestration; no RAG framework is introduced. LangChain or LlamaIndex remain options for a demonstrated later need. No requirement for an autonomous-agent runtime. |
 | API documentation | FastAPI OpenAPI documents ingestion, summary and index status/chunk routes. Future capabilities need their own contracts. |
 | Tests | Pytest behavior checks use real persistence/queue and offline parser fixtures. Accepted seams are HTTP-to-evidence, parser output and processing/recovery. |
-| Retrieval store | pgvector 0.8.7 in the existing PostgreSQL 18 database is accepted and stores the vectors. Exact search is the selected starting direction; query embedding, ranking and search endpoints remain unimplemented. Approximate indexes and a second vector service remain deferred. |
+| Retrieval store | pgvector 0.8.7 in the existing PostgreSQL 18 database stores the vectors. Query embedding and exact scoped ranking are implemented within the answer flow. Approximate indexes and a second vector service remain deferred. |
 
 The comparison and application pin Docling 2.148.0. Application dependencies are locked when introduced. Later model/library choices require explicit evaluation; the ingestion dependency selection does not settle retrieval or generation.
 
@@ -72,12 +72,12 @@ Accepted for ingestion: retain immutable originals, source identities/hashes, pa
 Accepted indexing binds a complete source-linked plan to one immutable extraction revision. Completed embedding batches survive bounded retries; partial vectors remain unavailable through the chunks endpoint until atomic publication. Known extraction gaps and declared exclusions remain visible. Every eligible body item must map to located evidence; unsupported source mapping fails indexing while the extraction and summary remain readable. Links identify whole source elements, not verified character spans. See the [indexing walkthrough](indexing.md).
 
 Accepted conversation scope is one selected PDF. The first-answer increment pins a
-ready index, saves one question and its terminal result, and preserves failed
+ready index, saves ordered questions and terminal results, and preserves failed
 questions. GPT-5.2 on OpenRouter's OpenAI route starts with 16,384
 input and 4,096 output tokens, reasoning off. Shared allowances are unchanged.
 Accounting surrounds paid execution; retrieval and prompt preparation do not
-make financial decisions. No subscriptions are included. Follow-ups, rewriting
-and the accepted hybrid history compression are next; previous answers must
+make financial decisions. No subscriptions are included. Follow-ups and rewriting
+are implemented; accepted hybrid history compression is next. Previous answers must
 remain context rather than evidence. Uploaded text cannot change instructions
 or permissions. See the [conversation contract](conversations.md).
 

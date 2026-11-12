@@ -9,12 +9,19 @@ import { questionDraftKey, questionIntentKey } from './storage';
 export interface QuestionIntent {
   key: string;
   question: string;
+  observed_head: number;
 }
 
 function savedIntent(id: string): QuestionIntent | null {
   try {
     const value = JSON.parse(sessionStorage.getItem(questionIntentKey(id)) || 'null');
-    return typeof value?.key === 'string' && typeof value?.question === 'string' ? value : null;
+    return typeof value?.key === 'string' && typeof value?.question === 'string'
+      ? {
+          key: value.key,
+          question: value.question,
+          observed_head: Number.isInteger(value.observed_head) ? value.observed_head : 0,
+        }
+      : null;
   } catch {
     return null;
   }
@@ -22,10 +29,16 @@ function savedIntent(id: string): QuestionIntent | null {
 
 export function QuestionComposer({
   conversationId,
+  observedHead,
+  waiting,
+  documentName,
   onAccepted,
   onConflict,
 }: {
   conversationId: string;
+  observedHead: number;
+  waiting: boolean;
+  documentName: string;
   onAccepted: (turn: Turn) => void;
   onConflict: () => void;
 }) {
@@ -38,11 +51,20 @@ export function QuestionComposer({
   const [missing, setMissing] = useState(false);
   function ownsIntent(operation: QuestionIntent) {
     const current = savedIntent(conversationId);
-    return current?.key === operation.key && current?.question === operation.question;
+    return (
+      current?.key === operation.key &&
+      current?.question === operation.question &&
+      current?.observed_head === operation.observed_head
+    );
   }
   async function send() {
     if (busy || missing || !question.trim()) return;
-    const operation = intent || { key: crypto.randomUUID(), question: question.trim() };
+    if (waiting && !intent) return;
+    const operation = intent || {
+      key: crypto.randomUUID(),
+      question: question.trim(),
+      observed_head: observedHead,
+    };
     setIntent(operation);
     sessionStorage.setItem(questionIntentKey(conversationId), JSON.stringify(operation));
     setBusy(true);
@@ -51,11 +73,16 @@ export function QuestionComposer({
       const turn = await request<Turn>(`/conversations/${conversationId}/turns`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Idempotency-Key': operation.key },
-        body: JSON.stringify({ question: operation.question }),
+        body: JSON.stringify({
+          question: operation.question,
+          observed_head: operation.observed_head,
+        }),
       });
       if (!ownsIntent(operation)) return;
       sessionStorage.removeItem(questionIntentKey(conversationId));
       sessionStorage.removeItem(questionDraftKey(conversationId));
+      setIntent(null);
+      setQuestion('');
       onAccepted(turn);
     } catch (e) {
       if (!ownsIntent(operation)) return;
@@ -82,9 +109,9 @@ export function QuestionComposer({
         busy={busy}
         locked={!!intent}
         retry={!!intent}
-        unavailable={missing}
+        unavailable={missing || (waiting && !intent)}
         error={error && `${error}${intent ? ' Retry sends the same question.' : ''}`}
-        scope={<span className="subtle">One question per chat for now.</span>}
+        scope={<span className="subtle">{documentName}</span>}
       />
       {missing && (
         <p className="subtle">

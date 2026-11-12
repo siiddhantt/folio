@@ -9,7 +9,7 @@ Each discussion should cover: the user's outcome, two or three realistic options
 - Name: Folio.
 - General-purpose document assistance, using fact-checking in reports/documents as initial examples. These examples do not constrain content domains.
 - Public source development; no public-service deployment implied.
-- OpenRouter as the initial API gateway. The current summary evaluation uses DeepSeek V4.1 Flash 1017 through the explicit Together route. Indexing uses `openai/text-embedding-3-small` through OpenAI at 1,536 dimensions; answers use the accepted `openai/gpt-5.2` on OpenRouter's OpenAI route. Rewriting and memory model choices remain open.
+- OpenRouter as the initial API gateway. The current summary evaluation uses DeepSeek V4.1 Flash 1017 through the explicit Together route. Indexing uses `openai/text-embedding-3-small` through OpenAI at 1,536 dimensions; answers, rewriting and memory use the accepted `openai/gpt-5.2` on OpenRouter's OpenAI route.
 - PDFs with native text and English OCR, with one selected PDF per conversation. Docling is the selected parser; DOCX and other formats remain deferred.
 - Preserve usable partial extraction with explicit coverage warnings; do not globally block summaries/chat when recoverable evidence exists.
 - Develop locally with Docker Compose. The completed Docling/LiteParse comparison informed parser selection.

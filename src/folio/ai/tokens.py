@@ -30,6 +30,17 @@ def tokenizer_name(model_id: str) -> str:
         raise BudgetError("SUMMARY_TOKENIZER_UNSUPPORTED") from None
 
 
+def count_tokens(text: str, model_id: str) -> int:
+    """Use the same supported tokenizer for history and complete provider inputs."""
+    name = tokenizer_name(model_id)
+    try:
+        if model_id == deepseek.MODEL_ID:
+            return deepseek.count_tokens(text)
+        return len(tiktoken.get_encoding(name).encode_ordinary(text))
+    except Exception:
+        raise BudgetError("SUMMARY_TOKENIZER_UNAVAILABLE") from None
+
+
 def check_budget(messages: list[dict], schema: dict, policy: dict, profile: dict) -> dict:
     """Count complete text/schema; wrapper allowance is estimated, never exact.
 
@@ -84,13 +95,10 @@ def check_budget(messages: list[dict], schema: dict, policy: dict, profile: dict
     except (KeyError, TypeError, ValueError, InvalidOperation):
         raise BudgetError("SUMMARY_PROFILE_INVALID") from None
     try:
-        if policy["model_id"] == deepseek.MODEL_ID:
-            token_count = deepseek.count_tokens(serialized)
-            tokenizer_version = version("tokenizers")
-        else:
-            encoding = tiktoken.encoding_for_model(policy["model_id"].removeprefix("openai/"))
-            token_count = len(encoding.encode_ordinary(serialized))
-            tokenizer_version = version("tiktoken")
+        token_count = count_tokens(serialized, policy["model_id"])
+        tokenizer_version = version(
+            "tokenizers" if policy["model_id"] == deepseek.MODEL_ID else "tiktoken"
+        )
     except Exception:
         # A missing/corrupt vocabulary cache must fail before paid work starts.
         raise BudgetError("SUMMARY_TOKENIZER_UNAVAILABLE") from None

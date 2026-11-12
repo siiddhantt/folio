@@ -45,6 +45,12 @@
 .chat-heading > a {
   flex-shrink: 0;
 }
+.chat-heading-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
 .chat-content {
   width: 100%;
   max-width: 70ch;
@@ -57,6 +63,18 @@
 }
 .chat-empty .question-composer {
   margin-block-start: auto;
+}
+.chat-exchange + .chat-exchange {
+  margin-block-start: 24px;
+}
+.chat-exchange {
+  scroll-margin-block: 24px;
+}
+.chat-history-gap {
+  color: var(--muted);
+  font-size: 0.8125rem;
+  padding-block: 16px;
+  border-block: 1px solid var(--line);
 }
 .question-composer {
   margin-block-start: 24px;

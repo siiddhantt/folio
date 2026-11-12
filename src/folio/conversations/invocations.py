@@ -45,7 +45,9 @@ def reserve(database, claim, stage, amount, input_tokens, metadata):
         )
 
 
-def settle(database, claim, stage, *, cost=None, metadata=None, vector=None, answer=None):
+def settle(
+    database, claim, stage, *, cost=None, metadata=None, vector=None, answer=None, resolution=None
+):
     """A stale worker's charge survives; only the owner can publish a checkpoint."""
     with database.transaction() as conn:
         conn.execute("SELECT id FROM summary_budget_account WHERE id=true FOR UPDATE")
@@ -69,6 +71,11 @@ def settle(database, claim, stage, *, cost=None, metadata=None, vector=None, ans
             )
         if row is None:
             return False
+        if resolution is not None:
+            conn.execute(
+                "UPDATE conversation_turns SET resolution=%s WHERE id=%s",
+                (Jsonb(resolution), claim["id"]),
+            )
         if vector is not None:
             conn.execute(
                 "UPDATE conversation_turns SET query_vector=%s::vector WHERE id=%s",

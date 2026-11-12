@@ -83,13 +83,13 @@ function ownsIntent(operation: NewChatIntent): boolean {
   }
 }
 
-function clearTransferredIntent(operation: NewChatIntent) {
+function clearTransferredIntent(operation: NewChatIntent, keepDraft = false) {
   if (!operation.conversationId) return;
   const key = questionIntentKey(operation.conversationId);
   try {
     if (JSON.parse(sessionStorage.getItem(key) || 'null')?.key === operation.questionKey) {
       sessionStorage.removeItem(key);
-      sessionStorage.removeItem(questionDraftKey(operation.conversationId));
+      if (!keepDraft) sessionStorage.removeItem(questionDraftKey(operation.conversationId));
     }
   } catch {
     /* Leave a different pending submission untouched. */
@@ -220,7 +220,11 @@ export function NewConversationPage() {
       const id = operation.conversationId!;
       sessionStorage.setItem(
         questionIntentKey(id),
-        JSON.stringify({ key: operation.questionKey, question: operation.question }),
+        JSON.stringify({
+          key: operation.questionKey,
+          question: operation.question,
+          observed_head: 0,
+        }),
       );
       sessionStorage.setItem(questionDraftKey(id), operation.question);
       sessionStorage.setItem(intentKey, JSON.stringify(operation));
@@ -229,7 +233,7 @@ export function NewConversationPage() {
       await request<Turn>(`/conversations/${id}/turns`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Idempotency-Key': operation.questionKey },
-        body: JSON.stringify({ question: operation.question }),
+        body: JSON.stringify({ question: operation.question, observed_head: 0 }),
       });
       clearTransferredIntent(operation);
       if (ownsIntent(operation)) {
@@ -260,7 +264,8 @@ export function NewConversationPage() {
         sessionStorage.removeItem(intentKey);
         if (mounted.current) setIntent(null);
         if (operation.conversationId) {
-          clearTransferredIntent(operation);
+          clearTransferredIntent(operation, reason.status === 409);
+          if (reason.status === 409) clearSubmittedDraft(operation);
           if (mounted.current)
             navigate(`/conversations/${operation.conversationId}`, {
               state: { createdConversation: operation.conversationId },

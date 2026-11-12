@@ -160,7 +160,7 @@ test('home separates upload and a document-scoped chat that starts only when sen
     { path: '/conversations', body: { index_id: 'index-1' } },
     {
       path: '/conversations/chat-1/turns',
-      body: { question: 'Does the garage have a separate limit?' },
+      body: { question: 'Does the garage have a separate limit?', observed_head: 0 },
     },
   ]);
 });
@@ -290,7 +290,7 @@ test('a failed linked-document lookup never silently sends the previous document
   await expect(page.getByRole('button', { name: 'Send question' })).toBeEnabled();
 });
 
-test('recovering an uncertain send from saved history clears the completed new-chat draft', async ({
+test('confirming an uncertain send by exact replay clears the completed new-chat draft', async ({
   page,
 }) => {
   const choice = {
@@ -311,14 +311,28 @@ test('recovering an uncertain send from saved history clears the completed new-c
     state: 'failed',
   };
   let accepted = false;
+  const failedTurn = {
+    id: 'turn-1',
+    conversation_id: chat.id,
+    sequence: 1,
+    question: chat.question,
+    state: 'failed',
+    error: { code: 'FAILED', message: 'Answer unavailable.' },
+    answer: null,
+    citations: [],
+    coverage: { diagnostics: [], pages_without_content: [] },
+  };
   await page.route('**/api/**', async (route) => {
     const path = new URL(route.request().url()).pathname.replace('/api', '');
     if (route.request().method() === 'POST') {
       if (path === '/conversations') await route.fulfill({ status: 201, json: chat });
       else {
         expect(path).toBe('/conversations/chat-1/turns');
-        accepted = true;
-        await route.abort('connectionfailed');
+        if (accepted) await route.fulfill({ status: 202, json: failedTurn });
+        else {
+          accepted = true;
+          await route.abort('connectionfailed');
+        }
       }
       return;
     }
@@ -328,19 +342,7 @@ test('recovering an uncertain send from saved history clears the completed new-c
       '/conversation-documents': { items: [choice], next_cursor: null },
       '/conversations/chat-1': chat,
       '/conversations/chat-1/turns': {
-        items: [
-          {
-            id: 'turn-1',
-            conversation_id: chat.id,
-            sequence: 1,
-            question: chat.question,
-            state: 'failed',
-            error: { code: 'FAILED', message: 'Answer unavailable.' },
-            answer: null,
-            citations: [],
-            coverage: { diagnostics: [], pages_without_content: [] },
-          },
-        ],
+        items: [failedTurn],
         next_after: null,
       },
     };
@@ -358,6 +360,9 @@ test('recovering an uncertain send from saved history clears the completed new-c
     .getByRole('link', { name: /What is covered/ })
     .click();
   await expect(page.getByRole('main').getByRole('alert')).toContainText('Answer unavailable.');
+  await expect(page.getByRole('textbox', { name: 'Your question' })).toBeDisabled();
+  await page.getByRole('button', { name: 'Send question' }).click();
+  await expect(page.getByRole('textbox', { name: 'Your question' })).toHaveValue('');
   await page.getByRole('link', { name: 'Folio home' }).click();
   await page.getByRole('main').getByRole('link', { name: 'New chat', exact: true }).click();
   await expect(page.getByRole('textbox', { name: 'Your question' })).toHaveValue('', {
@@ -449,7 +454,10 @@ test('an uncertain first send keeps both replay identities across reload and lea
         else await route.fulfill({ status: 201, json: { id: 'chat-1' } });
       } else {
         expect(path).toBe('/conversations/chat-1/turns');
-        expect(route.request().postDataJSON()).toEqual({ question: 'What is covered?' });
+        expect(route.request().postDataJSON()).toEqual({
+          question: 'What is covered?',
+          observed_head: 0,
+        });
         questionKeys.push(route.request().headers()['idempotency-key']);
         if (questionKeys.length === 1) await route.abort('connectionfailed');
         else {
