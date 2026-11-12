@@ -175,7 +175,9 @@ class OpenRouter:
         self._profile = profile
         return deepcopy(profile)
 
-    def generate(self, messages: list[dict], schema: dict) -> Generation:
+    def generate(
+        self, messages: list[dict], schema: dict, *, schema_name="folio_summary"
+    ) -> Generation:
         profile = self.profile()
         check_budget(messages, schema, self.policy, profile)
         if not self._api_key:
@@ -185,7 +187,7 @@ class OpenRouter:
             "messages": messages,
             "response_format": {
                 "type": "json_schema",
-                "json_schema": {"name": "folio_summary", "strict": True, "schema": schema},
+                "json_schema": {"name": schema_name, "strict": True, "schema": schema},
             },
             "max_tokens": self.policy["max_output_tokens"],
             "stream": False,

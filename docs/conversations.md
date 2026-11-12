@@ -1,13 +1,174 @@
 # Document conversations
 
-Design checkpoint: November 12, 2026. **Proposed, not implemented.** The owner
+Design checkpoint: November 12, 2026. **First-answer software implemented; live answer quality not accepted.** The owner
 requested a complete question/answer flow with persisted history, bounded context,
 compression when needed, recovery and an explanation of scaling. One PDF per
 conversation and the existing immutable index are accepted. The owner has now
 accepted automatic history summaries and sharing the unchanged allowance across
 question embeddings, rewriting, answers and memory calls. Hybrid timing and
-stage-allowance reservations are accepted; precise chat model/token limits still
-need compatibility and quality checks before live use.
+stage-allowance reservations are accepted. Initial chat model/token limits below
+passed a read-only compatibility check; quality is evaluated separately.
+
+## Accepted first-answer increment
+
+The owner selected one question and its terminal answer per saved conversation,
+with follow-ups and the accepted hybrid memory behavior in the next increment.
+The UI must state this temporary boundary and offer a new chat, never accept a
+second question while silently ignoring history. Home lists saved conversations;
+Runs remains processing history. The source reader remains accessible.
+
+Use the existing DeepSeek V4.1 Flash 1017/Together route through OpenRouter,
+reasoning off, 16,384 input tokens and 4,096 maximum output tokens. These are
+configurable initial limits and a compatibility candidate, not verified answer
+quality. Public metadata preflight passed; the current generation reservation is
+$0.0098304 at the observed rates. Question embeddings use the pinned index model.
+Existing cumulative/document allowances are unchanged. Accounting surrounds paid
+execution; retrieval, source selection and prompt preparation know no dollar
+account. Subscriptions and account abstractions are outside this increment.
+
+Start with exact cosine search of only the pinned ready index, six chunks at
+most, followed by a complete-input token check. Return a short cited answer,
+clarification or insufficient-evidence outcome. Save actual supplied chunks;
+validate citation membership and retain known extraction gaps. No silent input
+truncation, similarity-as-truth threshold, reranking or streaming.
+
+Accepted test interfaces extend the existing HTTP/persistence, database/worker
+lifecycle and provider contracts. Test one saved cited answer first, then replay,
+scope isolation, malformed/truncated output and recovery. Model responses are
+controlled in software tests; real answer support is reviewed separately.
+
+HTTP/UI contract for this increment:
+
+- `POST /conversations` with `{index_id}` and `Idempotency-Key` returns a saved
+  conversation; `GET /conversations?before=<id>&limit=20` lists newest created
+  conversations with `items` and `next_cursor`.
+- `GET /conversations/{id}` returns `id`, `document_id`, `revision_id`, `index_id`,
+  `document_name`, `created_at`, `question`, `state`, and `max_turns: 1`.
+- `POST /conversations/{id}/turns` with `{question}` and `Idempotency-Key` saves
+  and returns a pending turn; exact replay returns the same turn; changed text
+  or a second question conflicts.
+- `GET /conversations/{id}/turns?after=0&limit=20` returns ordered `items` and
+  `next_after`; `GET /conversations/{id}/turns/{turn_id}` polls a saved turn.
+- A turn contains `id`, `conversation_id`, `sequence`, `question`, `state`,
+  timestamps, nullable `error: {code,message}`, nullable `answer`, `citations`,
+  and `coverage: {pages_without_content,diagnostics}`. States are `pending`,
+  `running`, `ready`, `failed`, `unavailable`. Answer is
+  `{outcome: answer|clarification|insufficient_evidence, statements: [{text,source_ids}]}`.
+  Citation entries contain `source_id` (a supplied label such as S1),
+  `chunk_ordinal`, `text`, and `pages`. Labels resolve to the saved supplied chunks,
+  whose existing source links identify original elements/pages.
+- Development-only `GET /development/conversation-turns/{id}` exposes safe
+  attempts, invocation usage/costs and retrieved identities for debugging.
+
+Use a dedicated chat queue/worker, immediate enqueue after commit and durable
+dispatcher recovery. Two attempts maximum; successful paid-stage checkpoints are
+reused. Failed accepted questions remain in history. A late response can settle
+its bill but cannot publish after losing ownership.
+
+## First-answer reading order
+
+For “How much coverage can apply to a detached garage?”, the browser saves a
+conversation tied to the ready PDF index, then saves the question. The API returns
+immediately after a bounded queue-delivery attempt. The dedicated chat worker
+embeds the question once, ranks chunks from that one index, and saves the six
+selected passages. The answer model sees the question, those passages and known
+extraction gaps. It does not receive the complete PDF or the document summary.
+The model returns cited statements or an explicit evidence/ambiguity limitation.
+Folio checks the response shape and cited identities before publishing it.
+
+| File under `src/folio/conversations` | Responsibility |
+| --- | --- |
+| `routes.py` | Accept/replay a question, list conversations and read saved results. |
+| `processing.py` | Coordinate one claimed question through the two paid stages. |
+| `retrieval.py` | Rank only the pinned index and save the actual selected chunks. |
+| `preparation.py` | Build the question/evidence prompt and validate the returned answer. |
+| `queries.py` | Read the conversation, evidence, citations and extraction gaps. |
+| `lifecycle.py`, `dispatcher.py` | Claim work, recover interruptions and repair queue delivery. |
+| `invocations.py` | Reserve/settle paid calls without deciding what to retrieve or say. |
+
+Five tables have distinct reasons to exist. `conversations` pins an index;
+`conversation_turns` stores the question and saved answer/checkpoints;
+`turn_evidence` links the selected chunk identities and their rank;
+`turn_attempts` records each execution; `turn_invocations` records each paid call.
+Source text and PDF bytes remain in their existing stores. Composite foreign keys
+prevent an evidence link from crossing the turn's index. An index and extraction
+are immutable, so links keep meaning after reload.
+
+A transaction is a small all-or-nothing database change. Accepting a question and
+its processing intent is one transaction. Publishing an answer and its known bill
+is another. Network/model calls run **outside** transactions. Two tabs briefly lock
+the same conversation row while accepting a question; unrelated conversations
+do not need that row. The shared deployment spending row briefly serializes paid
+admission/settlement, never the model's generation time. It remains a measurable
+shared bottleneck at higher traffic, not a claim of unlimited throughput.
+
+If Redis is down, the saved question remains pending and the dispatcher retries
+delivery. If generation times out, its charge is uncertain and retains its hold;
+a bounded second attempt reuses the saved question vector and evidence. If a worker
+dies, its lease eventually expires and another worker can claim the work. An old
+worker returning later may settle its bill but cannot overwrite the new result.
+This is at-least-once execution with guarded publication, not exactly-once billing.
+Two attempts are allowed; invalid citations/truncation are terminal rather than
+adaptive prompt retries. All accepted failures remain reloadable.
+
+`conversations_created` supports newest-first cursor pagination. The partial
+`turns_due` and `turns_expired` indexes contain only work needing delivery/recovery.
+Existing `(index_id,ordinal)` chunk keys narrow retrieval before exact distance
+ranking. There is no approximate vector index: with a small selected document,
+exact search is simple and inspectable. Measure filtered retrieval with
+`EXPLAIN (ANALYZE, BUFFERS)` and representative documents before adding HNSW or
+another retrieval store. Adding workers does not make that SQL faster.
+
+Owner exercise: open one answer's development trace and find its index, six ranked
+chunks, two invocation records and final citations. Explain why six retrieved
+passages can yield only one cited passage, then compare the cited statement with
+the original page. Citation membership is checked in code; semantic support still
+needs evaluation. No broad quality claim follows from one example.
+
+## First live observations
+
+The fixed public FEMA October 2021 Dwelling Form remains the evaluation input;
+Docling 2.148.0 extraction, merged 512-token chunks and the pinned 1,536-dimensional
+OpenAI small embedding index were reused. Prompt/schema/retrieval versions are 1.
+Two manual questions used DeepSeek V4.1 Flash 1017/Together with reasoning off,
+16,384 input and 4,096 output limits, no prompt tuning and no adaptive retries.
+
+| Observation | Retrieval | Generation |
+| --- | --- | --- |
+| Garage amount and conditions | Relevant chunk 10 ranked first; its original clause is on physical page 5. | Non-answer with citations violated the response contract; no answer published. 2,712 input/65 output tokens, $0.00089160 generation. |
+| Whether garage coverage increases the building limit | Relevant chunk 10 ranked first again. | Structurally valid citation, but incorrect “Yes” contradicted both its explanation and the source's reduction clause. 2,517 input/57 output tokens, $0.00082350 generation. |
+
+Server acceptance-to-terminal times were approximately 4.6 and 5.2 seconds on these
+runs, not a latency benchmark. Question embeddings cost $0.00000060 in total.
+The first rejected output's full text was not retained; its precise wording cannot
+be reconstructed from safe diagnostics. An independent reviewer established the
+second expected answer from the source before reading the output and confirmed
+that generation failed. This is agent review, not owner acceptance or a general
+quality metric. Keep the errors visible; do not auto-correct “Yes” with a rule or
+weaken citation validation. Model/prompt improvement needs a separate comparison
+including held-out questions and another document before broader claims.
+
+### Approved comparison
+
+The owner then approved comparing `openai/gpt-5.2` on OpenRouter's `openai` route,
+reasoning `none`, with the same prompt, six-chunk retrieval and token allowances.
+The two repeated questions retrieved exactly the same chunk order as before.
+A third question asked for a personal policy number unavailable in the supplied
+standard form excerpts. No adaptive retry, automatic answer correction or prompt
+tuning was added.
+
+| GPT-5.2 question | Observed outcome | Generation cost |
+| --- | --- | --- |
+| Garage amount and conditions | Preserved <=10%, location, optional use/reduced building limit, residential/business/farming exclusions. Its separately qualified Coverage D garage/carport exclusion is supported on page 12. | $0.00688800 |
+| Whether using garage coverage increases the building limit | Correctly answered No, with the reduction and 10% ceiling cited. | $0.00555800 |
+| Personal policy number | Insufficient evidence, no invented number or citations; limited its statement to the available excerpts. | $0.00499975 |
+
+Independent source review found all three outputs supported. These are diagnostic
+observations, not a held-out benchmark, broad quality guarantee or owner acceptance
+of each answer. The comparison used $0.01744647 including query embeddings. At
+observed $1.75/M input and $14/M output, the full answer hold is $0.086016; a hold
+is temporary allowance, not the actual charge. Both models used less than their
+reserved amounts. The default-model decision is separate from permission to compare.
 
 ## Outcome and example
 

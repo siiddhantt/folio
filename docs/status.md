@@ -14,11 +14,51 @@ OpenRouter is the selected initial model gateway. Automatic summaries use
 DeepSeek V4.1 Flash 1017 on the explicitly selected Together standard route through
 OpenRouter, with a persistent $1 deployment and owner-approved $0.40 document
 allowance, shared with embeddings and now authorized for conversation stages too.
-Conversation stages are not implemented yet. This is an evaluation candidate, not a
-general quality guarantee. Indexing uses Docling peer merging with heading
-preservation, OpenRouter OpenAI small embeddings and PostgreSQL/pgvector. Question
-retrieval and chat remain separate increments. Configuration uses a commentless
+First-answer conversations are implemented; live evaluation found answer errors.
+The current model has not passed a quality gate. Indexing uses Docling peer merging with heading
+preservation, OpenRouter OpenAI small embeddings and PostgreSQL/pgvector. Scoped question
+retrieval and one saved answer are implemented; follow-ups remain next. Configuration uses a commentless
 ignored `.env` and a safe template.
+
+## First saved answer — November 12
+
+Accepted and implemented: one question per saved conversation, pinned ready index,
+exact top-six retrieval, DeepSeek V4.1 Flash 1017/Together with reasoning off and
+16,384/4,096 input/output allowances, separate chat worker, and unchanged shared
+spending. The home screen lists conversations; Runs stays separate. The answer,
+question, citations, known extraction gaps and failures survive reload. Paid-call
+bookkeeping lives outside retrieval/prompt preparation. Follow-ups and the accepted
+hybrid history design remain a separate increment.
+
+Twelve chat integration checks cover scoped sources, replay/one-question boundary,
+concurrent tabs, queue outage, saved checkpoints, timeout recovery, late billing,
+invalid output and frozen execution limits. Independent review found current-vs-saved
+worker deadline mismatch; three observed failing cases now pass with saved bounds,
+lease/monitor checks and remaining-time admission. The isolated Docker suite passed
+141 tests plus two subtests (supervision excluded). Existing upstream deprecations
+and the PDF renderer bundle warning remain. Migration 010 preserved hashes of the
+existing document, extraction, summary, 62 chunks and previous charges.
+
+Two real manual questions used the existing public PDF; no reupload or retuning.
+Retrieval found the relevant garage clause first in both runs. The first response
+violated the non-answer/citation contract and remained a saved failure. The second
+had valid citations but contradicted the source by saying “Yes” to whether coverage
+increases the building limit, then saying it reduces that limit. Independent source
+review confirmed a generation error. **The workflow is verified; answer quality has
+not passed.** Do not present a ready state as semantic correctness or this model
+as accepted for reliable answers. Stronger-model comparison remains a decision.
+
+The owner approved a GPT-5.2 comparison with unchanged prompt/retrieval/limits.
+It corrected both observed failures and answered a third missing-policy-number
+question with insufficient evidence. Independent source review supported all
+three outputs; no general quality claim follows. Its three calls cost $0.01744647
+including embeddings. All five live questions cost $0.01916217; cumulative spending
+is $0.251760194 and available allowance $0.748239806, with no uncertain charge.
+Aside verified saved results after reload, source-page rendering and focus return,
+separate Conversations/Runs and no page overflow at 390/1440 pixels. Three mocked
+chat browser checks plus the indexing regression passed, as did types/build/format
+and Ruff. The default-model choice remains with the owner.
+See the [data flow and reading order](conversations.md#first-answer-reading-order).
 
 ## Conversation design checkpoint — November 12
 

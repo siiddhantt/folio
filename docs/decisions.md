@@ -450,6 +450,29 @@ stable pagination and idempotent identity, separate outcomes, restart-safe failu
 details, development gating, and reopening a real uploaded PDF. No paid model
 call is needed. Retrieval models and chunking remain proposals.
 
+## First saved answer — November 12
+
+Accepted: one question and its terminal answer per saved conversation now, with
+follow-ups and hybrid history compression next. Pin a ready immutable index;
+retrieve at most six chunks by exact cosine distance inside that index. Use
+DeepSeek V4.1 Flash 1017/Together through OpenRouter, reasoning off, initial
+16,384 input and 4,096 output-token allowances. Return a cited answer,
+clarification or insufficient evidence; reject malformed/truncated output and
+invalid references. Known extraction gaps remain visible.
+
+A separate lightweight chat worker prevents a long parser job occupying the
+interactive worker. Acceptance and stage checkpoints are durable; immediate
+queue delivery has dispatcher recovery. Two bounded attempts reuse completed
+query embedding/evidence. A stale worker may settle billing but cannot publish.
+The unchanged deployment/document spending rules stay in shared admission and
+invocation code; retrieval and prompt preparation have no account knowledge.
+No subscription or tenant abstractions are introduced. This is a measured
+starting architecture, not a throughput or universal answer-quality claim.
+
+The owner selected this checkpoint over implementing all conversation context at
+once, to inspect a complete question → source → reload journey. Home lists chats;
+Runs remains document-processing history. See [the contract and reading order](conversations.md).
+
 ## Slice order and remaining decisions
 
 November 11 planning recommendation, not an accepted implementation contract:

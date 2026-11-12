@@ -5,7 +5,13 @@ import { errorMessage, request } from '../api';
 import { Button, formatBytes, Notice } from '../components/ui';
 import type { Capabilities } from '../types';
 
-export function UploadPage({ capabilities }: { capabilities: Capabilities }) {
+export function UploadPage({
+  capabilities,
+  compact = false,
+}: {
+  capabilities: Capabilities;
+  compact?: boolean;
+}) {
   const navigate = useNavigate();
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState('');
@@ -44,10 +50,11 @@ export function UploadPage({ capabilities }: { capabilities: Capabilities }) {
       if (!operation.signal.aborted) setBusy(false);
     }
   }
+  const Heading = compact ? 'h2' : 'h1';
   return (
-    <div className="upload-page">
+    <div className={`upload-page${compact ? ' upload-compact' : ''}`}>
       <section className="upload-section" aria-labelledby="upload-title">
-        <h1 id="upload-title">Open a document</h1>
+        <Heading id="upload-title">Open a document</Heading>
         <form
           onSubmit={(event) => {
             event.preventDefault();

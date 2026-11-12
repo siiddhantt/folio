@@ -7,6 +7,7 @@ import type { Capabilities, RequestStatus } from '../types';
 import { useDocument } from './useDocument';
 import { DeveloperPanel } from '../development/DeveloperPanel';
 import { DocumentReader } from './DocumentReader';
+import { DocumentChatAction } from '../conversations/NewChatButton';
 
 function processingLabel(status: RequestStatus): string {
   if (status.state === 'succeeded') return 'Evidence available';
@@ -64,6 +65,9 @@ function DocumentWorkspace({
               </div>
             </div>
             <div className="document-actions">
+              {status?.revision_id && (
+                <DocumentChatAction key={status.revision_id} revisionId={status.revision_id} />
+              )}
               <Button variant="outline" size="sm" asChild>
                 <a href={originalUrl(documentId)}>
                   <Download aria-hidden="true" />

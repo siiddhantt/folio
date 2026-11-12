@@ -6,6 +6,7 @@ from fastapi.responses import JSONResponse
 from folio.config import Settings
 from folio.configuration.routes import create_router as create_configuration_router
 from folio.configuration.store import read_controls
+from folio.conversations.routes import create_router as create_conversation_router
 from folio.database import Database
 from folio.indexing.routes import create_router as create_index_router
 from folio.ingestion.routes import UploadLimit, create_router
@@ -50,6 +51,7 @@ def create_app(settings: Settings | None = None):
     app.include_router(create_router(database, artifacts, settings))
     app.include_router(create_summary_router(database))
     app.include_router(create_index_router(database, settings))
+    app.include_router(create_conversation_router(database, settings))
     if settings.development_mode:
         app.include_router(create_configuration_router(database, settings))
     return app

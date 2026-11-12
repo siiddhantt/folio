@@ -44,6 +44,7 @@ test('Activity follows indexing after extraction and preserves unknown charges',
         next_after_order: null,
       },
       '/revisions/revision-1/summary': { state: 'not_scheduled' },
+      '/revisions/revision-1/index': { state: 'not_started', index_id: null },
     };
     if (path === '/development/ingestion-requests/request-1') {
       const pending = ++reads === 1;

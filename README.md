@@ -3,8 +3,8 @@
 Understand your documents. Check the evidence.
 
 Folio turns uploaded PDFs into inspectable evidence: text, tables, physical-page references,
-and visible extraction limitations. Automatic cited summaries build on that evidence;
-grounded conversations remain a later slice.
+and visible extraction limitations. Automatic cited summaries and saved questions
+build on that evidence, with links back to original pages.
 
 ## Current state
 
@@ -25,7 +25,10 @@ including a 59-page report, without exhausting output. Source review still finds
 citation and qualification weaknesses; no general quality pass is claimed. Generation defaults to disabled.
 Source-linked indexing uses Docling merging and OpenRouter embeddings stored in
 pgvector. Activity shows batch progress and billing; only complete indexes expose
-their chunks. Question retrieval and chat remain the next increments.
+their chunks. A separate chat worker answers one question per saved conversation,
+using only that document's retrieved passages. Home lists conversations; follow-ups
+and conversation memory are the next increment. Initial live answers exposed
+contract and semantic errors; the current answer model has not passed quality review.
 
 ## Run locally
 

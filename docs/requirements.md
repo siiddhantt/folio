@@ -1,6 +1,6 @@
 # Folio requirements agreement
 
-Status: ingestion accepted November 7; minimal interface and development inspection accepted November 9; automatic-only summary trigger accepted November 10; complete-input summaries, short-source output, revised spending limits and a development configuration console accepted by November 11; separate processing-run history, saved failure details and document indexing accepted November 12. Retrieval and conversation behavior retain open design choices. Updated: 2026-11-12.
+Status: ingestion accepted November 7; minimal interface and development inspection accepted November 9; automatic-only summary trigger accepted November 10; complete-input summaries, short-source output, revised spending limits and a development configuration console accepted by November 11; separate processing-run history, saved failure details and document indexing accepted November 12. First-answer retrieval and saved conversations are accepted; follow-ups remain the next increment. Updated: 2026-11-12.
 
 This agreement separates product outcomes, engineering constraints, proposed behavior, and optional capabilities. A proposed detail is not accepted merely because it appears here.
 
@@ -33,10 +33,10 @@ The first journey is verified through APIs. On November 9, a minimal upload/deta
 | --- | --- | --- |
 | R01 | Intelligent upload and ingestion | First slice implemented: bounded PDF upload, immutable original and metadata, idempotent acceptance and useful invalid-input errors. Initial limits are 25 MiB and 100 physical pages; encrypted PDFs are terminal unsupported inputs. |
 | R02 | Asynchronous document processing | Extraction, summaries and indexing run through RQ/Redis with durable PostgreSQL intent and bounded recovery. Indexing checkpoints one bounded embedding batch per job and publishes readiness only after every planned chunk has a vector. Request/attempt history remains inspectable. |
-| R03 | Document retrieval | Metadata, processing state, original bytes and paginated revision evidence are available. A bounded Runs page lists accepted uploads and reopens documents separately from future conversations. Filtering and content search remain open. |
+| R03 | Document retrieval | Metadata, processing state, original bytes and paginated revision evidence are available. A bounded Runs page lists accepted uploads and reopens documents separately from conversations. Filtering and content search remain open. |
 | R04 | Summaries and AI insights | Automatically prepare a saved short overview and normally 3–5 cited key points (1–2 for short documents) from complete available evidence in one call per attempt, showing known gaps. No manual generation controls or generation on reads. Inputs over the selected limit remain readable with a summary-unavailable reason. Summaries and embeddings share the existing $1 cumulative and $0.40 document allowance, including retries/uncertain calls; indexing received no allowance increase. |
-| R05 | Start a chat session | Create a conversation bound to one selected PDF. Follow-up questions and evidence retrieval preserve that document scope. |
-| R06 | Ask a grounded question | Retrieve evidence and produce a contextual answer with resolvable citations. Agree the behavior for absent, conflicting, or ambiguous evidence. |
+| R05 | Start a chat session | Save a conversation pinned to one ready PDF index. The first increment accepts one question; home lists saved conversations separately from Runs. |
+| R06 | Ask a grounded question | Exact search retrieves at most six chunks from the pinned index. Return concise cited statements, clarification or insufficient evidence; preserve known gaps and validate citation membership. Semantic support is evaluated separately. |
 | R07 | Chat history | Store and retrieve ordered user/assistant turns and their source context/citations. Specify persistence behavior when a model call fails. |
 | R08 | Multi-turn context | Resolve a follow-up using relevant conversation context without changing the permitted document scope or treating a previous answer as independent evidence. |
 | R09 | Document statistics API | Return real persisted document counts/status totals and agreed aggregate information. Do not substitute a static dashboard. |
@@ -71,7 +71,15 @@ Accepted for ingestion: retain immutable originals, source identities/hashes, pa
 
 Accepted indexing binds a complete source-linked plan to one immutable extraction revision. Completed embedding batches survive bounded retries; partial vectors remain unavailable through the chunks endpoint until atomic publication. Known extraction gaps and declared exclusions remain visible. Every eligible body item must map to located evidence; unsupported source mapping fails indexing while the extraction and summary remain readable. Links identify whole source elements, not verified character spans. See the [indexing walkthrough](indexing.md).
 
-Accepted conversation scope is one selected PDF. Proposed later answer rules still need refinement: treat previous answers as context rather than evidence, preserve document scope in retrieval, distinguish valid citation IDs from actual support, and explain absent/ambiguous evidence. Uploaded text cannot grant permissions or override application instructions. Summary behavior is accepted under R04. Automatic history summaries, hybrid timing and sharing the unchanged allowance across question embeddings, rewriting, answers and memory calls are now authorized. Versioned stage-allowance reservations are accepted; query/answer behavior, model selection and concrete conversation limits remain under design. Each stage reports its own outcome.
+Accepted conversation scope is one selected PDF. The first-answer increment pins a
+ready index, saves one question and its terminal result, and preserves failed
+questions. DeepSeek V4.1 Flash 1017/Together through OpenRouter starts with 16,384
+input and 4,096 output tokens, reasoning off. Shared allowances are unchanged.
+Accounting surrounds paid execution; retrieval and prompt preparation do not
+make financial decisions. No subscriptions are included. Follow-ups, rewriting
+and the accepted hybrid history compression are next; previous answers must
+remain context rather than evidence. Uploaded text cannot change instructions
+or permissions. See the [conversation contract](conversations.md).
 
 ## Optional capability ledger
 
@@ -101,7 +109,7 @@ Every item is accounted for. Deferred means intentionally outside the initial co
 ## Unknowns to resolve in order
 
 1. Summary/insight usefulness and grounded-answer behavior for ambiguity, missing evidence and partial extraction, within the accepted one-PDF scope.
-2. Retrieval ranking, question/answer behavior and conversation revision binding; chunking, embedding space and vector storage are now selected for indexing.
+2. Follow-up resolution and the precise token triggers/schema for accepted hybrid history compression; first-answer retrieval and index binding are now selected.
 3. Representative questions, wider OCR quality cases, latency expectations and an explicit live-evaluation budget.
 4. Retention/deletion, backpressure, total storage limits and any later private/public hosting boundary.
 

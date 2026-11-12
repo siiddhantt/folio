@@ -36,6 +36,14 @@ x-settings: &settings
   FOLIO_INDEX_BATCH_SIZE: ${FOLIO_INDEX_BATCH_SIZE:-32}
   FOLIO_INDEX_MAX_CHUNKS: ${FOLIO_INDEX_MAX_CHUNKS:-4096}
   FOLIO_INDEX_TIMEOUT_SECONDS: ${FOLIO_INDEX_TIMEOUT_SECONDS:-60}
+  FOLIO_CHAT_MODEL_ID: ${FOLIO_CHAT_MODEL_ID:-deepseek/deepseek-v4.1-flash-1017}
+  FOLIO_CHAT_PROVIDER: ${FOLIO_CHAT_PROVIDER:-together}
+  FOLIO_CHAT_INPUT_LIMIT_TOKENS: ${FOLIO_CHAT_INPUT_LIMIT_TOKENS:-16384}
+  FOLIO_CHAT_MAX_OUTPUT_TOKENS: ${FOLIO_CHAT_MAX_OUTPUT_TOKENS:-4096}
+  FOLIO_CHAT_TOKEN_MARGIN: ${FOLIO_CHAT_TOKEN_MARGIN:-2048}
+  FOLIO_CHAT_REASONING_EFFORT: ${FOLIO_CHAT_REASONING_EFFORT:-none}
+  FOLIO_CHAT_TIMEOUT_SECONDS: ${FOLIO_CHAT_TIMEOUT_SECONDS:-90}
+  FOLIO_CHAT_RETRIEVAL_CHUNKS: ${FOLIO_CHAT_RETRIEVAL_CHUNKS:-6}
 
 services:
   web:
@@ -108,6 +116,20 @@ services:
     cpus: 4
     mem_limit: 6g
     memswap_limit: 6g
+    stop_grace_period: 30s
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
+
+  chat-worker:
+    image: folio-api:local
+    environment:
+      <<: *settings
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+    command: ["python", "-m", "folio", "chat-worker"]
+    cpus: 1
+    mem_limit: 1g
+    memswap_limit: 1g
     stop_grace_period: 30s
     depends_on:
       migrate: {condition: service_completed_successfully}

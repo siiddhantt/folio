@@ -3,7 +3,7 @@ ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=/app/src TIKTOKEN_CA
 WORKDIR /app
 COPY requirements.lock ./
 RUN pip install --no-cache-dir --require-hashes -r requirements.lock
-RUN python -c "import tiktoken; tiktoken.get_encoding('o200k_base')"
+RUN python -c "import tiktoken; tiktoken.get_encoding('o200k_base'); tiktoken.get_encoding('cl100k_base')"
 COPY src ./src
 RUN python -c "from folio.ai.deepseek import install; install()"
 CMD ["uvicorn", "folio.api:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000"]

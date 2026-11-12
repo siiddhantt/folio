@@ -3,7 +3,7 @@
 The [README](../README.md) starts the application. The initial parser image uses the
 same pinned Docling/CPU/model configuration as the inspected extraction comparison.
 The API image contains no Docling runtime. Builds do not receive the local API key;
-only the running worker receives it for summaries and embeddings when configured.
+only the processing and chat workers receive it for configured model calls.
 The PostgreSQL image adds pinned pgvector 0.8.7 to the existing PostgreSQL 18 base.
 
 ## Read the slice
@@ -22,7 +22,24 @@ For indexing, follow the publication intent through
 chunks; each delivery embeds one bounded batch, and the final transaction exposes
 the complete index. [`ai/budget.py`](../src/folio/ai/budget.py) shares admission with
 summaries. The [indexing walkthrough](indexing.md) explains recovery and source
-reading order. Search and answer generation remain later work.
+reading order.
+
+For the first answer, follow `conversations/routes.py` → `processing.py` →
+`retrieval.py` → `preparation.py` → `queries.py`. `lifecycle.py` owns claims and
+retries; `invocations.py` keeps paid-stage bookkeeping outside retrieval/prompt
+logic. The [conversation walkthrough](conversations.md#first-answer-reading-order)
+explains storage and recovery. The lightweight `chat-worker` service consumes the
+separate `chat` queue, so parsing does not occupy its worker. Scale that worker
+with `docker compose up -d --scale chat-worker=2`; this is capacity configuration,
+not a load-test result.
+
+`FOLIO_CHAT_*` environment values select the answer model/provider, input/output
+allowances, token margin, reasoning, timeout and retrieval count. They are captured
+when a question is accepted; recreate API/workers after edits. They are not yet
+editable through the document configuration console. Question embeddings use the
+conversation's pinned index model, not the answer model. The development-only
+`GET /development/conversation-turns/{id}` shows attempts, safe failures, selected
+chunk identities, input manifest and known/uncertain charges. It exposes no API key.
 
 Keep files together by the behavior they own. Ingestion includes its HTTP routes,
 read queries, worker lifecycle, event history and parser. Configuration, database

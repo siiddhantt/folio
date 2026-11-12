@@ -5,7 +5,8 @@ import { request, errorMessage } from './api';
 import type { Capabilities } from './types';
 import { ThemeToggle } from './components/ThemeToggle';
 import { Button, Notice } from './components/ui';
-import { UploadPage } from './documents/UploadPage';
+import { HomePage } from './conversations/HomePage';
+import { ConversationPage } from './conversations/ConversationPage';
 import { DocumentPage } from './documents/DocumentPage';
 import { SettingsPage } from './configuration/SettingsPage';
 import { RunsPage } from './runs/RunsPage';
@@ -73,7 +74,8 @@ export function App() {
           <p className="page-message">Connecting to Folio…</p>
         ) : (
           <Routes>
-            <Route path="/" element={<UploadPage capabilities={capabilities} />} />
+            <Route path="/" element={<HomePage capabilities={capabilities} />} />
+            <Route path="/conversations/:conversationId" element={<ConversationPage />} />
             <Route path="/runs" element={<RunsPage />} />
             {capabilities.development_mode && (
               <Route

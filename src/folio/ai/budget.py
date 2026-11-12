@@ -1,4 +1,4 @@
-"""One spending boundary for summaries and embeddings, using their durable attempts."""
+"""Shared paid-call bookkeeping and deployment admission, independent of prompts."""
 
 from decimal import Decimal
 
@@ -38,6 +38,10 @@ def spending(connection, document_id=None):
             UNION ALL
             SELECT i.document_id,a.cost_usd,a.reserved_usd
             FROM embedding_invocations a JOIN document_indexes i ON i.id=a.index_id
+            UNION ALL
+            SELECT i.document_id,a.cost_usd,a.reserved_usd
+            FROM turn_invocations a JOIN conversation_turns t ON t.id=a.turn_id
+            JOIN document_indexes i ON i.id=t.index_id
         )
         SELECT COALESCE(sum(cost_usd),0) AS spent_usd,
             COALESCE(sum(reserved_usd) FILTER (WHERE cost_usd IS NULL),0) AS held_usd,
