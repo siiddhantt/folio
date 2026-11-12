@@ -9,7 +9,7 @@ Each discussion should cover: the user's outcome, two or three realistic options
 - Name: Folio.
 - General-purpose document assistance, using fact-checking in reports/documents as initial examples. These examples do not constrain content domains.
 - Public source development; no public-service deployment implied.
-- OpenRouter as the initial API gateway. The current summary evaluation uses DeepSeek V4.1 Flash 1017 through the explicit Together route. Indexing uses `openai/text-embedding-3-small` through OpenAI at 1,536 dimensions; chat model selection remains open.
+- OpenRouter as the initial API gateway. The current summary evaluation uses DeepSeek V4.1 Flash 1017 through the explicit Together route. Indexing uses `openai/text-embedding-3-small` through OpenAI at 1,536 dimensions; answers use the accepted `openai/gpt-5.2` on OpenRouter's OpenAI route. Rewriting and memory model choices remain open.
 - PDFs with native text and English OCR, with one selected PDF per conversation. Docling is the selected parser; DOCX and other formats remain deferred.
 - Preserve usable partial extraction with explicit coverage warnings; do not globally block summaries/chat when recoverable evidence exists.
 - Develop locally with Docker Compose. The completed Docling/LiteParse comparison informed parser selection.
@@ -472,6 +472,21 @@ starting architecture, not a throughput or universal answer-quality claim.
 The owner selected this checkpoint over implementing all conversation context at
 once, to inspect a complete question → source → reload journey. Home lists chats;
 Runs remains document-processing history. See [the contract and reading order](conversations.md).
+
+## Answer model selection — November 12
+
+The owner accepted `openai/gpt-5.2` through OpenRouter's `openai` route for new
+questions after the three checked examples in [the evaluation](conversations.md#approved-comparison).
+The comparison kept prompts and retrieved evidence unchanged; all three outputs
+were independently supported, while DeepSeek failed the first two. This is a
+limited diagnostic result, not a broad quality guarantee.
+
+Preserve reasoning `none`, 16,384 input / 4,096 output tokens, six retrieved chunks
+and existing shared spending limits. Summaries retain DeepSeek/Together; query and
+document embeddings retain their existing model. No prompt or accounting change.
+Policy freezes when a question is accepted, so configuration changes never rewrite
+queued work or saved answers. Update the application default, Compose fallback,
+safe template and local chat overrides together; recreate API and chat worker.
 
 ## Conversation navigation refinement — November 12
 

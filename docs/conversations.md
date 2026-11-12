@@ -1,6 +1,6 @@
 # Document conversations
 
-Design checkpoint: November 12, 2026. **First-answer software implemented; live answer quality not accepted.** The owner
+Design checkpoint: November 12, 2026. **First-answer software implemented; GPT-5.2 selected after a limited comparison.** The owner
 requested a complete question/answer flow with persisted history, bounded context,
 compression when needed, recovery and an explanation of scaling. One PDF per
 conversation and the existing immutable index are accepted. The owner has now
@@ -18,11 +18,11 @@ second question while silently ignoring history. Saved conversations live in a
 desktop sidebar or a mobile drawer; Runs remains processing history. The source
 reader remains accessible, and home opens a document.
 
-Use the existing DeepSeek V4.1 Flash 1017/Together route through OpenRouter,
+Use `openai/gpt-5.2` on OpenRouter's `openai` route,
 reasoning off, 16,384 input tokens and 4,096 maximum output tokens. These are
-configurable initial limits and a compatibility candidate, not verified answer
-quality. Public metadata preflight passed; the current generation reservation is
-$0.0098304 at the observed rates. Question embeddings use the pinned index model.
+configurable initial limits, not a general answer-quality guarantee.
+Public metadata preflight passed; the current generation reservation is
+$0.086016 at the observed rates. Question embeddings use the pinned index model.
 Existing cumulative/document allowances are unchanged. Accounting surrounds paid
 execution; retrieval, source selection and prompt preparation know no dollar
 account. Subscriptions and account abstractions are outside this increment.
@@ -169,7 +169,10 @@ observations, not a held-out benchmark, broad quality guarantee or owner accepta
 of each answer. The comparison used $0.01744647 including query embeddings. At
 observed $1.75/M input and $14/M output, the full answer hold is $0.086016; a hold
 is temporary allowance, not the actual charge. Both models used less than their
-reserved amounts. The default-model decision is separate from permission to compare.
+reserved amounts. After this comparison, the owner accepted GPT-5.2 as the answer
+default on November 12. This changes newly accepted questions; existing turn
+policies and answers remain intact. Summary and embedding settings, prompts,
+retrieval and spending allowances are unchanged.
 
 ## Outcome and example
 
@@ -413,7 +416,7 @@ The assembled request must fit all applicable limits:
 `instructions + schema + question + memory + recent history + evidence + framing margin`
 
 must stay within the configured input allowance and any verified provider prompt
-ceiling. A missing prompt ceiling is not unlimited capacity; the current DeepSeek
+ceiling. A missing prompt ceiling is not unlimited capacity; the DeepSeek summary
 route leaves it unspecified. Add reserved output, including reasoning where applicable, and check
 the combined context ceiling too. History and evidence allowances partition the
 input; they are not extra capacity. Keep short prose targets separate from a
@@ -435,10 +438,10 @@ billing guarantee follows. New generation policies reserve the configured stage
 input allowance plus maximum output. This remains an estimate-based spending
 control; don't invent an exact tokenizer or assume a gateway hard dollar cap.
 
-Current model research favours the existing DeepSeek V4.1 Flash 1017/Together
-route as the first compatibility candidate for all three generation jobs. It
-already has a pinned tokenizer and supported route; neither its answer,
-rewriting nor memory quality is established. Luna has lower advertised unit
+Initial research considered DeepSeek V4.1 Flash 1017/Together for all three
+generation jobs. Subsequent answer evaluation led to the accepted GPT-5.2 answer
+default. Rewriting and memory model choices remain open; the answer selection
+does not establish their quality. Luna has lower advertised unit
 prices but needs verified token accounting and tier/cache-write support; Haiku
 also needs a new provider boundary. Changing an environment value is insufficient.
 
@@ -446,12 +449,11 @@ The legacy full-ceiling policy would reserve $0.319488 for a DeepSeek call
 with a 4,096-token completion cap. Under the unchanged $0.40 document allowance,
 that prevents admission once known spending plus held amounts exceeds $0.080512.
 For comparison, exactly 16,384 billed input tokens and 4,096 output tokens at
-the current $0.30/$1.20 per-million rates would cost $0.0098304. The latter is
+the observed DeepSeek $0.30/$1.20 per-million rates would cost $0.0098304. The latter is
 illustrative arithmetic, not a hard billing bound or measured chat cost.
 
 The owner selected fixed stage input allowances plus maximum output, accepting
-the uncertainty without raising allowances. The illustrative token limits still
-need agreement before paid chat. Successful stage checkpoints can
+the uncertainty without raising allowances. The 16,384/4,096 token limits were subsequently accepted for the first answer. Successful stage checkpoints can
 avoid repeat payment after a failure but cannot guarantee funds for later stages.
 
 Prompt caching is optional provider reuse of a matching prefix. It neither

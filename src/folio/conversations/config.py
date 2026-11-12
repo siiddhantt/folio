@@ -6,8 +6,8 @@ from folio.ai.budget import BudgetSettings
 
 class ChatSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="FOLIO_CHAT_", env_file=".env", extra="ignore")
-    model_id: str = "deepseek/deepseek-v4.1-flash-1017"
-    provider: str = "together"
+    model_id: str = "openai/gpt-5.2"
+    provider: str = "openai"
     input_limit_tokens: int = Field(default=16384, gt=0)
     max_output_tokens: int = Field(default=4096, gt=0)
     token_margin: int = Field(default=2048, gt=0)

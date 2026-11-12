@@ -148,7 +148,7 @@ policy. These implementation limits are not support for arbitrary model swaps.
 See the [indexing walkthrough](indexing.md) for the persisted lifecycle.
 
 The two existing `FOLIO_SUMMARY_*_BUDGET_USD` values above intentionally retain
-their names and now govern both summaries and embeddings. One locked account
+their names and now govern summaries, embeddings and conversation stages. One locked account
 admits calls against combined known charges and uncertain reservations; indexing
 does not add or reset an allowance. Embedding admission reserves counted input
 plus 16 tokens per chunk at a maximum $0.02 per million input tokens. The client
@@ -159,35 +159,40 @@ needs a new admission. Summary-specific configuration errors do not invalidate
 otherwise valid embedding settings.
 
 Vectors are stored in pgvector 0.8.7 inside the existing PostgreSQL 18 database.
-Query embeddings, exact-search queries, ranking and answer generation are not
-implemented by these controls.
+Query embeddings and exact retrieval belong to the separate conversation flow;
+they use the pinned index model, not the answer model.
 
-## Deferred chat controls
+## Answer controls
 
-Chat remains deferred. The following names are proposals for later
-conversation work, not settings consumed by summaries or added as inert flags to
-the environment template. Their numerical defaults remain open.
+These settings apply when a new question is accepted. Its policy is saved with
+that turn; changing the deployment does not change existing work or answers.
+Recreate API/chat-worker after changing the local environment. The development
+console does not expose these controls yet.
 
-| Proposed setting | Purpose |
+| Setting | Default and purpose |
 | --- | --- |
-| `AI_MODEL` | Explicit later chat model ID, to be selected and evaluated; avoid a moving latest alias. |
-| `AI_INPUT_BUDGET_TOKENS` | Folio's maximum assembled input: instructions, current question, selected history, retrieved evidence, and formatting overhead. |
-| `AI_EVIDENCE_BUDGET_TOKENS` | The part of the input budget available to retrieved passages and their source labels. |
-| `AI_HISTORY_BUDGET_TOKENS` | The part of the input budget available to previous conversation turns. |
-| `AI_MAX_OUTPUT_TOKENS` | Reserved generated-token budget, including reasoning tokens where the selected API/model counts them. It is not a requested answer length. |
-| `AI_REASONING_EFFORT` | A model-specific effort choice. Validate it against the chosen model/route; unsupported values must not silently disappear. |
-| `AI_TIMEOUT_SECONDS` | Maximum wait for a provider response; retries require a separate, bounded policy. |
+| `FOLIO_CHAT_MODEL_ID` | `openai/gpt-5.2`, accepted after the limited source-reviewed comparison. |
+| `FOLIO_CHAT_PROVIDER` | `openai`, the selected OpenRouter route. |
+| `FOLIO_CHAT_INPUT_LIMIT_TOKENS` | `16384`, complete question/instructions/evidence/schema estimate including safety margin. |
+| `FOLIO_CHAT_MAX_OUTPUT_TOKENS` | `4096`, completion headroom, not a requested answer length. |
+| `FOLIO_CHAT_TOKEN_MARGIN` | `2048`, allowance for uncertain framing/token overhead. |
+| `FOLIO_CHAT_REASONING_EFFORT` | `none`, verified for this model/route. |
+| `FOLIO_CHAT_TIMEOUT_SECONDS` | `90`, maximum wait per provider request within the saved worker deadline. |
+| `FOLIO_CHAT_RETRIEVAL_CHUNKS` | `6`, maximum passages from the conversation's pinned index. |
 
-Later question embeddings must use the same frozen embedding space as the
-document index. They must not inherit the generation model identifier.
+Prices and model capacity come from validated provider metadata, not these
+settings. At the observed GPT-5.2 rates, the answer reservation is $0.086016;
+actual reported cost replaces the reservation. Existing deployment/document
+allowances are unchanged. Summary settings stay separate. History compression
+and its own configuration remain a later increment.
 
-The provider's model/endpoint context limit is a capability to verify, not a capacity that Folio can enlarge by changing an environment variable. The proposed budget invariant is:
+The provider's model/endpoint context limit is a capability to verify, not a capacity that Folio can enlarge by changing an environment variable. The input-fit invariant is:
 
 `assembled input + reserved generated tokens + safety margin <= verified context limit`
 
 Also enforce the selected route's separate ceilings: assembled input must not exceed its maximum prompt tokens, and the output reservation must not exceed its maximum completion tokens. Passing the combined-context check alone is insufficient. If route metadata omits a limit, verify it before relying on that capacity rather than interpreting the missing field as unlimited.
 
-The evidence and history budgets are parts of the input budget, not additional capacity. The current question, instructions, citation labels, and message-format overhead also need room. Token accounting must match the selected model as closely as supported and reserve a margin where exact accounting is unavailable. Reject invalid budgets; define any history reduction or evidence selection explicitly instead of silently truncating arbitrary content.
+Evidence and any later conversation history share the input allowance; they do not add capacity. The current question, instructions, citation labels, and message-format overhead also need room. Token accounting must match the selected model as closely as supported and reserve a margin where exact accounting is unavailable. Reject invalid budgets; define any history reduction or evidence selection explicitly instead of silently truncating arbitrary content.
 
 Large advertised context is not an instruction to fill every request. Start with a bounded evidence budget and measure missed evidence, supported answers, latency, and actual usage before increasing it. A completed response can be too short or incomplete if reasoning consumes its output reservation.
 

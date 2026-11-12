@@ -35,7 +35,7 @@ The first journey is verified through APIs. On November 9, a minimal upload/deta
 | R02 | Asynchronous document processing | Extraction, summaries and indexing run through RQ/Redis with durable PostgreSQL intent and bounded recovery. Indexing checkpoints one bounded embedding batch per job and publishes readiness only after every planned chunk has a vector. Request/attempt history remains inspectable. |
 | R03 | Document retrieval | Metadata, processing state, original bytes and paginated revision evidence are available. A bounded Runs page lists accepted uploads and reopens documents separately from conversations. Filtering and content search remain open. |
 | R04 | Summaries and AI insights | Automatically prepare a saved short overview and normally 3–5 cited key points (1–2 for short documents) from complete available evidence in one call per attempt, showing known gaps. No manual generation controls or generation on reads. Inputs over the selected limit remain readable with a summary-unavailable reason. Summaries and embeddings share the existing $1 cumulative and $0.40 document allowance, including retries/uncertain calls; indexing received no allowance increase. |
-| R05 | Start a chat session | Save a conversation pinned to one ready PDF index. The first increment accepts one question; home lists saved conversations separately from Runs. |
+| R05 | Start a chat session | Save a conversation pinned to one ready PDF index. The first increment accepts one question; the sidebar lists saved conversations separately from Runs. |
 | R06 | Ask a grounded question | Exact search retrieves at most six chunks from the pinned index. Return concise cited statements, clarification or insufficient evidence; preserve known gaps and validate citation membership. Semantic support is evaluated separately. |
 | R07 | Chat history | Store and retrieve ordered user/assistant turns and their source context/citations. Specify persistence behavior when a model call fails. |
 | R08 | Multi-turn context | Resolve a follow-up using relevant conversation context without changing the permitted document scope or treating a previous answer as independent evidence. |
@@ -55,7 +55,7 @@ The first journey is verified through APIs. On November 9, a minimal upload/deta
 | PostgreSQL | Foundation constraint for persistent data. Start locally in Docker; hosting remains a later decision. |
 | Task queue | RQ/Redis accepted November 7. PostgreSQL owns processing intent, attempts and the single retry policy. |
 | File processing library | Docling selected after local comparison; PDF native text and English OCR. Structured evidence, diagnostics and initial bounds are accepted; wider quality checks remain open. |
-| AI access | OpenRouter accepted as the initial API gateway. Summary models are compared against source support; compatibility and lifecycle limits are recorded in the model notes. Summaries and embeddings share the existing $1 total/$0.40 document allowance. The answer model remains open. |
+| AI access | OpenRouter accepted as the initial API gateway. Summary models are compared against source support; compatibility and lifecycle limits are recorded in the model notes. Summaries, embeddings and conversation stages share the existing $1 total/$0.40 document allowance. GPT-5.2 through OpenRouter is accepted for answers after a limited comparison. |
 | Embeddings | OpenRouter `openai/text-embedding-3-small` through the OpenAI route, at its default 1,536 dimensions, is accepted and implemented. Docling HybridChunker uses peer merging, heading preservation and a default 512-token ceiling. Exact submitted text, source links and policy are frozen per index. |
 | File storage | Shared local Docker named volume accepted for opaque immutable originals/results. S3 is a future multi-host option, not an implemented backend. |
 | RAG library | Summaries and indexing use direct provider calls and explicit orchestration; no RAG framework is introduced. LangChain or LlamaIndex remain options for a demonstrated later need. No requirement for an autonomous-agent runtime. |
@@ -73,7 +73,7 @@ Accepted indexing binds a complete source-linked plan to one immutable extractio
 
 Accepted conversation scope is one selected PDF. The first-answer increment pins a
 ready index, saves one question and its terminal result, and preserves failed
-questions. DeepSeek V4.1 Flash 1017/Together through OpenRouter starts with 16,384
+questions. GPT-5.2 on OpenRouter's OpenAI route starts with 16,384
 input and 4,096 output tokens, reasoning off. Shared allowances are unchanged.
 Accounting surrounds paid execution; retrieval and prompt preparation do not
 make financial decisions. No subscriptions are included. Follow-ups, rewriting

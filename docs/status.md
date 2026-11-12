@@ -14,11 +14,24 @@ OpenRouter is the selected initial model gateway. Automatic summaries use
 DeepSeek V4.1 Flash 1017 on the explicitly selected Together standard route through
 OpenRouter, with a persistent $1 deployment and owner-approved $0.40 document
 allowance, shared with embeddings and now authorized for conversation stages too.
-First-answer conversations are implemented; live evaluation found answer errors.
-The current model has not passed a quality gate. Indexing uses Docling peer merging with heading
+First-answer conversations are implemented. The owner accepted GPT-5.2 for new
+answers after three independently supported examples; broader quality remains
+unproven. Indexing uses Docling peer merging with heading
 preservation, OpenRouter OpenAI small embeddings and PostgreSQL/pgvector. Scoped question
 retrieval and one saved answer are implemented; follow-ups remain next. Configuration uses a commentless
 ignored `.env` and a safe template.
+
+## Answer default — November 12
+
+The owner selected GPT-5.2 through OpenRouter's `openai` route for newly accepted
+questions. Application/Compose/template/local defaults agree; reasoning remains
+off with 16,384 input and 4,096 output tokens. Summaries, embeddings, prompts,
+retrieval, saved turn policies and the existing spending allowance are unchanged.
+The selection follows the limited comparison; it does not establish general
+correctness. All 46 targeted provider/conversation checks and Ruff passed.
+Read-only provider metadata verified compatibility and the $0.086016 answer
+reservation. Rebuilt API/chat-worker settings agree; summary/embedding settings
+and the $0.748239806 remaining allowance are unchanged. No paid call was needed.
 
 ## Conversation navigation — November 12
 
@@ -70,7 +83,7 @@ had valid citations but contradicted the source by saying “Yes” to whether c
 increases the building limit, then saying it reduces that limit. Independent source
 review confirmed a generation error. **The workflow is verified; answer quality has
 not passed.** Do not present a ready state as semantic correctness or this model
-as accepted for reliable answers. Stronger-model comparison remains a decision.
+as accepted for reliable answers. The subsequent stronger-model comparison follows.
 
 The owner approved a GPT-5.2 comparison with unchanged prompt/retrieval/limits.
 It corrected both observed failures and answered a third missing-policy-number
@@ -81,7 +94,7 @@ is $0.251760194 and available allowance $0.748239806, with no uncertain charge.
 Aside verified saved results after reload, source-page rendering and focus return,
 separate Conversations/Runs and no page overflow at 390/1440 pixels. Three mocked
 chat browser checks plus the indexing regression passed, as did types/build/format
-and Ruff. The default-model choice remains with the owner.
+and Ruff. The owner subsequently accepted GPT-5.2 for new answers, as recorded above.
 See the [data flow and reading order](conversations.md#first-answer-reading-order).
 
 ## Conversation design checkpoint — November 12

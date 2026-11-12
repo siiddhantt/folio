@@ -28,8 +28,9 @@ pgvector. Activity shows batch progress and billing; only complete indexes expos
 their chunks. A separate chat worker answers one question per saved conversation,
 using only that document's retrieved passages. Saved conversations stay in a desktop
 sidebar or a mobile drawer; home opens a document. Follow-ups
-and conversation memory are the next increment. Initial live answers exposed
-contract and semantic errors; the current answer model has not passed quality review.
+and conversation memory are the next increment. GPT-5.2 is the selected answer
+model after three independently supported examples; broader answer quality remains
+unproven. Summaries retain their separate DeepSeek configuration.
 
 ## Run locally
 
