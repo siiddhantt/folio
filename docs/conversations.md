@@ -33,6 +33,48 @@ clarification or insufficient-evidence outcome. Save actual supplied chunks;
 validate citation membership and retain known extraction gaps. No silent input
 truncation, similarity-as-truth threshold, reranking or streaming.
 
+## Accepted conversation completion — November 12
+
+The owner requested the next complete conversation experience. Implementation
+proceeds through passing checkpoints, using the existing HTTP/persistence,
+worker/provider and mocked-browser test interfaces:
+
+1. Entry/composer: Home offers New chat and Upload, with separate routes. A shared
+   rounded textarea grows before scrolling internally. New chat selects a ready
+   document inside the composer; the first deliberate Send creates/submits with
+   durable replay keys. Keep one document/index fixed afterward. Remove the
+   duplicate header glyph. No model calls are needed to verify this checkpoint.
+2. Identity/management: generate a brief title in the first answer call, persist
+   it with the result, and provide rename/delete actions. Manual rename wins over
+   delayed title generation. Legacy/failed chats use a deterministic fallback.
+3. Follow-ups: accept ordered turns against the caller's observed head, freeze
+   bounded history, resolve follow-up intent, retrieve fresh evidence and retain
+   all messages/failures on reload. The composer stays available. Source labels
+   are scoped to their owning turn. Do not remove the one-turn restriction until
+   the complete context path works.
+4. Long history: implement the accepted durable background memory path and the
+   before-request fallback, then verify the end-to-end flow and actual costs.
+
+Accepted Delete behavior removes the chat from public navigation/read routes and
+prevents new work/publication, retaining internal transcript, diagnostics and
+billing records. Explain that retention in the confirmation. Already-started
+provider calls may still finish and bill; settlement must remain possible, but
+the chat cannot reappear or publish an answer. This is not permanent erasure.
+
+The owner accepted GPT-5.2 for contextualization and memory too, sharing the
+unchanged allowance. Report actual live charges separately from estimates.
+At the verified $1.75/M input and $14/M output rates, 1,500 input plus 120 output
+tokens for rewriting is about $0.0043; 6,000 plus 500 for memory is about $0.0175.
+These are illustrations, not measurements or guarantees. Titles add a small
+field to the first answer response, not a separate inference call.
+
+Accepted configurable history defaults: background trigger 6,000 tokens, target
+roughly 3,000 after compression, hard allowance 8,000; preserve the two most recent
+exchanges unchanged. The target guides prefix selection rather than permitting
+partial-message truncation. Actual assembled requests still undergo model/stage
+fit checks. Background work must leave allowance for foreground answering.
+Lossy memory never becomes document evidence or a substitute for original turns.
+
 Accepted test interfaces extend the existing HTTP/persistence, database/worker
 lifecycle and provider contracts. Test one saved cited answer first, then replay,
 scope isolation, malformed/truncated output and recovery. Model responses are

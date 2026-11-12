@@ -45,7 +45,7 @@ function DocumentWorkspace({
           <div className="document-heading">
             <div className="document-title">
               <Button variant="ghost" size="icon" asChild>
-                <Link to="/" aria-label="Open another document" title="Open another document">
+                <Link to="/upload" aria-label="Open another document" title="Open another document">
                   <ArrowLeft aria-hidden="true" />
                 </Link>
               </Button>

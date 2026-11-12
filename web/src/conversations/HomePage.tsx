@@ -1,16 +1,25 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight } from 'lucide-react';
-import { UploadPage } from '../documents/UploadPage';
-import type { Capabilities } from '../types';
+import { MessageSquarePlus, Upload } from 'lucide-react';
+import { Button } from '../components/ui';
 
-export function HomePage({ capabilities }: { capabilities: Capabilities }) {
+export function HomePage() {
   return (
-    <div className="document-entry">
-      <UploadPage capabilities={capabilities} />
-      <Link to="/runs" className="existing-documents">
-        Previously uploaded documents
-        <ArrowRight aria-hidden="true" />
-      </Link>
-    </div>
+    <section className="home-page" aria-labelledby="home-title">
+      <h1 id="home-title">Folio</h1>
+      <div className="home-actions">
+        <Button asChild>
+          <Link to="/new-chat">
+            <MessageSquarePlus aria-hidden="true" />
+            New chat
+          </Link>
+        </Button>
+        <Button variant="outline" asChild>
+          <Link to="/upload">
+            <Upload aria-hidden="true" />
+            Upload
+          </Link>
+        </Button>
+      </div>
+    </section>
   );
 }

@@ -10,7 +10,7 @@ test('console saves limits for a real upload and rejects a stale form', async ({
   const original = await originalResponse.json();
   let ownedRevision: number | null = null;
   try {
-    await page.goto('/');
+    await page.goto('/upload');
     await page.getByRole('link', { name: 'Development settings' }).click();
     await expect(page.getByRole('heading', { name: 'Development' })).toBeVisible();
     await page.getByLabel('Maximum pages', { exact: true }).fill('701');
@@ -39,6 +39,7 @@ test('console saves limits for a real upload and rejects a stale form', async ({
     await expect(page.getByLabel('Maximum pages', { exact: true })).toHaveValue('702');
 
     await page.getByRole('link', { name: 'Folio home' }).click();
+    await page.getByRole('main').getByRole('link', { name: 'Upload', exact: true }).click();
     await expect(page.getByText(/702 pages/)).toBeVisible();
     await page
       .getByLabel('PDF document', { exact: true })
@@ -74,7 +75,7 @@ test('focus refresh revalidates a selected file without discarding it', async ({
   const original = await (await request.get(endpoint)).json();
   let ownedRevision = original.revision;
   try {
-    await page.goto('/');
+    await page.goto('/upload');
     await page
       .getByLabel('PDF document', { exact: true })
       .setInputFiles('../tests/fixtures/text.pdf');

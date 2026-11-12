@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 
 test('upload a PDF, inspect its evidence, and revisit the document', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/upload');
   await page
     .getByLabel('PDF document', { exact: true })
     .setInputFiles('../tests/fixtures/text.pdf');
@@ -16,7 +16,7 @@ test('upload a PDF, inspect its evidence, and revisit the document', async ({ pa
 });
 
 test('usable content stays visible alongside a page coverage warning', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/upload');
   await page
     .getByLabel('PDF document', { exact: true })
     .setInputFiles('../tests/fixtures/mixed.pdf');
@@ -32,7 +32,7 @@ test('usable content stays visible alongside a page coverage warning', async ({ 
 });
 
 test('table cells retain their relationships and link to the original page', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/upload');
   await page
     .getByLabel('PDF document', { exact: true })
     .setInputFiles('../tests/fixtures/table.pdf');
@@ -49,7 +49,7 @@ test('table cells retain their relationships and link to the original page', asy
 });
 
 test('development view shows observed stages from this actual upload', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/upload');
   await page
     .getByLabel('PDF document', { exact: true })
     .setInputFiles('../tests/fixtures/text.pdf');
@@ -73,7 +73,7 @@ test('an upstream diagnostic without a code does not hide usable evidence', asyn
     evidence.diagnostics.push({ page_no: 2, error_message: 'Unrecognized timeout configuration' });
     await route.fulfill({ response, json: evidence });
   });
-  await page.goto('/');
+  await page.goto('/upload');
   await page
     .getByLabel('PDF document', { exact: true })
     .setInputFiles('../tests/fixtures/text.pdf');
@@ -112,7 +112,7 @@ test('retrying an upload after a lost response reopens the accepted document', a
     acceptedId = (await response.json()).document_id;
     await route.abort('connectionfailed');
   });
-  await page.goto('/');
+  await page.goto('/upload');
   await page
     .getByLabel('PDF document', { exact: true })
     .setInputFiles('../tests/fixtures/text.pdf');
@@ -127,7 +127,7 @@ test('an unsupported encrypted PDF has a useful failure and its original remains
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('/');
+  await page.goto('/upload');
   await page.getByRole('button', { name: 'Switch to dark mode' }).click();
   await page
     .getByLabel('PDF document', { exact: true })

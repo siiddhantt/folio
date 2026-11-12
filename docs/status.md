@@ -21,6 +21,29 @@ preservation, OpenRouter OpenAI small embeddings and PostgreSQL/pgvector. Scoped
 retrieval and one saved answer are implemented; follow-ups remain next. Configuration uses a commentless
 ignored `.env` and a safe template.
 
+## Conversation completion in progress — November 12
+
+The owner accepted a natural conversation workflow: separate New chat/Upload
+entry, an expanding composer with a ready-document selector, generated short
+titles, rename/delete and follow-up messages. Delete removes a chat from the app
+and stops new publication while retaining internal records and billing. GPT-5.2
+is also selected for rewriting and occasional history summaries, within the
+unchanged allowance. History defaults are 6,000 trigger / roughly 3,000 target /
+8,000 hard tokens, keeping two latest exchanges raw. See the [accepted checklist](conversations.md#accepted-conversation-completion--november-12).
+
+Entry/composer and the bounded ready-document catalog are complete. Thirteen
+isolated API/conversation checks and thirteen mocked browser checks passed,
+along with types, formatting, build and Ruff. Independent review caught wrong
+document selection after a failed lookup, late responses clearing newer drafts,
+and lost acknowledged chat identities after navigation; regressions passed.
+Aside verified real Home/New chat/Upload routes, the dropdown and textarea growth
+from 72 to 200 pixels before internal scrolling at desktop/mobile widths, without
+submitting or uploading. API/web were rebuilt; no model call was needed.
+
+Next active checkpoint: title/rename/delete. Follow-ups and hybrid memory remain
+unfinished. Do not present the old one-question flow as supporting conversation
+context.
+
 ## Answer default — November 12
 
 The owner selected GPT-5.2 through OpenRouter's `openai` route for newly accepted

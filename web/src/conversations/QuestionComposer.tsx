@@ -1,16 +1,16 @@
-import { useState } from 'react';
+import { useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { ArrowUp } from 'lucide-react';
 import { ApiError, errorMessage, request } from '../api';
 import { Button, Notice } from '../components/ui';
 import type { Turn } from './types';
 import { questionDraftKey, questionIntentKey } from './useConversation';
 
-interface Intent {
+export interface QuestionIntent {
   key: string;
   question: string;
 }
 
-function savedIntent(id: string): Intent | null {
+function savedIntent(id: string): QuestionIntent | null {
   try {
     const value = JSON.parse(sessionStorage.getItem(questionIntentKey(id)) || 'null');
     return typeof value?.key === 'string' && typeof value?.question === 'string' ? value : null;
@@ -62,40 +62,101 @@ export function QuestionComposer({
     }
   }
   return (
+    <QuestionInput
+      question={question}
+      onChange={(value) => {
+        setQuestion(value);
+        sessionStorage.setItem(questionDraftKey(conversationId), value);
+      }}
+      onSend={send}
+      busy={busy}
+      locked={!!intent}
+      retry={!!intent}
+      error={error && `${error}${intent ? ' Retry sends the same question.' : ''}`}
+      scope={<span className="subtle">One question per chat for now.</span>}
+    />
+  );
+}
+
+export function QuestionInput({
+  question,
+  onChange,
+  onSend,
+  busy = false,
+  locked = false,
+  retry = false,
+  unavailable = false,
+  error = '',
+  scope,
+}: {
+  question: string;
+  onChange: (value: string) => void;
+  onSend: () => void | Promise<void>;
+  busy?: boolean;
+  locked?: boolean;
+  retry?: boolean;
+  unavailable?: boolean;
+  error?: string;
+  scope?: ReactNode;
+}) {
+  const id = useId();
+  const input = useRef<HTMLTextAreaElement>(null);
+  useLayoutEffect(() => {
+    const textarea = input.current;
+    if (!textarea) return;
+    const resize = () => {
+      textarea.style.height = 'auto';
+      textarea.style.height = `${Math.min(textarea.scrollHeight, 200)}px`;
+    };
+    resize();
+    let width = textarea.clientWidth;
+    const observer = new ResizeObserver(() => {
+      if (textarea.clientWidth !== width) {
+        width = textarea.clientWidth;
+        resize();
+      }
+    });
+    observer.observe(textarea);
+    return () => observer.disconnect();
+  }, [question]);
+  return (
     <form
       className="question-composer"
       onSubmit={(event) => {
         event.preventDefault();
-        void send();
+        if (!busy && !unavailable) void onSend();
       }}
     >
-      <label className="sr-only" htmlFor="question">
-        Your question
-      </label>
-      <textarea
-        id="question"
-        placeholder="Ask about this document…"
-        rows={4}
-        maxLength={4000}
-        value={question}
-        disabled={busy || !!intent}
-        onChange={(event) => {
-          setQuestion(event.target.value);
-          sessionStorage.setItem(questionDraftKey(conversationId), event.target.value);
-        }}
-      />
-      {error && (
-        <Notice error>
-          {error} {intent && 'Retry sends the same question.'}
-        </Notice>
-      )}
-      <div className="composer-actions">
-        <span className="subtle">One question per chat for now.</span>
-        <Button type="submit" disabled={busy || !question.trim()} aria-label="Send question">
-          {busy ? 'Sending…' : intent ? 'Retry question' : 'Send'}
-          <ArrowUp aria-hidden="true" />
-        </Button>
+      <div className="composer-surface">
+        <label className="sr-only" htmlFor={id}>
+          Your question
+        </label>
+        <textarea
+          ref={input}
+          id={id}
+          name="question"
+          placeholder="Ask about this document…"
+          rows={2}
+          maxLength={4000}
+          value={question}
+          disabled={busy || locked}
+          onChange={(event) => {
+            onChange(event.target.value);
+          }}
+        />
+        <div className="composer-actions">
+          <div className="composer-scope">{scope}</div>
+          <Button
+            type="submit"
+            disabled={busy || unavailable || !question.trim()}
+            aria-label="Send question"
+          >
+            {busy ? 'Sending…' : retry ? 'Retry question' : 'Send'}
+            <ArrowUp aria-hidden="true" />
+          </Button>
+        </div>
       </div>
+      {error && <Notice error>{error}</Notice>}
     </form>
   );
 }

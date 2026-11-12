@@ -15,7 +15,7 @@ export function ConversationSidebar({
   const content = (
     <>
       <Button variant="outline" className="sidebar-open-document" asChild>
-        <Link to="/" onClick={onNavigate}>
+        <Link to="/upload" onClick={onNavigate}>
           <FilePlus2 aria-hidden="true" />
           Open document
         </Link>

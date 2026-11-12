@@ -130,12 +130,30 @@ test('switching chats keeps drafts and a new chat returns history to the latest 
     const url = new URL(route.request().url());
     const path = url.pathname.replace('/api', '');
     if (route.request().method() === 'POST') {
-      expect(path).toBe('/conversations');
-      created = true;
-      await route.fulfill({ status: 201, json: chat('new') });
+      if (path === '/conversations') {
+        created = true;
+        await route.fulfill({ status: 201, json: chat('new') });
+      } else {
+        expect(path).toBe('/conversations/new/turns');
+        await route.fulfill({ status: 202, json: { id: 'new-turn' } });
+      }
     } else if (path === '/capabilities') {
       await route.fulfill({
         json: { development_mode: false, max_pages: 100, max_upload_bytes: 26214400 },
+      });
+    } else if (path === '/conversation-documents') {
+      await route.fulfill({
+        json: {
+          items: [
+            {
+              document_id: 'document-1',
+              index_id: 'index-1',
+              display_name: 'Coverage.pdf',
+              created_at: '2026-01-01T12:00:00Z',
+            },
+          ],
+          next_cursor: null,
+        },
       });
     } else if (path === '/conversations') {
       const older = url.searchParams.has('before');
@@ -183,7 +201,10 @@ test('switching chats keeps drafts and a new chat returns history to the latest 
   );
   await sidebar.getByRole('button', { name: 'Older conversations' }).click();
   await sidebar.getByRole('link', { name: /What is covered/ }).click();
-  await page.getByRole('button', { name: 'New chat', exact: true }).click();
+  await page.getByRole('link', { name: 'New chat', exact: true }).click();
+  await expect(page).toHaveURL(/\/new-chat\?document=index-1$/);
+  await page.getByRole('textbox', { name: 'Your question' }).fill('What is covered?');
+  await page.getByRole('button', { name: 'Send question', exact: true }).click();
   await expect(page).toHaveURL(/\/conversations\/new$/);
   await expect(sidebar.getByRole('link', { name: /new.pdf/ })).toHaveAttribute(
     'aria-current',

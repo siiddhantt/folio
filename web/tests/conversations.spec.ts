@@ -78,6 +78,17 @@ test('a saved chat accepts one question, reloads its answer and opens the cited 
       '/conversations/chat-1/turns/turn-1': question ? turn() : null,
       '/conversations/chat-2': { ...conversation, id: 'chat-2' },
       '/conversations/chat-2/turns': { items: [], next_after: null },
+      '/conversation-documents': {
+        items: [
+          {
+            document_id: 'document-1',
+            index_id: 'index-1',
+            display_name: 'Coverage.pdf',
+            created_at: time,
+          },
+        ],
+        next_cursor: null,
+      },
     };
     expect(path in responses, `unexpected request ${path}`).toBeTruthy();
     await route.fulfill({ json: responses[path] });
@@ -118,10 +129,13 @@ test('a saved chat accepts one question, reloads its answer and opens the cited 
     await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
   ).toBeTruthy();
   expect(creations).toBe(0);
-  await page.getByRole('button', { name: 'New chat', exact: true }).click();
-  await expect(page).toHaveURL(/\/conversations\/chat-2$/);
+  await page.getByRole('link', { name: 'New chat', exact: true }).click();
+  await expect(page).toHaveURL(/\/new-chat\?document=index-1$/);
   await expect(page.getByRole('textbox', { name: 'Your question' })).toHaveValue('');
-  expect(creations).toBe(1);
+  await expect(page.getByRole('combobox', { name: 'Document', exact: true })).toHaveValue(
+    'index-1',
+  );
+  expect(creations).toBe(0);
   expect(submissions).toBe(1);
 });
 
@@ -260,5 +274,5 @@ test('clarification and evidence limits remain readable without invented source 
   await expect(page.getByRole('button', { name: /^Source / })).toHaveCount(0);
   await expect(page.getByRole('note')).toContainText('Some document content may be missing.');
   await expect(page.getByRole('textbox', { name: 'Your question' })).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'New chat', exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'New chat', exact: true })).toBeVisible();
 });

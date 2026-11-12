@@ -29,7 +29,7 @@ test('summary follows its own processing state and citations open the source', a
       },
     });
   });
-  await page.goto('/');
+  await page.goto('/upload');
   await page
     .getByLabel('PDF document', { exact: true })
     .setInputFiles('../tests/fixtures/text.pdf');
@@ -65,7 +65,7 @@ test('an unavailable summary leaves recovered evidence and source access usable'
       },
     }),
   );
-  await page.goto('/');
+  await page.goto('/upload');
   await page
     .getByLabel('PDF document', { exact: true })
     .setInputFiles('../tests/fixtures/text.pdf');

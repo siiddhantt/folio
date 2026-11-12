@@ -4,6 +4,7 @@ from fastapi import APIRouter, Header, HTTPException, Query
 from psycopg.types.json import Jsonb
 from pydantic import BaseModel, ConfigDict, Field
 
+from .catalog import create_router as create_catalog_router
 from .config import ChatSettings
 from .inspection import inspect_turn
 from .queries import conversation, turn
@@ -21,6 +22,7 @@ class NewQuestion(BaseModel):
 
 def create_router(database, settings):
     router = APIRouter()
+    router.include_router(create_catalog_router(database))
 
     if settings.development_mode:
 

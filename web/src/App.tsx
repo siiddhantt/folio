@@ -1,15 +1,17 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, Route, Routes, useLocation } from 'react-router-dom';
-import { History, PanelLeft, PanelsTopLeft, SlidersHorizontal } from 'lucide-react';
+import { History, PanelLeft, SlidersHorizontal } from 'lucide-react';
 import { Dialog } from 'radix-ui';
 import { request, errorMessage } from './api';
 import type { Capabilities } from './types';
 import { ThemeToggle } from './components/ThemeToggle';
 import { Button, Notice } from './components/ui';
 import { HomePage } from './conversations/HomePage';
+import { NewConversationPage } from './conversations/NewConversationPage';
 import { ConversationPage } from './conversations/ConversationPage';
 import { ConversationSidebar } from './conversations/ConversationSidebar';
 import { DocumentPage } from './documents/DocumentPage';
+import { UploadPage } from './documents/UploadPage';
 import { SettingsPage } from './configuration/SettingsPage';
 import { RunsPage } from './runs/RunsPage';
 
@@ -30,7 +32,12 @@ export function App() {
     return () => media.removeEventListener('change', close);
   }, []);
   useEffect(() => {
-    document.title = location.pathname === '/runs' ? 'Processing runs · Folio' : 'Folio';
+    const titles: Record<string, string> = {
+      '/runs': 'Processing runs',
+      '/new-chat': 'New chat',
+      '/upload': 'Upload',
+    };
+    document.title = titles[location.pathname] ? `${titles[location.pathname]} · Folio` : 'Folio';
     if (window.matchMedia('(min-width: 1100px)').matches) {
       document.getElementById('main')?.focus({ preventScroll: true });
     }
@@ -71,7 +78,6 @@ export function App() {
             </Dialog.Trigger>
           )}
           <Link className="wordmark" to="/" aria-label="Folio home">
-            <PanelsTopLeft aria-hidden="true" />
             Folio
           </Link>
         </div>
@@ -115,7 +121,9 @@ export function App() {
             <p className="page-message">Connecting to Folio…</p>
           ) : (
             <Routes>
-              <Route path="/" element={<HomePage capabilities={capabilities} />} />
+              <Route path="/" element={<HomePage />} />
+              <Route path="/new-chat" element={<NewConversationPage />} />
+              <Route path="/upload" element={<UploadPage capabilities={capabilities} />} />
               <Route
                 path="/conversations/:conversationId"
                 element={<ConversationPage onTurnChanged={refreshHistory} />}
@@ -136,7 +144,7 @@ export function App() {
                 element={
                   <div className="page-message">
                     <h1>Page not found</h1>
-                    <Link to="/">Upload a document</Link>
+                    <Link to="/">Go home</Link>
                   </div>
                 }
               />

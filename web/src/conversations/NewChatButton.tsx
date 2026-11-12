@@ -1,46 +1,18 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { MessageSquarePlus } from 'lucide-react';
 import { errorMessage, request } from '../api';
-import { Button, Notice } from '../components/ui';
+import { Button } from '../components/ui';
 import type { IndexStatus } from '../types';
-import type { Conversation } from './types';
 
 export function NewChatButton({ indexId }: { indexId: string }) {
-  const navigate = useNavigate();
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-  async function create() {
-    if (busy) return;
-    setBusy(true);
-    setError('');
-    const storageKey = `folio:new-chat:${indexId}`;
-    const key = sessionStorage.getItem(storageKey) || crypto.randomUUID();
-    sessionStorage.setItem(storageKey, key);
-    try {
-      const conversation = await request<Conversation>('/conversations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Idempotency-Key': key },
-        body: JSON.stringify({ index_id: indexId }),
-      });
-      sessionStorage.removeItem(storageKey);
-      navigate(`/conversations/${conversation.id}`, {
-        state: { createdConversation: conversation.id },
-      });
-    } catch (e) {
-      setError(errorMessage(e));
-    } finally {
-      setBusy(false);
-    }
-  }
   return (
-    <div className="new-chat-action">
-      <Button variant="outline" size="sm" disabled={busy} onClick={() => void create()}>
+    <Button variant="outline" size="sm" asChild>
+      <Link to={`/new-chat?document=${encodeURIComponent(indexId)}`}>
         <MessageSquarePlus aria-hidden="true" />
-        {busy ? 'Opening…' : 'New chat'}
-      </Button>
-      {error && <Notice error>{error} Try New chat again to recover the same request.</Notice>}
-    </div>
+        New chat
+      </Link>
+    </Button>
   );
 }
 

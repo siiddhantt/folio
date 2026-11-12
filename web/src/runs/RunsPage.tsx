@@ -42,7 +42,7 @@ export function RunsPage() {
       )}
       {data && !data.items.length && (
         <p className="runs-empty">
-          No processing runs here. <Link to="/">Upload a PDF</Link>
+          No processing runs here. <Link to="/upload">Upload a PDF</Link>
         </p>
       )}
       {!!data?.items.length && (

@@ -27,7 +27,7 @@ test('large extraction gaps stay compact while recovered content remains readabl
     evidence.diagnostics = [{ category: 'timeout', error_message: 'Document timeout exceeded' }];
     await route.fulfill({ response, json: evidence });
   });
-  await page.goto('/');
+  await page.goto('/upload');
   await page
     .getByLabel('PDF document', { exact: true })
     .setInputFiles('../tests/fixtures/text.pdf');
@@ -41,7 +41,7 @@ test('large extraction gaps stay compact while recovered content remains readabl
   await expect(coverage).toContainText('Processing reached its time limit');
   await expect(coverage.getByRole('button')).toHaveCount(0);
   await coverage.getByText('Coverage details', { exact: true }).click();
-  await expect(coverage.getByRole('button', { name: 'Inspect pages 4–3,000' })).toBeVisible();
+  await expect(coverage.getByRole('button', { name: 'Inspect pages 4â€“3,000' })).toBeVisible();
   await expect(coverage.getByRole('listitem')).toHaveCount(10);
   await coverage.getByRole('button', { name: 'Next diagnostic page' }).click();
   await expect(coverage.getByRole('listitem')).toHaveCount(10);
@@ -63,7 +63,7 @@ test('activity opens in a keyboard-accessible side panel without replacing conte
   page,
 }) => {
   await page.setViewportSize({ width: 960, height: 520 });
-  await page.goto('/');
+  await page.goto('/upload');
   await page
     .getByLabel('PDF document', { exact: true })
     .setInputFiles('../tests/fixtures/text.pdf');
@@ -228,7 +228,7 @@ test('a canvas rendering failure leaves evidence usable and another page can sti
       return fillRect.apply(this, args);
     };
   });
-  await page.goto('/');
+  await page.goto('/upload');
   await page
     .getByLabel('PDF document', { exact: true })
     .setInputFiles('../tests/fixtures/text.pdf');
@@ -259,7 +259,7 @@ test('a failed parse with partial parser output is still labeled as failed', asy
     }));
     await route.fulfill({ response, json: status });
   });
-  await page.goto('/');
+  await page.goto('/upload');
   await page
     .getByLabel('PDF document', { exact: true })
     .setInputFiles('../tests/fixtures/text.pdf');

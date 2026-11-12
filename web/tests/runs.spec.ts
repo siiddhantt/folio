@@ -69,7 +69,7 @@ test('Activity follows summary completion and keeps an uncertain bill distinct f
     };
     await route.fulfill({ response, json: inspection });
   });
-  await page.goto('/');
+  await page.goto('/upload');
   await page
     .getByLabel('PDF document', { exact: true })
     .setInputFiles('../tests/fixtures/text.pdf');
