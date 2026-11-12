@@ -26,7 +26,8 @@ citation and qualification weaknesses; no general quality pass is claimed. Gener
 Source-linked indexing uses Docling merging and OpenRouter embeddings stored in
 pgvector. Activity shows batch progress and billing; only complete indexes expose
 their chunks. A separate chat worker answers one question per saved conversation,
-using only that document's retrieved passages. Home lists conversations; follow-ups
+using only that document's retrieved passages. Saved conversations stay in a desktop
+sidebar or a mobile drawer; home opens a document. Follow-ups
 and conversation memory are the next increment. Initial live answers exposed
 contract and semantic errors; the current answer model has not passed quality review.
 

@@ -1,12 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, Route, Routes, useLocation } from 'react-router-dom';
-import { History, PanelsTopLeft, SlidersHorizontal } from 'lucide-react';
+import { History, PanelLeft, PanelsTopLeft, SlidersHorizontal } from 'lucide-react';
+import { Dialog } from 'radix-ui';
 import { request, errorMessage } from './api';
 import type { Capabilities } from './types';
 import { ThemeToggle } from './components/ThemeToggle';
 import { Button, Notice } from './components/ui';
 import { HomePage } from './conversations/HomePage';
 import { ConversationPage } from './conversations/ConversationPage';
+import { ConversationSidebar } from './conversations/ConversationSidebar';
 import { DocumentPage } from './documents/DocumentPage';
 import { SettingsPage } from './configuration/SettingsPage';
 import { RunsPage } from './runs/RunsPage';
@@ -15,7 +17,25 @@ export function App() {
   const [capabilities, setCapabilities] = useState<Capabilities | null>(null);
   const [error, setError] = useState('');
   const [reload, setReload] = useState(0);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyRevision, setHistoryRevision] = useState(0);
+  const refreshHistory = useCallback(() => setHistoryRevision((value) => value + 1), []);
   const location = useLocation();
+  useEffect(() => {
+    const media = window.matchMedia('(min-width: 1100px)');
+    const close = () => {
+      if (media.matches) setHistoryOpen(false);
+    };
+    media.addEventListener('change', close);
+    return () => media.removeEventListener('change', close);
+  }, []);
+  useEffect(() => {
+    document.title = location.pathname === '/runs' ? 'Processing runs · Folio' : 'Folio';
+    if (window.matchMedia('(min-width: 1100px)').matches) {
+      document.getElementById('main')?.focus({ preventScroll: true });
+    }
+    document.getElementById('main')?.scrollTo(0, 0);
+  }, [location.pathname]);
   useEffect(() => {
     const refresh = () => setReload((value) => value + 1);
     window.addEventListener('focus', refresh);
@@ -32,15 +52,29 @@ export function App() {
     return () => controller.abort();
   }, [reload, location.pathname]);
   return (
-    <>
+    <Dialog.Root open={historyOpen} onOpenChange={setHistoryOpen}>
       <a className="skip-link" href="#main">
         Skip to content
       </a>
       <header className="site-header">
-        <Link className="wordmark" to="/" aria-label="Folio home">
-          <PanelsTopLeft aria-hidden="true" />
-          Folio
-        </Link>
+        <div className="header-brand">
+          {capabilities && (
+            <Dialog.Trigger asChild>
+              <Button
+                className="history-toggle"
+                variant="ghost"
+                size="icon"
+                aria-label="Open conversation history"
+              >
+                <PanelLeft aria-hidden="true" />
+              </Button>
+            </Dialog.Trigger>
+          )}
+          <Link className="wordmark" to="/" aria-label="Folio home">
+            <PanelsTopLeft aria-hidden="true" />
+            Folio
+          </Link>
+        </div>
         <div className="header-actions">
           <Button variant="ghost" size="sm" asChild>
             <Link to="/runs" aria-current={location.pathname === '/runs' ? 'page' : undefined}>
@@ -62,43 +96,54 @@ export function App() {
           <ThemeToggle />
         </div>
       </header>
-      <main id="main">
-        {error && !capabilities ? (
-          <div className="page-message">
-            <Notice error>{error} Folio could not load its settings.</Notice>
-            <Button variant="outline" onClick={() => setReload(reload + 1)}>
-              Reconnect
-            </Button>
-          </div>
-        ) : !capabilities ? (
-          <p className="page-message">Connecting to Folio…</p>
-        ) : (
-          <Routes>
-            <Route path="/" element={<HomePage capabilities={capabilities} />} />
-            <Route path="/conversations/:conversationId" element={<ConversationPage />} />
-            <Route path="/runs" element={<RunsPage />} />
-            {capabilities.development_mode && (
-              <Route
-                path="/development/settings"
-                element={<SettingsPage onSaved={() => setReload((value) => value + 1)} />}
-              />
-            )}
-            <Route
-              path="/documents/:documentId"
-              element={<DocumentPage capabilities={capabilities} />}
-            />
-            <Route
-              path="*"
-              element={
-                <div className="page-message">
-                  <h1>Page not found</h1>
-                  <Link to="/">Upload a document</Link>
-                </div>
-              }
-            />
-          </Routes>
+      <div className={`app-workspace${capabilities ? ' has-history' : ''}`}>
+        {capabilities && (
+          <ConversationSidebar
+            revision={historyRevision}
+            onNavigate={() => setHistoryOpen(false)}
+          />
         )}
-      </main>
-    </>
+        <main id="main" tabIndex={-1}>
+          {error && !capabilities ? (
+            <div className="page-message">
+              <Notice error>{error} Folio could not load its settings.</Notice>
+              <Button variant="outline" onClick={() => setReload(reload + 1)}>
+                Reconnect
+              </Button>
+            </div>
+          ) : !capabilities ? (
+            <p className="page-message">Connecting to Folio…</p>
+          ) : (
+            <Routes>
+              <Route path="/" element={<HomePage capabilities={capabilities} />} />
+              <Route
+                path="/conversations/:conversationId"
+                element={<ConversationPage onTurnChanged={refreshHistory} />}
+              />
+              <Route path="/runs" element={<RunsPage />} />
+              {capabilities.development_mode && (
+                <Route
+                  path="/development/settings"
+                  element={<SettingsPage onSaved={() => setReload((value) => value + 1)} />}
+                />
+              )}
+              <Route
+                path="/documents/:documentId"
+                element={<DocumentPage capabilities={capabilities} />}
+              />
+              <Route
+                path="*"
+                element={
+                  <div className="page-message">
+                    <h1>Page not found</h1>
+                    <Link to="/">Upload a document</Link>
+                  </div>
+                }
+              />
+            </Routes>
+          )}
+        </main>
+      </div>
+    </Dialog.Root>
   );
 }

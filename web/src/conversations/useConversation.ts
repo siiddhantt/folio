@@ -3,8 +3,9 @@ import { ApiError, errorMessage, request } from '../api';
 import type { Conversation, Turn } from './types';
 
 export const questionIntentKey = (conversationId: string) => `folio:question:${conversationId}`;
+export const questionDraftKey = (conversationId: string) => `folio:draft:${conversationId}`;
 
-export function useConversation(id: string) {
+export function useConversation(id: string, onTurnChanged: () => void) {
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [turn, setTurn] = useState<Turn | null>(null);
   const [error, setError] = useState('');
@@ -25,7 +26,10 @@ export function useConversation(id: string) {
         setConversation(next);
         setTurn(history.items[0] || null);
         setLoaded(true);
-        if (history.items.length) sessionStorage.removeItem(questionIntentKey(id));
+        if (history.items.length) {
+          sessionStorage.removeItem(questionIntentKey(id));
+          sessionStorage.removeItem(questionDraftKey(id));
+        }
       })
       .catch((e) => {
         if (!controller.signal.aborted) setError(errorMessage(e));
@@ -47,6 +51,7 @@ export function useConversation(id: string) {
         setTurn(next);
         setError('');
         if (next.state === 'pending' || next.state === 'running') timer = setTimeout(poll, 1500);
+        else onTurnChanged();
       } catch (e) {
         if (controller.signal.aborted) return;
         setError(errorMessage(e));
@@ -58,7 +63,7 @@ export function useConversation(id: string) {
       controller.abort();
       clearTimeout(timer);
     };
-  }, [id, turnId, active]);
+  }, [id, turnId, active, onTurnChanged]);
   return {
     conversation,
     turn,

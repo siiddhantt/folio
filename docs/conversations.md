@@ -14,8 +14,9 @@ passed a read-only compatibility check; quality is evaluated separately.
 The owner selected one question and its terminal answer per saved conversation,
 with follow-ups and the accepted hybrid memory behavior in the next increment.
 The UI must state this temporary boundary and offer a new chat, never accept a
-second question while silently ignoring history. Home lists saved conversations;
-Runs remains processing history. The source reader remains accessible.
+second question while silently ignoring history. Saved conversations live in a
+desktop sidebar or a mobile drawer; Runs remains processing history. The source
+reader remains accessible, and home opens a document.
 
 Use the existing DeepSeek V4.1 Flash 1017/Together route through OpenRouter,
 reasoning off, 16,384 input tokens and 4,096 maximum output tokens. These are
@@ -173,8 +174,8 @@ reserved amounts. The default-model decision is separate from permission to comp
 ## Outcome and example
 
 Open an indexed PDF, ask a question, inspect the answer's source page, ask a
-follow-up and return after reload. Conversations belong on the home screen;
-processing Runs remains separate. An answer, a request for clarification and
+follow-up and return after reload. Saved conversations remain available beside
+the active view; processing Runs stays separate. An answer, a request for clarification and
 an evidence limitation are useful outcomes. A provider failure is an execution
 failure, displayed distinctly and retained in history.
 
@@ -494,8 +495,8 @@ provider registry, universal memory interface or extra retrieval service.
 
 The minimal UI reuses the document reader and source-page navigation. Add a chat
 view with persisted messages, a question field, a real pending/failure state and
-citation buttons; keep the existing content view reachable. Home lists saved
-conversations with bounded pagination and an upload entry. Activity shows stage
+citation buttons; keep the existing content view reachable. The sidebar lists saved
+conversations with bounded pagination, while home provides the upload entry. Activity shows stage
 timings, context counts/memory version, supplied evidence identities and billing.
 No simulated progress or raw document/credential logging is introduced.
 

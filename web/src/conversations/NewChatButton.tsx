@@ -24,7 +24,9 @@ export function NewChatButton({ indexId }: { indexId: string }) {
         body: JSON.stringify({ index_id: indexId }),
       });
       sessionStorage.removeItem(storageKey);
-      navigate(`/conversations/${conversation.id}`);
+      navigate(`/conversations/${conversation.id}`, {
+        state: { createdConversation: conversation.id },
+      });
     } catch (e) {
       setError(errorMessage(e));
     } finally {

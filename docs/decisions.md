@@ -473,6 +473,23 @@ The owner selected this checkpoint over implementing all conversation context at
 once, to inspect a complete question → source → reload journey. Home lists chats;
 Runs remains document-processing history. See [the contract and reading order](conversations.md).
 
+## Conversation navigation refinement — November 12
+
+The owner requested a minimal conversation sidebar and a clearer chat workspace,
+using reviewed skills from Jakub Krehel. Use persistent desktop history and a
+named mobile navigation drawer, reusing the same bounded conversation-list API.
+Keep Runs in the header as separate document-processing history. Home becomes
+document entry rather than a second conversation list. Preserve the selected
+conversation, source links, reload/retry behavior and the current one-question
+limit; do not present an unavailable follow-up composer.
+
+Apply the existing neutral palette, DM Sans and shadcn/Radix controls. Improve
+shared edges, text measure, readable inputs and compact action placement. No new
+UI dependency, provider call, backend route or schema is needed. The accepted
+browser/API test boundary covers navigation, list recovery and mobile focus;
+visual inspection covers long content, narrow widths, themes and zoom. This is
+an interface refinement, not evidence that model quality or throughput changed.
+
 ## Slice order and remaining decisions
 
 November 11 planning recommendation, not an accepted implementation contract:

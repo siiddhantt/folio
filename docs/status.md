@@ -20,12 +20,36 @@ preservation, OpenRouter OpenAI small embeddings and PostgreSQL/pgvector. Scoped
 retrieval and one saved answer are implemented; follow-ups remain next. Configuration uses a commentless
 ignored `.env` and a safe template.
 
+## Conversation navigation — November 12
+
+Installed four reviewed, pinned Jakub Krehel interface skills in `.agents/skills`,
+with licenses and file hashes; see [skills](skills.md). Applied them to a persistent
+desktop conversation sidebar, a mobile history drawer and a quieter chat layout.
+Home opens documents; Runs remains separate in the header. History reuses the
+existing bounded API. Unsent drafts survive switching chats within the browser tab,
+while submission replay keys retain their separate purpose. No backend, provider,
+dependency or paid-usage change is part of this increment.
+
+Test-first checks caught missing navigation, lost drafts, hidden newly created
+chats, refresh failures replacing loaded history and mobile reading-position loss
+after moving scrolling into the main pane. Seven fully mocked browser checks,
+TypeScript, formatting and the Docker web build passed. Independent review found
+no remaining blockers after the scroll fix. Browser review also identified a main
+focus outline, fixed-height header overflow under enlarged text and a sticky footer
+touching citation focus rings; those were refined before the final visual check.
+Final browser checks confirmed the mobile reader round trip restored the exact
+scroll position and the enlarged-text drawer no longer overflowed. Home, chat
+and PDF layouts were inspected at 320–1440 pixels, along with keyboard focus,
+source-page rendering and light/dark themes. This was not a full accessibility
+audit. The PDF renderer's existing bundle-size warning remains. Spending was
+unchanged; no new question or upload was submitted during this UI work.
+
 ## First saved answer — November 12
 
 Accepted and implemented: one question per saved conversation, pinned ready index,
 exact top-six retrieval, DeepSeek V4.1 Flash 1017/Together with reasoning off and
 16,384/4,096 input/output allowances, separate chat worker, and unchanged shared
-spending. The home screen lists conversations; Runs stays separate. The answer,
+spending. Conversation history is now in the sidebar; Runs stays separate. The answer,
 question, citations, known extraction gaps and failures survive reload. Paid-call
 bookkeeping lives outside retrieval/prompt preparation. Follow-ups and the accepted
 hybrid history design remain a separate increment.

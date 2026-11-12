@@ -37,10 +37,15 @@ export function DocumentReader({
   }, []);
   function selectView(next: string, sourceJump = false) {
     if (narrow) {
-      positions.current[view] = window.scrollY;
-      nextScroll.current = sourceJump
-        ? (workspace.current?.offsetTop ?? 0)
-        : (positions.current[next] ?? workspace.current?.offsetTop ?? 0);
+      const scroller = workspace.current?.closest('main');
+      const workspaceTop =
+        scroller && workspace.current
+          ? workspace.current.getBoundingClientRect().top -
+            scroller.getBoundingClientRect().top +
+            scroller.scrollTop
+          : 0;
+      positions.current[view] = scroller?.scrollTop ?? 0;
+      nextScroll.current = sourceJump ? workspaceTop : (positions.current[next] ?? workspaceTop);
       focusOriginal.current = sourceJump;
     }
     if (next === 'original') setPreviewOpened(true);
@@ -52,7 +57,9 @@ export function DocumentReader({
       focusOriginal.current = false;
     }
     if (nextScroll.current !== null) {
-      window.scrollTo({ top: nextScroll.current, behavior: 'instant' });
+      workspace.current
+        ?.closest('main')
+        ?.scrollTo({ top: nextScroll.current, behavior: 'instant' });
       nextScroll.current = null;
     }
   }, [view]);

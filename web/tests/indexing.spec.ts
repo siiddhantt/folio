@@ -28,6 +28,7 @@ test('Activity follows indexing after extraction and preserves unknown charges',
     }
     const responses: Record<string, unknown> = {
       '/capabilities': { development_mode: true, max_pages: 100, max_upload_bytes: 26214400 },
+      '/conversations': { items: [], next_cursor: null },
       '/documents/document-1': {
         id: 'document-1',
         display_name: 'Controlled document',

@@ -98,7 +98,7 @@ test('a saved chat accepts one question, reloads its answer and opens the cited 
   await expect(page.getByText('One question per chat for now.', { exact: true })).toBeVisible();
   await page.reload();
   await expect(
-    page.getByText('Does the garage have a separate limit?', { exact: true }),
+    page.getByRole('main').getByText('Does the garage have a separate limit?', { exact: true }),
   ).toBeVisible();
   await expect(
     page.getByText('The building limit includes garage coverage.', { exact: true }),
@@ -167,6 +167,7 @@ test('an uncertain question can be retried after reload without creating a new i
     const responses: Record<string, unknown> = {
       '/capabilities': { development_mode: false, max_pages: 100, max_upload_bytes: 26214400 },
       '/conversations/retry-chat': conversation,
+      '/conversations': { items: [conversation], next_cursor: null },
       '/conversations/retry-chat/turns': {
         items: keys.length > 1 ? [failed] : [],
         next_after: null,
@@ -217,6 +218,7 @@ test('clarification and evidence limits remain readable without invented source 
     const responses: Record<string, unknown> = {
       '/capabilities': { development_mode: false, max_pages: 100, max_upload_bytes: 26214400 },
       '/conversations/limited-chat': conversation,
+      '/conversations': { items: [conversation], next_cursor: null },
       '/conversations/limited-chat/turns': {
         items: [
           {

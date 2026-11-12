@@ -235,7 +235,7 @@
     min-height: 40px;
   }
 }
-@media (max-width: 1000px) {
+@container (max-width: 1000px) {
   .document-heading {
     align-items: flex-start;
     flex-direction: column;

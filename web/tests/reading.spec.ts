@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { readFile } from 'node:fs/promises';
 
 test('large extraction gaps stay compact while recovered content remains readable', async ({
   page,
@@ -95,15 +96,70 @@ test('activity opens in a keyboard-accessible side panel without replacing conte
 test('the original renders one page and mobile citations switch views without losing content', async ({
   page,
 }) => {
+  test.setTimeout(30000);
+  const time = '2026-01-01T12:00:00Z';
+  await page.route('**/api/**', async (route) => {
+    expect(route.request().method()).toBe('GET');
+    const path = new URL(route.request().url()).pathname.replace('/api', '');
+    if (path.endsWith('/original')) {
+      await route.fulfill({
+        contentType: 'application/pdf',
+        body: await readFile('../tests/fixtures/text.pdf'),
+      });
+      return;
+    }
+    const responses: Record<string, unknown> = {
+      '/capabilities': { development_mode: false, max_pages: 100, max_upload_bytes: 26214400 },
+      '/conversations': { items: [], next_cursor: null },
+      '/documents/reading-document': {
+        id: 'reading-document',
+        display_name: 'Operating report.pdf',
+        created_at: time,
+        current_request_id: 'reading-request',
+        active_revision_id: 'reading-revision',
+      },
+      '/ingestion-requests/reading-request': {
+        request_id: 'reading-request',
+        document_id: 'reading-document',
+        revision_id: 'reading-revision',
+        state: 'succeeded',
+        authorized_attempt_id: 'reading-attempt',
+        created_at: time,
+        finished_at: time,
+        attempts: [],
+      },
+      '/revisions/reading-revision/evidence': {
+        revision_id: 'reading-revision',
+        diagnostics: [],
+        next_after_order: null,
+        pages: [1, 2].map((page_no) => ({
+          page_no,
+          content_observation: 'content_recovered',
+          diagnostics: [],
+        })),
+        elements: Array.from({ length: 10 }, (_, index) => ({
+          element_id: `paragraph-${index}`,
+          reading_order: index,
+          kind: 'text',
+          table_data: null,
+          text:
+            index === 9
+              ? 'Revenue was 125,000.'
+              : 'The operating report describes revenue, costs and annual changes. Read the original page to verify each figure and qualification.',
+          locations: [{ page_no: index === 9 ? 2 : 1, x0: null, y0: null, x1: null, y1: null }],
+        })),
+      },
+      '/revisions/reading-revision/summary': { state: 'not_scheduled' },
+      '/revisions/reading-revision/index': { state: 'not_started', index_id: null },
+    };
+    expect(path in responses, `Unexpected API read: ${path}`).toBeTruthy();
+    await route.fulfill({ json: responses[path] });
+  });
   let originalRequests = 0;
   page.on('request', (request) => {
     if (request.url().includes('/original?inline=true')) originalRequests += 1;
   });
-  await page.goto('/');
-  await page
-    .getByLabel('PDF document', { exact: true })
-    .setInputFiles('../tests/fixtures/text.pdf');
-  await page.getByRole('button', { name: 'Open document', exact: true }).click();
+  await page.goto('/documents/reading-document');
   const content = page.getByRole('region', { name: 'Extracted evidence' });
   await expect(content).toContainText('125,000');
   const original = page.getByRole('region', { name: 'Original PDF' });
@@ -127,7 +183,7 @@ test('the original renders one page and mobile citations switch views without lo
     .getByRole('button', { name: 'View page 2 in original', exact: true })
     .first();
   await citation.scrollIntoViewIfNeeded();
-  const readingPosition = await page.evaluate(() => window.scrollY);
+  const readingPosition = await page.getByRole('main').evaluate((node) => node.scrollTop);
   expect(readingPosition).toBeGreaterThan(0);
   await citation.focus();
   await page.keyboard.press('Enter');
@@ -146,7 +202,9 @@ test('the original renders one page and mobile citations switch views without lo
   await expect.poll(() => paper.evaluate((node) => node.scrollTop)).toBeGreaterThan(0);
   await page.getByRole('tab', { name: 'Content', exact: true }).click();
   await expect(content).toContainText('125,000');
-  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeCloseTo(readingPosition, -1);
+  await expect
+    .poll(() => page.getByRole('main').evaluate((node) => node.scrollTop), { timeout: 5000 })
+    .toBeCloseTo(readingPosition, -1);
   const width = await page.evaluate(() => ({
     page: document.documentElement.scrollWidth,
     viewport: innerWidth,

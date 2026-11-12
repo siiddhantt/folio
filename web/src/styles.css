@@ -5,6 +5,7 @@
 @import './styles/configuration.css';
 @import './styles/runs.css';
 @import './styles/conversations.css';
+@import './styles/navigation.css';
 
 @custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
 
@@ -34,6 +35,7 @@
   --header-height: 60px;
   --page-gutter: 32px;
   --background: #ffffff;
+  --sidebar-background: #fafafa;
   --foreground: #202020;
   --primary: #262626;
   --primary-foreground: #ffffff;
@@ -45,6 +47,7 @@
 }
 :root[data-theme='dark'] {
   --background: #171717;
+  --sidebar-background: #141414;
   --foreground: #ededed;
   --primary: #ededed;
   --primary-foreground: #171717;
@@ -99,13 +102,26 @@
   }
 }
 
-.site-header {
-  height: var(--header-height);
-  padding: 0 var(--page-gutter);
+#root {
+  height: 100dvh;
   display: flex;
+  flex-direction: column;
+}
+.site-header {
+  min-height: var(--header-height);
+  flex-shrink: 0;
+  padding: 8px var(--page-gutter);
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
+  gap: 8px 16px;
   border-bottom: 1px solid var(--line);
+}
+.site-header .header-actions {
+  margin-inline-start: auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 .wordmark {
   display: flex;
@@ -120,9 +136,6 @@
   width: 19px;
   height: 19px;
   stroke-width: 1.6;
-}
-main {
-  min-height: calc(100dvh - var(--header-height));
 }
 .skip-link {
   position: absolute;

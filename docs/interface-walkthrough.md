@@ -55,6 +55,33 @@ layer so its words remain selectable.
 
 ## Where the work happens
 
+Conversation history lives beside the workspace on wide screens. On narrower
+screens, **Open conversation history** opens the same list in a drawer. Select a
+conversation to reopen its saved question and result; Runs remains separate
+document-processing history in the header. The home screen opens a document.
+
+History uses `GET /api/conversations?limit=20` and the returned cursor for older
+pages. These are reads of existing records, not new model requests or a second
+history store. A history-loading failure has its own retry action and does not
+erase the selected conversation or already loaded history. New questions still use the existing submission
+and idempotency flow. One question per conversation remains the current limit;
+the interface does not offer an unsupported follow-up composer.
+
+An unsent question stays in this browser tab's session storage when switching
+chats. It is separate from the submission key used to recover an uncertain send;
+neither is a second server transcript. History fetches at most 20 conversations
+per page. Latest/Older changes the page; ordinary refresh keeps your place.
+
+For the UI reading order, start with `web/src/App.tsx` for the shared shell,
+`conversations/ConversationSidebar.tsx` and `useConversationList.ts` for history,
+then `ConversationPage.tsx` and `QuestionComposer.tsx` for the selected chat.
+Layout rules live in `styles/navigation.css` and `styles/conversations.css`.
+The existing source panel opens original PDF pages; it does not ask a model again.
+The main pane owns page scrolling, while history scrolls independently. On mobile,
+the document reader saves that main-pane position before opening Original and
+restores it on return to Content. Try that round trip halfway down a PDF to check
+the behavior yourself without triggering any model work.
+
 The web container serves React assets and forwards `/api/` requests to FastAPI.
 It removes that prefix: the backend route is still `/documents`, for example.
 The frontend never connects directly to PostgreSQL or Redis.

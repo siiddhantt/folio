@@ -3,7 +3,7 @@ import { ArrowUp } from 'lucide-react';
 import { ApiError, errorMessage, request } from '../api';
 import { Button, Notice } from '../components/ui';
 import type { Turn } from './types';
-import { questionIntentKey } from './useConversation';
+import { questionDraftKey, questionIntentKey } from './useConversation';
 
 interface Intent {
   key: string;
@@ -29,7 +29,9 @@ export function QuestionComposer({
   onConflict: () => void;
 }) {
   const [intent, setIntent] = useState(() => savedIntent(conversationId));
-  const [question, setQuestion] = useState(intent?.question || '');
+  const [question, setQuestion] = useState(
+    () => intent?.question || sessionStorage.getItem(questionDraftKey(conversationId)) || '',
+  );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   async function send() {
@@ -46,6 +48,7 @@ export function QuestionComposer({
         body: JSON.stringify({ question: operation.question }),
       });
       sessionStorage.removeItem(questionIntentKey(conversationId));
+      sessionStorage.removeItem(questionDraftKey(conversationId));
       onAccepted(turn);
     } catch (e) {
       setError(errorMessage(e));
@@ -76,7 +79,10 @@ export function QuestionComposer({
         maxLength={4000}
         value={question}
         disabled={busy || !!intent}
-        onChange={(event) => setQuestion(event.target.value)}
+        onChange={(event) => {
+          setQuestion(event.target.value);
+          sessionStorage.setItem(questionDraftKey(conversationId), event.target.value);
+        }}
       />
       {error && (
         <Notice error>

@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, FileText } from 'lucide-react';
+import { FileText } from 'lucide-react';
 import { Button, Notice } from '../components/ui';
 import { Answer } from './Answer';
 import { NewChatButton } from './NewChatButton';
@@ -9,36 +9,37 @@ import { SourcePanel } from './SourcePanel';
 import { useConversation } from './useConversation';
 import type { Citation } from './types';
 
-export function ConversationPage() {
+export function ConversationPage({ onTurnChanged }: { onTurnChanged: () => void }) {
   const { conversationId = '' } = useParams();
-  return <ConversationWorkspace key={conversationId} id={conversationId} />;
+  return (
+    <ConversationWorkspace key={conversationId} id={conversationId} onTurnChanged={onTurnChanged} />
+  );
 }
 
-function ConversationWorkspace({ id }: { id: string }) {
-  const { conversation, turn, error, loaded, setTurn, reload } = useConversation(id);
+function ConversationWorkspace({ id, onTurnChanged }: { id: string; onTurnChanged: () => void }) {
+  const { conversation, turn, error, loaded, setTurn, reload } = useConversation(id, onTurnChanged);
   const [source, setSource] = useState<Citation | null>(null);
   const active = turn?.state === 'pending' || turn?.state === 'running';
+  useEffect(() => {
+    if (conversation) document.title = `${conversation.document_name} · Folio`;
+  }, [conversation?.document_name]);
   return (
     <div className="chat-page">
       <div className="chat-heading">
         <div className="chat-heading-title">
-          <Button variant="ghost" size="icon" asChild>
-            <Link to="/" aria-label="All conversations">
-              <ArrowLeft aria-hidden="true" />
-            </Link>
-          </Button>
+          <FileText aria-hidden="true" />
           <h1>{conversation?.document_name || 'Conversation'}</h1>
         </div>
         {conversation && (
           <Button variant="outline" size="sm" asChild>
-            <Link to={`/documents/${conversation.document_id}`}>
-              <FileText aria-hidden="true" />
-              Document
-            </Link>
+            <Link to={`/documents/${conversation.document_id}`}>View document</Link>
           </Button>
         )}
       </div>
-      <div className="chat-content">
+      <div className={`chat-content${loaded && !turn ? ' chat-empty' : ''}`}>
+        <p className="sr-only" role="status">
+          {turn?.state === 'ready' ? 'Answer ready.' : ''}
+        </p>
         {error && (
           <Notice error>
             {error}{' '}
@@ -65,7 +66,14 @@ function ConversationWorkspace({ id }: { id: string }) {
               )}
             </>
           ) : (
-            <QuestionComposer conversationId={id} onAccepted={setTurn} onConflict={reload} />
+            <QuestionComposer
+              conversationId={id}
+              onAccepted={(turn) => {
+                setTurn(turn);
+                onTurnChanged();
+              }}
+              onConflict={reload}
+            />
           ))}
       </div>
       {source && conversation && (
