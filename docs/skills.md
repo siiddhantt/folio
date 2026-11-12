@@ -13,15 +13,20 @@ to a compatible agent; it does not run a workflow or add an application dependen
 | [`codebase-design`](../.agents/skills/codebase-design/SKILL.md) | Keep complex behavior behind a small, understandable interface. Supplies the design vocabulary referenced by `tdd`. | When an interface or test boundary needs a design decision. It does not require an architecture workshop for every change. |
 | [`evaluate-rag`](../.agents/skills/evaluate-rag/SKILL.md) | Diagnose retrieval separately from answer generation, then measure the failure that matters. | After inspecting real traces from Folio. Start with manually checked questions and supporting passages; synthetic questions are supplementary. |
 | [`error-discovery`](../.agents/skills/error-discovery/SKILL.md) | Organize a human review of output traces into concrete failure modes. | Only when the user explicitly chooses an interactive trace-review session. Its larger annotation interface is optional development tooling, outside Folio's product scope. |
+| [`better-layout`](../.agents/skills/better-layout/SKILL.md) | Review grouping, shared alignment edges and responsive structure. | For an accepted interface change; preserve the existing spacing and density conventions. |
+| [`better-accessibility`](../.agents/skills/better-accessibility/SKILL.md) | Review navigation, focus, accessible controls and dynamic feedback. | For the changed user journey; distinguish executable checks from unverified assistive-technology coverage. |
+| [`better-typography`](../.agents/skills/better-typography/SKILL.md) | Review text hierarchy, line measure, wrapping and input readability. | Keep the existing font unless a font change is requested. |
+| [`better-ui`](../.agents/skills/better-ui/SKILL.md) | Refine consistent controls, surfaces and interaction states. | After the interaction works; preserve Folio's restrained visual style rather than adding decorative motion. |
 
-No executable scripts are bundled in these four folders. Their Markdown examples
+No executable scripts are bundled in these eight folders. Their Markdown examples
 are guidance, not commands that run during installation. `error-discovery` can
 generate and run a local review interface when explicitly invoked; any libraries
 or services needed at that point are a separate decision.
 
 ## Provenance and licensing
 
-Reviewed on November 6, 2026. These exact commits were the upstream default-branch
+Initial workflows reviewed on November 6, 2026; interface additions on November
+12. These exact commits were the upstream default-branch
 revisions observed during the review; a date establishes what was inspected, not
 a promise about future maintenance.
 
@@ -29,6 +34,15 @@ a promise about future maintenance.
 | --- | --- | --- | --- | --- |
 | [Matt Pocock's skills](https://github.com/mattpocock/skills) | `skills/engineering/tdd`, `skills/engineering/codebase-design` | [`4ae2317ddb22b046e26455e4f9c9b3aaaf62212d`](https://github.com/mattpocock/skills/commit/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d) | October 31, 2026 | MIT |
 | [AI Evals course skills](https://github.com/ai-evals-course/evals-skills) | `skills/evaluate-rag`, `skills/error-discovery` | [`80d5f7b0127c7572ed9e9339937adbfd7240ffeb`](https://github.com/ai-evals-course/evals-skills/commit/80d5f7b0127c7572ed9e9339937adbfd7240ffeb) | September 24, 2026 | Apache-2.0 |
+| [Jakub Krehel's skills](https://github.com/jakubkrehel/skills) | `skills/better-layout`, `skills/better-accessibility`, `skills/better-typography`, `skills/better-ui` | [`8b254eb75dadf3615a6abce87aed28e1b6e4d77c`](https://github.com/jakubkrehel/skills/commit/8b254eb75dadf3615a6abce87aed28e1b6e4d77c) | November 10, 2026 | MIT |
+
+The four Jakub Krehel workflows were explicitly requested and reviewed on November
+12. All 28 upstream files, including local references and agent metadata, were
+inspected and verified against the pinned Git objects. Only provenance and the
+upstream MIT license were added. The umbrella and unrelated workflows were not
+installed. Cross-references to other domains are guidance, not authorization to
+install more skills or expand the product scope. These are repository-local
+instructions, not frontend runtime dependencies or a global tool installation.
 
 Every folder contains `UPSTREAM.json` with the source, commit, path, original file
 hashes and modifications, plus `UPSTREAM-LICENSE.txt`. The complete instructions,
@@ -64,7 +78,7 @@ review process. `evaluate-rag` and `error-discovery` have no mandatory skill-pac
 dependencies. Personal teaching or code-walkthrough tools can complement these
 workflows without becoming a requirement for contributors.
 
-The four folders are ordinary repository files, so they travel with a clone.
+The skill folders are ordinary repository files, so they travel with a clone.
 Compatible agents discover `.agents/skills` according to their own support for the
 [Agent Skills format](https://agentskills.io/home). Discovery, execution tooling,
 authentication and updates remain separate concerns.

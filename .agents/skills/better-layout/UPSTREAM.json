@@ -1,0 +1,14 @@
+{
+  "repository": "https://github.com/jakubkrehel/skills",
+  "commit": "8b254eb75dadf3615a6abce87aed28e1b6e4d77c",
+  "path": "skills/better-layout",
+  "license": "MIT",
+  "reviewed_on": "2026-11-12",
+  "modifications": "Added UPSTREAM.json and UPSTREAM-LICENSE.txt only; workflow content unchanged.",
+  "upstream_files": {
+    "agents/openai.yaml": "d51a2ca663c9331f8f23b7a550e5f848f83e81361e21f2280cc384e99cc0ae15",
+    "grouping-and-alignment.md": "30057c8e063a3cb0026140c82de0c16510080c7c306876caacba1206d7e2483a",
+    "SKILL.md": "4e7fd6880f41a87a21bb3be8e0b2bd7e7b8c561af5fb706ec0bb3e58877d60ec",
+    "spacing-and-adaptivity.md": "1b7e015f520b5e34cf9712fbb6586deb57a7c9f9902b54aa465719e9e5678958"
+  }
+}
