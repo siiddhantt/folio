@@ -89,16 +89,18 @@ input and code versions are recorded at first admission; retries after admission
 must match that manifest. A never-admitted queued run can use newer preparation
 code after a deployment, so the manifest is authoritative for actual provenance.
 
-Token admission uses the selected upstream tokenizer plus a margin. Monetary
-admission reserves the route's full prompt ceiling plus maximum output, not the
-estimated input bill. The selected DeepSeek route omits its separate prompt cap;
-Folio conservatively reserves its combined context ceiling for input instead:
-$0.3342336 at the observed rates. This is an upper bound for financial admission,
-not a claim that the provider accepts that many input tokens. The smaller local
-64,000-token admission limit still applies. Unknown
-outcomes retain that reservation; retries require a fresh one. An uncertain
-call therefore leaves insufficient room for another full reservation under the
-$0.40 document cap, even with two attempts configured. Invalid summary
+Token admission uses the selected upstream tokenizer plus a margin. New upload
+policies reserve the configured input allowance (constrained by provider prompt
+and combined-context limits) plus maximum output. With 64,000 input and 16,384
+output tokens, the observed DeepSeek rates produce a $0.0388608 hold. The output
+ceiling is unchanged. Reservation version 2 is a code-owned policy field; policies
+without it retain the legacy $0.3342336 calculation on retries. Existing unknown
+holds are never reduced on deployment. This is estimate-based admission, not a
+provider-enforced dollar guarantee. Unknown outcomes retain their hold; retries
+require a fresh one. Late known charges settle even after ownership expires.
+Reported cost or input exceeding its reservation pauses new paid admissions and
+appears in the console; running calls can still finish. See [accounting](ai-budget.md).
+Invalid summary
 configuration cannot prevent usable extraction publication. The client rejects
 unsupported limits, parameters and tiered pricing. Output exhaustion is terminal
 with `SUMMARY_OUTPUT_LIMIT`; no adaptive retry increases the allowance. Configurability does

@@ -13,11 +13,38 @@ Docling processes PDF native text and English OCR. Usable partial evidence remai
 OpenRouter is the selected initial model gateway. Automatic summaries use
 DeepSeek V4.1 Flash 1017 on the explicitly selected Together standard route through
 OpenRouter, with a persistent $1 deployment and owner-approved $0.40 document
-allowance, now shared with embeddings. This is an evaluation candidate, not a
+allowance, shared with embeddings and now authorized for conversation stages too.
+Conversation stages are not implemented yet. This is an evaluation candidate, not a
 general quality guarantee. Indexing uses Docling peer merging with heading
 preservation, OpenRouter OpenAI small embeddings and PostgreSQL/pgvector. Question
 retrieval and chat remain separate increments. Configuration uses a commentless
 ignored `.env` and a safe template.
+
+## Conversation design checkpoint — November 12
+
+The owner requested researched question answering, saved conversations,
+multi-turn context and long-history handling. The [conversation proposal](conversations.md)
+maps one indexed PDF through question resolution, scoped retrieval, cited
+answers and reloadable history. Primary-source research supports token-bounded
+recent history plus occasional lossy memory; it does not establish a universal
+standard or Folio quality. Independent review identified the shared parser queue,
+15-second dispatch cycle, new paid-stage accounting, concurrent-tab ordering,
+memory coverage and full-provider-ceiling reservations as concrete concerns.
+
+Proposed: a dedicated chat worker using existing Redis, one active turn per
+conversation, durable stage checkpoints, original transcripts plus versioned
+memory, and explicit clarification/evidence-limit outcomes. The owner accepted
+automatic history summaries and sharing the unchanged allowance across question
+embeddings, rewriting, answers and memory calls. The owner also accepted after-answer precomputation with an early token trigger
+and a before-request fallback. It needs a separate lightweight worker for actual
+overlap, immutable-prefix/version checks, and financial admission that does not
+let background reservations crowd out answers. Model/accounting and concrete
+output limits remain to resolve before live use. The immediate prerequisite is
+the [reservation correction](ai-budget.md), accepted as a separate test-first
+increment before chat. It includes late summary billing and preserves legacy
+holds. Version 2 now prices the stage input allowance plus maximum output, with
+visible admission pauses on overruns. Worker verification and independent review
+are in progress. No paid calls or budget increases are needed for this correction.
 
 ## Source-linked indexing increment — November 12
 

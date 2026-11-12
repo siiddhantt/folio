@@ -45,6 +45,15 @@ Example: a PDF page says a report covers April-June. A correct answer should ide
 
 Status: one selected PDF per conversation accepted. Answer and insufficient-evidence policies remain open.
 
+November 12: the owner requested the complete question/answer and history flow,
+including researched context compression and scaling/failure tradeoffs. The
+[conversation proposal](conversations.md) is under review. Automatic history
+summaries and sharing the existing allowance across all conversation model calls
+are accepted. The owner then accepted hybrid timing: early after-answer
+precomputation plus a before-request fallback. Concurrency, answer and admission
+details remain under design; the [budget correction](ai-budget.md) is accepted
+as the prerequisite increment before chat implementation.
+
 - One selected document: simplest scope and evidence verification; multi-turn questions still work.
 - A selected set: enables comparison but adds conflicts, cross-document citations, and more retrieval cases.
 - Entire library: convenient discovery, but ambiguity and unintended source mixing become harder to control.
@@ -242,6 +251,21 @@ per document. Admission uses one database lock and combined spending, preserving
 historical charges and uncertain reservations. The live indexing run cost
 $0.00032692; cumulative observed spending is $0.232598024. Query/answer calls
 remain outside this completed indexing increment.
+
+Subsequently on November 12, the owner authorized question embeddings, follow-up
+rewriting, answer generation and occasional history summaries to share that same
+remaining allowance and $0.40 document cap, with no increase. The authorization
+does not reset prior charges. Conversation implementation and financial admission
+details remain separate from the accepted spending scope.
+
+Also on November 12, the owner selected fixed per-stage input allowances plus
+maximum billed output for new generation reservations (version 2), rather than
+the provider's full prompt capacity. Keep the $1/$0.40 limits and existing ledger.
+This is estimate-based admission, not an absolute no-overshoot guarantee. Preserve
+legacy policy calculations and unknown holds; settle late reported costs even
+after publication ownership expires. An observed reservation overrun pauses new
+paid calls visibly while in-flight calls still settle. No adaptive retries or
+chat implementation belong in this correction. See [accounting](ai-budget.md).
 
 ## D12: API shape, performance, and monitoring
 
