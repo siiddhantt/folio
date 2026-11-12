@@ -1,3 +1,5 @@
+import type { FailureDiagnostics } from './development/types';
+
 export interface Capabilities {
   max_upload_bytes: number;
   max_pages: number;
@@ -78,4 +80,50 @@ export interface Diagnostic {
   message?: string;
   error_message?: string;
   [key: string]: unknown;
+}
+
+export interface IndexStatus {
+  index_id: string | null;
+  state: 'not_started' | 'pending' | 'running' | 'ready' | 'unavailable' | 'failed';
+  chunk_count: number;
+  embedded_chunks: number;
+  model_id: string | null;
+  dimensions: number | null;
+  error_code: string | null;
+  created_at: string | null;
+  started_at: string | null;
+  finished_at: string | null;
+  available_at: string | null;
+  lease_expires_at: string | null;
+  dispatch_error: string | null;
+  coverage: { diagnostics: Diagnostic[]; pages_without_content: number[] };
+  exclusions: { element_id: string; reason: string }[];
+  warnings: Diagnostic[];
+}
+
+export interface IndexInspection extends IndexStatus {
+  has_more: boolean;
+  attempts: {
+    id: string;
+    attempt_no: number;
+    batch_no: number | null;
+    state: 'running' | 'succeeded' | 'failed';
+    started_at: string;
+    finished_at: string | null;
+    invoked_at: string | null;
+    error_code: string | null;
+    failure_diagnostics: FailureDiagnostics | null;
+    billing_state: 'none' | 'reserved' | 'known' | 'unknown';
+    reserved_usd: number | null;
+    cost_usd: number | null;
+    response_id: string | null;
+    input_hash: string | null;
+    chunk_ordinals: number[];
+    usage: {
+      prompt_tokens?: number | null;
+      input_tokens?: number | null;
+      model?: string;
+      requested_provider?: string;
+    };
+  }[];
 }

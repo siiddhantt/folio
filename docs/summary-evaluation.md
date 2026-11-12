@@ -1,4 +1,6 @@
-# Summary evaluation, November 11, 2026
+# Summary evaluation
+
+Latest observation: November 12, 2026. Earlier checkpoints retain their dates.
 
 These are small development observations, not a general accuracy benchmark.
 Independent agent source review found the failures below; the owner has not yet
@@ -230,6 +232,36 @@ navigation and reload; reads did not create another call. The prompt was not
 tuned after these results. Completion/headroom improved on these examples;
 citation correctness, qualification preservation and content selection still
 need work before a general quality claim.
+
+## Single-document development baseline — November 12
+
+The public [FEMA NFIP Dwelling Form, F-122 / October 2021](https://www.fema.gov/sites/default/files/documents/fema_F-122-Dwelling-SFIP_2021.pdf)
+was uploaded once to establish the next document-to-answer development example.
+It has 32 physical pages and 393,573 bytes; SHA-256
+`4e91d6417cba13c18d4402083a0c02811da8264be6fcb8557c6afa4f8b6e2e74`.
+This identifies a fixed edition, not a claim about current policy terms.
+
+Unchanged Docling 2.148.0 extraction recovered 633 elements, no tables and no
+content on physical page 2, which was independently viewed as blank. The parser
+took 56.32 seconds on this run. The unchanged DeepSeek V4.1 Flash 1017/Together
+summary used prompt/schema/preparation versions 6/4/3, reasoning off and a 16,384
+completion ceiling. One call finished normally with 27,988 input tokens, 412
+completion tokens and zero reported reasoning tokens. The provider-reported
+known charge saved by Folio was **$0.0088908**, against a $0.3342336 reservation;
+no uncertain amount remains. This charge was not independently reconciled with
+the provider account endpoint in this checkpoint.
+
+Adding this to earlier recorded spending gives **$0.232271104** across 14 calls
+and **$0.767728896** remaining under the original $1 ceiling. Historical charges
+were preserved in the remaining allowance during the authorized local data reset;
+the fresh database does not contain the earlier attempt rows.
+
+The saved summary completed and its source links resolve. This is not a full
+semantic quality review or a passing retrieval evaluation. Proposed source-based
+questions and qualifications still need owner review before tuning. At this
+baseline checkpoint no chunks, embeddings or question answers were generated.
+The subsequent [indexing run](indexing.md) adds $0.00032692 to shared spending;
+question retrieval and answers remain unfinished. See the [walkthrough](retrieval.md).
 
 ## Reproducing and reviewing
 

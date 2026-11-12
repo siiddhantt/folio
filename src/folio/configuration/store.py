@@ -3,6 +3,8 @@ from decimal import Decimal
 
 from psycopg.types.json import Jsonb
 
+from folio.ai.budget import spending
+from folio.indexing.config import capture_policy as capture_index_policy
 from folio.storage import UploadError
 from folio.summaries.config import SummarySettings, capture_policy
 
@@ -41,6 +43,7 @@ def capture_upload(database, settings, idempotency_key):
         "max_upload_bytes": values.max_upload_bytes,
         "settings_revision": current["revision"],
         "summary_policy": policy,
+        "index_policy": capture_index_policy(settings),
     }
     limit = values.max_upload_bytes
     if idempotency_key and len(idempotency_key) <= 200:
@@ -98,11 +101,7 @@ def describe(database, settings, current=None):
         account = connection.execute(
             "SELECT budget_usd FROM summary_budget_account WHERE id=true"
         ).fetchone()
-        spending = connection.execute(
-            "SELECT COALESCE(sum(cost_usd),0) AS spent_usd,"
-            "COALESCE(sum(reserved_usd) FILTER (WHERE billing_state IN ('reserved','unknown')),0) "
-            "AS held_usd FROM summary_attempts"
-        ).fetchone()
+        used = spending(connection)
     allowance = Decimal(policy.get("budget_usd", "0"))
     if account:
         allowance = min(allowance, account["budget_usd"])
@@ -119,8 +118,8 @@ def describe(database, settings, current=None):
             "summary_timeout_seconds": policy.get("timeout_seconds"),
             "document_budget_usd": policy.get("document_budget_usd"),
             "budget_usd": str(allowance),
-            "spent_usd": str(spending["spent_usd"]),
-            "held_usd": str(spending["held_usd"]),
-            "remaining_usd": str(max(Decimal(0), allowance - sum(spending.values()))),
+            "spent_usd": str(used["spent_usd"]),
+            "held_usd": str(used["held_usd"]),
+            "remaining_usd": str(max(Decimal(0), allowance - used["spent_usd"] - used["held_usd"])),
         },
     }

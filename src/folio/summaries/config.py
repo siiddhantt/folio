@@ -1,9 +1,8 @@
-from decimal import Decimal
-
 from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic_settings.exceptions import SettingsError
 
+from folio.ai.budget import BudgetSettings
 from folio.summaries.preparation import PREPARATION_VERSION, PROMPT_VERSION, SCHEMA_VERSION
 
 
@@ -12,7 +11,7 @@ class SummaryCredentials(BaseSettings):
     api_key: SecretStr = Field(default=SecretStr(""), validation_alias="OPENROUTER_API_KEY")
 
 
-class SummarySettings(SummaryCredentials):
+class SummarySettings(SummaryCredentials, BudgetSettings):
     model_config = SettingsConfigDict(
         env_prefix="FOLIO_SUMMARY_", env_file=".env", extra="ignore", populate_by_name=True
     )
@@ -26,8 +25,6 @@ class SummarySettings(SummaryCredentials):
     reasoning_effort: str = "none"
     timeout_seconds: int = Field(default=90, gt=0)
     max_attempts: int = Field(default=2, ge=1, le=2)
-    budget_usd: Decimal = Field(default=Decimal("1"), gt=0)
-    document_budget_usd: Decimal = Field(default=Decimal("0.40"), gt=0)
     base_url: str = Field(
         default="https://openrouter.ai/api/v1", validation_alias="OPENROUTER_BASE_URL"
     )

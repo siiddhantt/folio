@@ -12,12 +12,13 @@ editable controls, not a way to overwrite an existing saved configuration.
 | Name | Meaning | Current state |
 | --- | --- | --- |
 | `OPENROUTER_API_KEY` | Server-side credential for OpenRouter | Supplied locally; never commit or print its value. |
-| `OPENROUTER_BASE_URL` | Base URL for the selected API gateway | `https://openrouter.ai/api/v1` |
+| `OPENROUTER_BASE_URL` | Summary gateway URL | `https://openrouter.ai/api/v1`; the embedding client fixes this same gateway URL in code. |
 
 The ingestion loader is [`Settings`](../src/folio/config.py). It validates positive bounds,
 retry delays and the timeout relationship at startup. Docker Compose forwards only the
 implemented settings. Only the worker receives the OpenRouter credential; it is
-never passed to the API, dispatcher or browser bundle. Summaries default to disabled.
+never passed to the API, dispatcher or browser bundle. Summaries and indexing
+default to disabled.
 
 | Ingestion setting | Default / meaning |
 | --- | --- |
@@ -44,7 +45,8 @@ Compose deliberately supplies private-network URLs and volume/model paths. Its d
 password is a public local-development default, not a production secret.
 
 Accepted requests freeze their processing settings. Console saves apply to new
-uploads, including their eventual summary policy. Changing non-editable `.env`
+uploads, including their eventual summary policy. Each upload also captures the
+environment-managed indexing policy. Changing non-editable `.env`
 settings takes effect after recreating services; it does not rewrite old requests.
 A worker rejects an old
 request if its parser version or current supervision timing is incompatible. Changing parser
@@ -69,8 +71,8 @@ worker receives `OPENROUTER_API_KEY`; no quality pass is implied.
 | `FOLIO_SUMMARY_REASONING_EFFORT` | `none`; checked against model metadata. |
 | `FOLIO_SUMMARY_TIMEOUT_SECONDS` | `90`; provider request timeout. |
 | `FOLIO_SUMMARY_MAX_ATTEMPTS` | `2`; initial attempt plus at most one automatic retry. |
-| `FOLIO_SUMMARY_BUDGET_USD` | `1.00`; persistent deployment allowance, not reset by restart. |
-| `FOLIO_SUMMARY_DOCUMENT_BUDGET_USD` | `0.40`; owner-approved allowance including retries and uncertain calls. |
+| `FOLIO_SUMMARY_BUDGET_USD` | `1.00`; existing persistent deployment allowance shared by summaries and embeddings, not reset by restart. |
+| `FOLIO_SUMMARY_DOCUMENT_BUDGET_USD` | `0.40`; shared document allowance including summary/embedding retries and uncertain calls. |
 
 Current prompt/schema/preparation versions are 6/4/3. Preparation preserves
 parent links alongside text/table content, source IDs and page references. Output
@@ -80,7 +82,7 @@ evidence must fit; there is no truncation, hierarchy, retrieval substitution,
 manual generation or generation on reads. Enabling does not backfill old revisions.
 See the [summary contract and walkthrough](summaries.md).
 
-For new uploads, runtime settings and the summary policy are captured together
+For new uploads, runtime settings, summary policy and indexing policy are captured together
 before multipart processing. Older requests without a saved summary policy keep
 their legacy publication-time capture. Effective
 input and code versions are recorded at first admission; retries after admission
@@ -109,9 +111,58 @@ outside Docker; Compose images use `/opt/tokenizers`. A missing or corrupt asset
 stops before paid work. JSON message/schema counting plus the margin is an
 estimate: provider-specific message framing is not reproduced exactly.
 
-## Deferred chat and embedding controls
+## Document indexing controls
 
-Chat and embeddings remain deferred. The following names are proposals for later
+[`IndexSettings`](../src/folio/indexing/config.py) validates the following settings
+forwarded by Compose and listed in `.env.example`. They apply to future uploads
+or the first explicit indexing intent for an existing revision. A captured
+policy and saved plan are immutable; changing settings does not rewrite stored
+chunks, restart unavailable work or backfill old documents. Indexing has no
+development-console switch.
+
+| Setting | Default / meaning |
+| --- | --- |
+| `FOLIO_INDEX_ENABLED` | `false`; enables indexing intent for new uploads. An explicit first intent also uses this value. |
+| `FOLIO_INDEX_MODEL_ID` | `openai/text-embedding-3-small`; this is the only accepted value. |
+| `FOLIO_INDEX_CHUNK_TOKENS` | `512`; final contextualized chunk ceiling, including headings; valid range 32–8,192. |
+| `FOLIO_INDEX_BATCH_SIZE` | `32`; chunks per provider call and worker delivery; valid range 1–32. |
+| `FOLIO_INDEX_MAX_CHUNKS` | `4096`; complete-plan bound; valid range 1–10,000. An oversized plan is unavailable, not truncated. |
+| `FOLIO_INDEX_TIMEOUT_SECONDS` | `60`; timeout for each provider request; positive and checked against the captured worker execution window. |
+
+The implementation fixes the OpenAI route and its default 1,536 dimensions, with
+no fallback or dimension override. It uses Docling peer merging and
+`always_emit_headings`, counts final text with `cl100k_base`, and stores the exact
+text/hash, ordered source links and versions. Unsupported mapping, lost context
+or an oversized chunk prevents publication. Source locations describe whole
+elements, not verified character spans. Known extraction gaps and outside-body
+exclusions remain visible. Successful batches persist, but the chunks endpoint
+requires the complete index to be ready.
+
+Compose does not expose provider, dimensions, embedding price or retry-count
+variables. The current indexing defaults allow at most two failed attempts for
+the same unfinished batch; a successful batch resets that failure counter.
+Retry timing, queue delivery and execution/lease bounds use the shared runtime
+policy. These implementation limits are not support for arbitrary model swaps.
+See the [indexing walkthrough](indexing.md) for the persisted lifecycle.
+
+The two existing `FOLIO_SUMMARY_*_BUDGET_USD` values above intentionally retain
+their names and now govern both summaries and embeddings. One locked account
+admits calls against combined known charges and uncertain reservations; indexing
+does not add or reset an allowance. Embedding admission reserves counted input
+plus 16 tokens per chunk at a maximum $0.02 per million input tokens. The client
+checks route availability and pricing before invocation. Reported cost replaces
+the reservation, including a late response whose vectors no longer have
+permission to publish. Missing billing retains the reservation, and each retry
+needs a new admission. Summary-specific configuration errors do not invalidate
+otherwise valid embedding settings.
+
+Vectors are stored in pgvector 0.8.7 inside the existing PostgreSQL 18 database.
+Query embeddings, exact-search queries, ranking and answer generation are not
+implemented by these controls.
+
+## Deferred chat controls
+
+Chat remains deferred. The following names are proposals for later
 conversation work, not settings consumed by summaries or added as inert flags to
 the environment template. Their numerical defaults remain open.
 
@@ -125,7 +176,8 @@ the environment template. Their numerical defaults remain open.
 | `AI_REASONING_EFFORT` | A model-specific effort choice. Validate it against the chosen model/route; unsupported values must not silently disappear. |
 | `AI_TIMEOUT_SECONDS` | Maximum wait for a provider response; retries require a separate, bounded policy. |
 
-An embedding model and its dimensions need separate settings when retrieval is designed. They must not inherit the generation model identifier.
+Later question embeddings must use the same frozen embedding space as the
+document index. They must not inherit the generation model identifier.
 
 The provider's model/endpoint context limit is a capability to verify, not a capacity that Folio can enlarge by changing an environment variable. The proposed budget invariant is:
 

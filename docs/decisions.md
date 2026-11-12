@@ -1,6 +1,6 @@
 # Folio decision guide
 
-Updated: 2026-11-11. All recommendations below are proposals unless marked accepted.
+Updated: 2026-11-12. All recommendations below are proposals unless marked accepted.
 
 Each discussion should cover: the user's outcome, two or three realistic options, what each costs, a recommendation, an example, and evidence that could change the recommendation. Resolve dependent questions in order rather than approving the whole stack at once.
 
@@ -9,7 +9,7 @@ Each discussion should cover: the user's outcome, two or three realistic options
 - Name: Folio.
 - General-purpose document assistance, using fact-checking in reports/documents as initial examples. These examples do not constrain content domains.
 - Public source development; no public-service deployment implied.
-- OpenRouter as the initial API gateway. The current summary evaluation uses DeepSeek V4.1 Flash 1017 through the explicit Together route; earlier candidates and quality limitations are recorded in the model notes. Chat and embedding models remain open.
+- OpenRouter as the initial API gateway. The current summary evaluation uses DeepSeek V4.1 Flash 1017 through the explicit Together route. Indexing uses `openai/text-embedding-3-small` through OpenAI at 1,536 dimensions; chat model selection remains open.
 - PDFs with native text and English OCR, with one selected PDF per conversation. Docling is the selected parser; DOCX and other formats remain deferred.
 - Preserve usable partial extraction with explicit coverage warnings; do not globally block summaries/chat when recoverable evidence exists.
 - Develop locally with Docker Compose. The completed Docling/LiteParse comparison informed parser selection.
@@ -91,13 +91,27 @@ Do not equate empty text with definitive evidence of a scan. Report insufficient
 
 ## D07: Chunking
 
-Status: open.
+Status: Docling HybridChunker with peer merging and heading preservation accepted
+November 12 after the offline comparison. Start with the inspected 512-token
+ceiling, with final serialized-text and provenance checks. It remains configurable
+for future uploads; changing configuration does not rewrite existing chunks.
+
+The owner accepted an offline comparison on the saved public PDF, test-first,
+with actual chunk text and source links reviewed before embeddings/storage work.
+The [comparison](chunking-comparison.md) exercised Docling peer merging
+and heading preservation against a small whole-paragraph baseline. The owner
+then selected merged Docling output, preserving headings and whole-element
+source links. It avoids maintaining another splitting engine. The production
+checks reject missing body sources or unlocated context instead of inventing
+citations; extraction and summaries remain usable if indexing fails.
 
 Chunking divides extracted text into pieces that retrieval can return and the model can read.
 
 Options: fixed token windows with overlap; paragraph/section-aware token-bounded pieces; structured parser chunks when a richer parser is selected.
 
-Recommendation: start with paragraph-aware pieces under a token limit, retaining all source spans. Compare a fixed-window baseline before claiming improvement. Choose size/overlap from evidence; avoid magic values presented as universal best practice.
+Decision: reuse the inspected Docling structure and token-bounded merging. Keep
+512 as a starting policy, not a universal optimum; retrieval misses may justify
+a different size. No additional overlap or custom semantic repair is included.
 
 Example: a condition at the end of page 2 may qualify a claim on page 3. Splitting them can lose meaning; joining them must retain both source locators. Large chunks add context but consume tokens and can dilute the relevant passage.
 
@@ -127,7 +141,8 @@ Measure whether expected evidence appears among the retrieved results. Do not us
 
 ## D09: Retrieval storage
 
-Status: open. PostgreSQL is fixed; pgvector is not.
+Status: PostgreSQL + pgvector accepted November 12. Start with exact search;
+approximate vector indexes and a second vector service remain deferred.
 
 | Option | Why choose it | What we take on |
 | --- | --- | --- |
@@ -135,7 +150,10 @@ Status: open. PostgreSQL is fixed; pgvector is not.
 | PostgreSQL + Qdrant | Dedicated vector/hybrid retrieval and independent scaling | Two data systems, synchronization, stale indexes, and coordinated deletion. |
 | Postgres numeric arrays + exact scoring | Tiny baseline where extensions are unavailable | Custom dimension validation/scoring, data movement, and scaling work. |
 
-Recommendation: pgvector with exact search for the initial small corpus, if supported by the chosen environment. This avoids a second service while leaving a measured migration path. It is a recommendation, not an accepted choice.
+Decision: pgvector in the existing database avoids a second service while leaving
+a measured migration path. Version 0.8.7 is pinned in the existing PostgreSQL 18
+image. The indexing slice stores `vector(1536)` values; question search is the
+next increment. There is no approximate vector index yet.
 
 Exact versus approximate search is a separate decision. pgvector supports both. Exact nearest-neighbor recall means the mathematical nearest vectors were found, not that they contain the right answer. Add approximate indexes only after relevant latency/recall measurements.
 
@@ -169,7 +187,8 @@ Accepted next increment: automatically create one saved, cited summary from all
 usable evidence in one immutable extraction revision, using one model call per
 attempt. If the complete input exceeds its limit, expose the summary's unavailable
 reason and keep evidence usable; do not truncate or substitute search hits.
-Section-note synthesis, embeddings and retrieval remain deferred.
+Section-note synthesis and question retrieval remain deferred. Embeddings now
+have the separate accepted indexing path below.
 
 The [summary contract](summaries.md) clarifies that source preparation comes
 before generation. The bounded complete-input call is selected; section notes
@@ -181,6 +200,15 @@ document. Automatic retries remain bounded within the same workflow. A shared
 token-budget function checks instructions, evidence labels, structured tables,
 output-schema overhead and a margin against the selected model/route limits.
 Summary configuration is separate from future chat and embedding settings.
+
+Accepted November 12: source-linked indexing uses OpenRouter's
+`openai/text-embedding-3-small`, pinned to the OpenAI route with fallbacks off,
+default 1,536 dimensions and a $0.02/M input-price cap. New enabled uploads freeze
+the indexing policy alongside ingestion/summary settings. An explicit idempotent
+POST can create the first index for an older revision without a second upload.
+One index per revision is supported; replacement/reindex generations are deferred.
+The worker checkpoints batches of at most 32 chunks and publishes readiness only
+after every planned vector is saved. See [indexing](indexing.md).
 
 Accepted output on November 10: a short overview and 3–5 cited key points, with
 known extraction gaps displayed. On November 11 the owner accepted 1–2 points for
@@ -207,6 +235,13 @@ Software tests: one observable behavior at a time; fail first, then implement an
 Live evaluations: inspect extraction, retrieval, answer support, citation correctness, abstention, and conversation behavior separately. Record versions and latency/usage. Establish a held-out set before tuning. A small sample finds errors but does not justify a general accuracy claim.
 
 Agree a maximum live-evaluation spend, a per-document limit, and a response budget before running paid calls. Account credits are not the same as a product budget. Report unknown costs and unavailable usage fields rather than inventing them. Calibrate any later model judge against human labels.
+
+On November 12 the owner explicitly extended the existing allowance to cover
+embeddings and summaries together, with no increase: $1 cumulative and $0.40
+per document. Admission uses one database lock and combined spending, preserving
+historical charges and uncertain reservations. The live indexing run cost
+$0.00032692; cumulative observed spending is $0.232598024. Query/answer calls
+remain outside this completed indexing increment.
 
 ## D12: API shape, performance, and monitoring
 

@@ -1,3 +1,4 @@
+from folio.indexing.inspection import inspect_index
 from folio.summaries.inspection import inspect_summary
 
 SAFE_CONFIGURATION = (
@@ -71,4 +72,5 @@ def inspect_request(database, request_id, after_id=0, limit=100):
         request["events"] = events[:limit]
         request["next_after_id"] = events[limit - 1]["id"] if len(events) > limit else None
         request["summary"] = inspect_summary(connection, request_id)
+        request["indexing"] = inspect_index(connection, request_id)
         return request

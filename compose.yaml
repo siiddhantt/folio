@@ -30,6 +30,12 @@ x-settings: &settings
   FOLIO_SUMMARY_BUDGET_USD: ${FOLIO_SUMMARY_BUDGET_USD:-1.00}
   FOLIO_SUMMARY_DOCUMENT_BUDGET_USD: ${FOLIO_SUMMARY_DOCUMENT_BUDGET_USD:-0.40}
   OPENROUTER_BASE_URL: ${OPENROUTER_BASE_URL:-https://openrouter.ai/api/v1}
+  FOLIO_INDEX_ENABLED: ${FOLIO_INDEX_ENABLED:-false}
+  FOLIO_INDEX_MODEL_ID: ${FOLIO_INDEX_MODEL_ID:-openai/text-embedding-3-small}
+  FOLIO_INDEX_CHUNK_TOKENS: ${FOLIO_INDEX_CHUNK_TOKENS:-512}
+  FOLIO_INDEX_BATCH_SIZE: ${FOLIO_INDEX_BATCH_SIZE:-32}
+  FOLIO_INDEX_MAX_CHUNKS: ${FOLIO_INDEX_MAX_CHUNKS:-4096}
+  FOLIO_INDEX_TIMEOUT_SECONDS: ${FOLIO_INDEX_TIMEOUT_SECONDS:-60}
 
 services:
   web:
@@ -44,7 +50,8 @@ services:
       timeout: 3s
       retries: 5
   postgres:
-    image: postgres:18@sha256:e3d24f6906d0760bf4da0dae872415391ededefad23fd471c47dc53b0ddf3c42
+    image: folio-postgres:local
+    build: {context: ., dockerfile: docker/postgres.Dockerfile}
     environment:
       POSTGRES_USER: folio
       POSTGRES_PASSWORD: folio

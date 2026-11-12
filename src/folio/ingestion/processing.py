@@ -6,6 +6,7 @@ import psycopg
 
 from folio.config import Settings
 from folio.database import Database
+from folio.indexing.config import capture_policy as capture_index_policy
 from folio.ingestion.ownership import claim_attempt, observe
 from folio.ingestion.publication import publish
 from folio.ingestion.recovery import finish_failure
@@ -68,7 +69,8 @@ def process_attempt(request_id, attempt_id, *, settings=None, parser=None):
                 if "summary_policy" in claim.config
                 else capture_policy(settings)
             )
-            revision_id = publish(database, claim, extraction, raw, policy)
+            index_policy = claim.config.get("index_policy") or capture_index_policy(settings)
+            revision_id = publish(database, claim, extraction, raw, policy, index_policy)
         except ExtractionError as exc:
             diagnostic = None
             try:

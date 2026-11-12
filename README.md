@@ -23,7 +23,9 @@ Automatic summaries are implemented with checked persistence, budget and failure
 contracts. The current configuration completed summaries of three tested PDFs,
 including a 59-page report, without exhausting output. Source review still finds
 citation and qualification weaknesses; no general quality pass is claimed. Generation defaults to disabled.
-Chat and embeddings remain deferred.
+Source-linked indexing uses Docling merging and OpenRouter embeddings stored in
+pgvector. Activity shows batch progress and billing; only complete indexes expose
+their chunks. Question retrieval and chat remain the next increments.
 
 ## Run locally
 
@@ -75,8 +77,16 @@ is enabled with DeepSeek V4.1 Flash 1017 through OpenRouter/Together, reasoning
 `none`, a fixed 16,384-token completion ceiling and prompt/schema/preparation
 versions 6/4/3; the template remains disabled. [Recorded live calls](docs/summary-evaluation.md)
 separate completion, spending and source correctness. The latest three calls
-cost $0.016125504; cumulative measured spending is $0.223380304 with no unknown
-billing. These small development comparisons do not establish general accuracy.
+cost $0.016125504. A subsequent public-document summary and indexing run bring
+cumulative measured spending to $0.232598024 with no unknown billing. These small
+development comparisons do not establish general accuracy.
+
+To index new uploads, set `FOLIO_INDEX_ENABLED=true` in the existing `.env` and
+recreate services. The same worker-side OpenRouter key is used. Summaries and
+embeddings share the existing allowance; enabling indexing adds no fresh budget.
+The template keeps paid processing disabled. Read the [indexing guide](docs/indexing.md)
+for saved chunks, explicit indexing of an older revision, failure recovery and
+inspection routes. The pinned PostgreSQL/pgvector build currently targets Linux amd64.
 
 For the summary source walkthrough, read [preparation.py](src/folio/summaries/preparation.py),
 [processing.py](src/folio/summaries/processing.py), then [lifecycle.py](src/folio/summaries/lifecycle.py)
@@ -96,6 +106,7 @@ stays charged against the allowance and why a late worker cannot replace a newer
 - [Development console](docs/development-console.md): saved controls for new uploads and reproducible experiments.
 - [Processing runs](docs/processing-runs.md): history, saved failures and the query/index walkthrough.
 - [Summaries](docs/summaries.md): automatic complete-input behavior, citations, spending and source walkthrough.
+- [Indexing](docs/indexing.md): source-linked chunks, embeddings, batch recovery and shared spending.
 - [Interface contract](docs/interface.md): the small document workflow, design and verification boundaries.
 - [Interface walkthrough](docs/interface-walkthrough.md): follow a real upload through the UI and backend.
 - [Ingestion investigation](docs/ingestion.md): parser research, local comparison, and source-preservation findings.

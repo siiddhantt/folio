@@ -13,9 +13,65 @@ Docling processes PDF native text and English OCR. Usable partial evidence remai
 OpenRouter is the selected initial model gateway. Automatic summaries use
 DeepSeek V4.1 Flash 1017 on the explicitly selected Together standard route through
 OpenRouter, with a persistent $1 deployment and owner-approved $0.40 document
-allowance. This is an evaluation candidate, not a general quality guarantee. Chat/embedding models,
-retrieval and vector storage remain deferred. Configuration uses a commentless
+allowance, now shared with embeddings. This is an evaluation candidate, not a
+general quality guarantee. Indexing uses Docling peer merging with heading
+preservation, OpenRouter OpenAI small embeddings and PostgreSQL/pgvector. Question
+retrieval and chat remain separate increments. Configuration uses a commentless
 ignored `.env` and a safe template.
+
+## Source-linked indexing increment — November 12
+
+The owner selected Docling HybridChunker with peer merging, heading preservation
+and an initial 512-token ceiling after the [comparison](chunking-comparison.md).
+The implemented [indexing slice](indexing.md) freezes this policy at upload,
+creates durable intent with extraction publication, checkpoints embedding batches
+and exposes only complete indexes. A bounded Activity section shows actual
+attempts, progress, safe failures, model details and billing. Summary and index
+failures do not remove usable extracted evidence.
+
+OpenRouter `openai/text-embedding-3-small` is pinned to the OpenAI route with
+fallbacks disabled, default 1,536 dimensions and a $0.02/M input cap. Shared
+spending admission preserves the existing allowance and historical charges; the
+owner explicitly approved sharing without an increase. The PostgreSQL 18 image
+adds pinned pgvector 0.8.7; migration 008 preserved the existing document and
+summary. This build targets Linux amd64. No approximate search index is present.
+
+The single public FEMA October 2021 Dwelling Form was indexed without reuploading
+or reparsing: 62 chunks, 16,346 reported input tokens and 62 stored vectors. Both
+batches succeeded; the actual cost was $0.00032692, bringing cumulative spending
+to $0.232598024 and leaving $0.767401976 with no uncertain charge. Replaying the
+index request reused the same saved result. The existing 633 source elements,
+31-of-32-page coverage observation and summary remain intact. The no-content
+page was visually blank; its stored partial-extraction state is not rewritten.
+
+Read-only browser inspection verified both attempt records, nonzero cost values,
+reload persistence and 390-pixel wrapping without clipping. API, worker and
+dispatcher restarts preserved readiness, all 62 chunks and the same two calls.
+Source checks found the garage clause in chunk 10 linked to physical page 5 and
+the mudflow definition in chunk 7 linked to pages 4–5. The temporary comparison
+viewer was stopped after the application inspection passed.
+
+Validation: 119 backend checks passed with real isolated PostgreSQL/Redis and
+Docling, excluding the opt-in supervision test; two subtests also passed. The
+focused browser regression, frontend types/build, Ruff and formatting checks
+passed. Independent review found and fixed late-charge recording, lost original
+failure diagnostics and unintended coupling to summary model configuration; no
+remaining actionable backend finding was reported. Test cases cover queue
+outage, stale ownership, timeout reservations, bounded retries, batch reuse,
+source scope and combined budget admission. Live execution establishes provider
+compatibility and persistence, not retrieval or answer quality.
+
+Temporary comparison code was replaced by the maintained chunker and its tests;
+observations remain in documentation, with generated reports ignored. Known
+limitations: whole-element citations; unsupported source/context mappings fail
+indexing rather than silently dropping content; one index per revision; no table
+retrieval evaluation, reindex-generation API or general semantic-quality claim.
+
+The [retrieval walkthrough](retrieval.md) separates implemented indexing from
+next-step scoped search and cited answers. Review expected source passages before
+live retrieval evaluation; the public PDF cannot validate table behavior. Keep
+future automated fixtures in isolated storage so the working application stays
+with one document.
 
 ## Processing runs increment — November 12
 
@@ -52,10 +108,9 @@ summaries, then restored the saved preference. No new paid call occurred and the
 prior cumulative spending allowance was preserved. Parser/supervision unit
 suites were not rerun; the real smoke exercised the unchanged parsing path.
 
-Current model research proposes hosted OpenAI small embeddings and a Luna answer
-comparison, with a local embedding alternative. Tokenizer/pricing compatibility,
-chunking, retrieval storage and answer behavior are still decisions to settle;
-none was implemented or enabled by this increment. See [model notes](models.md).
+At this earlier history checkpoint, model research proposed hosted OpenAI small
+embeddings and a Luna answer comparison. The subsequent indexing acceptance and
+implementation are recorded above; answer selection remains open. See [model notes](models.md).
 
 ## Reading workspace increment — November 11
 
@@ -330,10 +385,10 @@ the workflow, not the semantic accuracy of all extracted content. Native PDF
 rendering varies by browser; page pixels were not validated in the in-app viewer,
 and open/download actions remain available. Normal worker operation was restored.
 
-Walk through the saved development controls and actual request snapshots with
-the owner. The bounded DeepSeek comparison is complete, with the source-support
-limitations recorded above; review those results before beginning grounded
-answers, chunking, retrieval or indexing. Previous GPT-5.1 results remain frozen;
+Walk through the saved development controls, actual request snapshots and
+indexing attempts with the owner. The bounded DeepSeek comparison is complete,
+with source-support limitations recorded above; those remain relevant before
+selecting grounded-answer behavior. Previous GPT-5.1 results remain frozen;
 no document-specific prompt tuning is planned.
 Chat/history, global statistics,
 the final document-chat demonstration/video and selected optional capabilities

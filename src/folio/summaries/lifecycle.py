@@ -5,6 +5,7 @@ from uuid import uuid4
 
 from psycopg.types.json import Jsonb
 
+from folio.ai.budget import admission_error, lock_account
 from folio.observability import exception_details
 
 
@@ -85,29 +86,14 @@ def reserve_invocation(database, claim, manifest):
     """Reserve and mark the possible external side effect before sending any bytes."""
     amount = Decimal(manifest["reservation_usd"])
     with database.transaction() as connection:
-        connection.execute(
-            "INSERT INTO summary_budget_account(id,budget_usd) VALUES (true,%s) "
-            "ON CONFLICT DO NOTHING",
-            (Decimal(claim.policy["budget_usd"]),),
-        )
-        account = connection.execute(
-            "SELECT * FROM summary_budget_account WHERE id=true FOR UPDATE"
-        ).fetchone()
+        allowance = lock_account(connection, claim.policy["budget_usd"])
         if owned(connection, claim) is None:
             return "SUPERSEDED"
-        spent = connection.execute(
-            """SELECT COALESCE(sum(COALESCE(a.cost_usd,a.reserved_usd)),0) AS total,
-            COALESCE(sum(COALESCE(a.cost_usd,a.reserved_usd))
-                FILTER (WHERE r.document_id=%s),0) AS document
-            FROM summary_attempts a JOIN summary_runs r ON r.id=a.run_id""",
-            (claim.document_id,),
-        ).fetchone()
-        if spent["document"] + amount > Decimal(claim.policy["document_budget_usd"]):
-            return "SUMMARY_DOCUMENT_BUDGET"
-        if spent["total"] + amount > min(
-            account["budget_usd"], Decimal(claim.policy["budget_usd"])
-        ):
-            return "SUMMARY_GLOBAL_BUDGET"
+        error = admission_error(
+            connection, claim.document_id, amount, allowance, claim.policy["document_budget_usd"]
+        )
+        if error:
+            return f"SUMMARY_{error}"
         connection.execute(
             "UPDATE summary_attempts SET invoked_at=clock_timestamp(),reserved_usd=%s,"
             "billing_state='reserved' WHERE id=%s",

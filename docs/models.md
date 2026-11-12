@@ -5,14 +5,17 @@ Latest check: November 12, 2026; earlier investigations retain their dates below
 OpenRouter is the accepted API gateway. DeepSeek V4.1 Flash 1017 is the current
 summary evaluation candidate. The owner delegated a cost-conscious
 choice; this does not establish model quality. Summary, later chat and embeddings
-have separate configuration and evaluation needs.
+have separate configuration and evaluation needs. Document embeddings now use
+the accepted OpenAI small route below; the answer model remains unselected.
 
-## Retrieval and answer candidates — November 12
+## Indexing selection and answer candidates — November 12
 
-Status: proposed, not accepted or implemented. This research used primary
-documentation and public catalogs; no inference, configuration change or paid
-evaluation occurred. Chunking, retrieval storage and answer behavior remain open
-in decisions D07–D10. OpenRouter remains the accepted gateway.
+The initial research used primary documentation and public catalogs without paid
+calls. The owner subsequently accepted Docling peer merging with heading
+preservation, OpenAI small embeddings through OpenRouter, and pgvector storage.
+Indexing is implemented; query embedding, retrieval ranking and answer generation
+remain unimplemented. D07–D10 record the boundary, and the
+[indexing walkthrough](indexing.md) records the implementation and live outcome.
 
 ### Embeddings
 
@@ -21,7 +24,11 @@ in decisions D07–D10. OpenRouter remains the accepted gateway.
 | OpenRouter `openai/text-embedding-3-small` | 8,192 tokens per input; 1,536 dimensions by default | $0.02 per million input tokens; simple hosted boundary, but requires external processing, network recovery and cost accounting. |
 | Local `intfloat/e5-small-v2` | 512 tokens; 384 dimensions; English only | No per-call API charge, but model assets, local resource use and tighter splitting limits. CPU latency is unmeasured. |
 
-Recommendation: evaluate OpenAI small at its default dimensions first. Embedding
+Selected: OpenAI small at its default dimensions, restricted to the `openai` route
+with no provider fallback. The implementation validates response membership,
+model identity and finite, nonzero vectors of 1,536 components before saving a batch.
+The model, route and dimensions are fixed; changing an environment value does
+not support swapping the embedding space. Embedding
 100,000 tokens would cost about $0.002 at the listed rate, including any repeated
 headings or overlap in the actual submitted text. OpenRouter documents a
 `dimensions` request field, but the observed OpenAI route metadata does not list
@@ -31,6 +38,14 @@ documents separate batch limits; do not infer gateway batch behavior from the
 per-input ceiling. Sources: [embedding catalog](https://openrouter.ai/api/v1/embeddings/models),
 [gateway request contract](https://openrouter.ai/docs/api/api-reference/embeddings/create-embeddings),
 [OpenAI embedding guide](https://developers.openai.com/api/docs/guides/embeddings).
+
+The first live index reused the saved FEMA extraction: 62 vectors in two calls,
+16,346 reported input tokens and $0.00032692 reported cost. Summaries and
+embeddings share the existing $1 cumulative/$0.40 document allowance; this
+increment did not increase or reset it. Cumulative recorded spending is now
+$0.232598024, leaving $0.767401976. This verifies execution and accounting, not
+retrieval relevance or answer quality. The existing PostgreSQL 18 instance stores
+the vectors using pgvector 0.8.7; exact search remains later application work.
 
 E5 requires `query: ` and `passage: ` prefixes and normalized vectors. Its model
 card warns that longer text truncates, so Folio would need an explicit bound
@@ -81,14 +96,15 @@ environment value is insufficient. Smaller retrieved inputs could reduce cost,
 but cannot substitute for citation and qualification review: the retained
 [DeepSeek summary results](summary-evaluation.md) still contain those errors.
 
-Docling's existing HybridChunker is the proposed alternative to a simple
-paragraph baseline, not a selected policy. It includes context in token counting,
-but embedding text does not retain all provenance. Split fragments may still
-refer to whole source items, and large tables can split. Verify pinned-version
-behavior and map chunk references to Folio evidence before claiming exact source
-locations. See [Docling's contract](https://docling-project.github.io/docling/concepts/chunking/)
-and D07. Human-reviewed questions must separately check retrieval of the right
-passages and whether answers preserve their facts and qualifications.
+The selected Docling HybridChunker merges peers and preserves headings, with a
+default 512-token ceiling checked against the final contextualized text using
+`cl100k_base`. Saved source links identify whole evidence elements; split
+fragments do not imply precise character spans, and large tables can split.
+Unmapped or unlocated eligible content fails the index rather than receiving an
+invented citation. See [Docling's contract](https://docling-project.github.io/docling/concepts/chunking/)
+and D07. Human-reviewed questions must still check retrieval of the right
+passages and whether answers preserve their facts and qualifications; those
+evaluations have not been performed by completing an index.
 
 ## Autoloops / DeepSeek investigation — November 11
 
@@ -393,7 +409,8 @@ the document allowance could not cover a new reservation. The unseen historical
 document produced a saved result but failed a clean source-support review for the
 precision errors above. Calls are recorded in the [evaluation report](summary-evaluation.md).
 These observations have exposed failures,
-not established a quality pass or general benchmark. No embeddings are implemented.
+not established a quality pass or general benchmark. Embeddings were not implemented
+at that summary checkpoint; the later indexing outcome is recorded above.
 Deterministic tests establish software contracts only. The [summary contract](summaries.md)
 records the generic prompt: document-specific reference facts are not production instructions.
 The accepted DeepSeek checkpoint uses these failures as regression examples and

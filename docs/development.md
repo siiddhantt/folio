@@ -3,7 +3,8 @@
 The [README](../README.md) starts the application. The initial parser image uses the
 same pinned Docling/CPU/model configuration as the inspected extraction comparison.
 The API image contains no Docling runtime. Builds do not receive the local API key;
-only the running summary worker receives it when configured.
+only the running worker receives it for summaries and embeddings when configured.
+The PostgreSQL image adds pinned pgvector 0.8.7 to the existing PostgreSQL 18 base.
 
 ## Read the slice
 
@@ -13,6 +14,15 @@ only the running summary worker receives it when configured.
 [`ownership.py`](../src/folio/ingestion/ownership.py) holds claim rules;
 [`recovery.py`](../src/folio/ingestion/recovery.py) records failure and authorizes bounded retries.
 The [walkthrough](system-design-walkthrough.md) explains these decisions in plain language.
+
+For indexing, follow the publication intent through
+[`indexing/dispatcher.py`](../src/folio/indexing/dispatcher.py) →
+[`processing.py`](../src/folio/indexing/processing.py) →
+[`lifecycle.py`](../src/folio/indexing/lifecycle.py). Preparation freezes source-linked
+chunks; each delivery embeds one bounded batch, and the final transaction exposes
+the complete index. [`ai/budget.py`](../src/folio/ai/budget.py) shares admission with
+summaries. The [indexing walkthrough](indexing.md) explains recovery and source
+reading order. Search and answer generation remain later work.
 
 Keep files together by the behavior they own. Ingestion includes its HTTP routes,
 read queries, worker lifecycle, event history and parser. Configuration, database
@@ -32,7 +42,7 @@ Install the small development environment with `uv sync --locked`. Start the sep
 verification database/broker; they use localhost ports 55432 and 56379:
 
 ```sh
-docker compose -p folio-check -f compose.test.yaml up -d --wait
+docker compose -p folio-check -f compose.test.yaml up -d --build --wait
 docker build --target verification -t folio-verification:local -f docker/worker.Dockerfile .
 docker run --rm --network folio-check_default --cpus 4 --memory 6g --memory-swap 6g -e FOLIO_DATABASE_URL=postgresql://folio:folio@postgres:5432/folio_test -e FOLIO_REDIS_URL=redis://redis:6379/15 folio-verification:local python -m pytest -m "not supervision" -q
 ```
@@ -41,6 +51,11 @@ Tests reset only the explicitly selected `folio_test` database between persisten
 Do not point them at application data. Parser tests use committed synthetic inputs and bundled
 models; no inference calls or network model downloads are involved. The isolated test network
 still permits PostgreSQL/Redis communication.
+
+The build flag ensures verification PostgreSQL includes pgvector before migration
+008 runs. Indexing checks use real isolated PostgreSQL/Redis and controlled
+embedding responses; they make no paid model calls. The worker image caches
+`cl100k_base` during its build so chunk counting runs offline.
 
 For fast tests on the host, set `FOLIO_DATABASE_URL` to
 `postgresql://folio:folio@127.0.0.1:55432/folio_test` and `FOLIO_REDIS_URL` to
@@ -131,6 +146,12 @@ visible in the checks; they are not suppressed or represented as test failures.
   Leave generation enabled only when uploads are deliberately budgeted live
   evaluations. The summary integration tests inject controlled provider responses;
   browser summary tests substitute the summary endpoint, not the server's worker.
+- Set `FOLIO_INDEX_ENABLED=false` and recreate the relevant services before
+  unbudgeted upload smoke checks. Indexing is environment-managed and independent
+  of the saved summary switch; the console does not toggle it. Existing intents
+  keep their captured policy. Use the isolated verification stack and controlled
+  model responses for indexing fault checks. A ready index is not evidence of
+  retrieval or answer quality.
 - One worker is the default; `docker compose up -d --scale worker=2 worker` runs two on
   the same host. Each has a 4-CPU/6-GiB ceiling, so check host capacity before increasing count.
 - PostgreSQL is the durable work authority. Redis AOF improves persistence but is not an

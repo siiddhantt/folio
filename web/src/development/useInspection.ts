@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ApiError, errorMessage, request } from '../api';
-import type { Attempt, RequestStatus } from '../types';
+import type { Attempt, IndexInspection, RequestStatus } from '../types';
 import type { FailureDiagnostics, SummaryInspection } from './types';
 
 export interface ProcessingEvent {
@@ -17,6 +17,7 @@ export interface Inspection extends Omit<RequestStatus, 'revision_id' | 'attempt
   configuration: Record<string, unknown>;
   summary_configuration: Record<string, unknown> | null;
   summary: SummaryInspection | null;
+  indexing?: IndexInspection | null;
   attempts: (Attempt & {
     failure_diagnostics: FailureDiagnostics | null;
     lease_expires_at: string | null;
@@ -56,7 +57,9 @@ export function useInspection(requestId: string, open: boolean) {
           snapshot.next_after_id !== null ||
           snapshot.state === 'open' ||
           snapshot.summary?.state === 'pending' ||
-          snapshot.summary?.state === 'running'
+          snapshot.summary?.state === 'running' ||
+          snapshot.indexing?.state === 'pending' ||
+          snapshot.indexing?.state === 'running'
         )
           timer = setTimeout(poll, snapshot.next_after_id !== null ? 0 : 2000);
       } catch (e) {

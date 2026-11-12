@@ -6,6 +6,7 @@ import { EventTimeline, localTime } from './EventTimeline';
 import { useInspection } from './useInspection';
 import { FailureDetails } from './FailureDetails';
 import { SummaryAttempts } from './SummaryAttempts';
+import { IndexingAttempts } from './IndexingAttempts';
 
 export function DeveloperPanel({ requestId }: { requestId: string }) {
   const [open, setOpen] = useState(false);
@@ -139,6 +140,7 @@ export function DeveloperPanel({ requestId }: { requestId: string }) {
                     </details>
                   ))}
                   <SummaryAttempts summary={data.summary} />
+                  <IndexingAttempts indexing={data.indexing} />
                   <details className="configuration-record">
                     <summary>Configuration for this request</summary>
                     <dl className="identity-list">
