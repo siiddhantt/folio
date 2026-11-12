@@ -70,6 +70,62 @@ function readyTurn(sequence: number, question: string, text: string, passage: st
   };
 }
 
+test('long chats scroll within the reader and keep the app header in view', async ({ page }) => {
+  const turns = Array.from({ length: 6 }, (_, i) =>
+    readyTurn(i + 1, `Question ${i + 1}`, 'A source-backed answer. '.repeat(18), 'Evidence.'),
+  );
+  await page.route('**/api/**', async (route) => {
+    const path = new URL(route.request().url()).pathname.replace('/api', '');
+    if (path === '/capabilities') await route.fulfill({ json: { development_mode: false } });
+    else if (path === '/conversations')
+      await route.fulfill({ json: { items: [chat], next_cursor: null } });
+    else if (path === '/conversations/chat-1') await route.fulfill({ json: chat });
+    else if (path === '/conversations/chat-1/turns')
+      await route.fulfill({ json: { items: turns, next_before: null } });
+    else throw new Error(`Unexpected request ${path}`);
+  });
+  for (const width of [1440, 390]) {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto('/conversations/chat-1');
+    await page.getByRole('textbox', { name: 'Your question' }).click();
+    await expect(page.locator('.site-header')).toBeInViewport();
+    expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBe(844);
+  }
+});
+
+test('waiting for history preparation stays readable and resumes without another send', async ({
+  page,
+}) => {
+  const answer = readyTurn(1, 'What did we decide?', 'The saved answer.', 'Evidence.');
+  let finished = false;
+  const current = () =>
+    finished
+      ? answer
+      : { ...answer, state: 'pending', context_state: 'preparing', answer: null, citations: [] };
+  await page.route('**/api/**', async (route) => {
+    const path = new URL(route.request().url()).pathname.replace('/api', '');
+    expect(route.request().method()).toBe('GET');
+    if (path === '/capabilities') await route.fulfill({ json: { development_mode: false } });
+    else if (path === '/conversations')
+      await route.fulfill({ json: { items: [chat], next_cursor: null } });
+    else if (path === '/conversations/chat-1') await route.fulfill({ json: chat });
+    else if (path === '/conversations/chat-1/turns')
+      await route.fulfill({ json: { items: [current()], next_before: null } });
+    else if (path === '/conversations/chat-1/turns/turn-1')
+      await route.fulfill({ json: current() });
+    else throw new Error(`Unexpected request ${path}`);
+  });
+  await page.goto('/conversations/chat-1');
+  await expect(page.getByText('Preparing conversation context…')).toBeVisible();
+  const composer = page.getByRole('textbox', { name: 'Your question' });
+  await composer.fill('Keep this next question');
+  await expect(page.getByRole('button', { name: 'Send question' })).toBeDisabled();
+  finished = true;
+  await expect(page.getByText('The saved answer.', { exact: true })).toBeVisible();
+  await expect(composer).toHaveValue('Keep this next question');
+  await expect(page.getByRole('button', { name: 'Send question' })).toBeEnabled();
+});
+
 test('a first-send conflict opens the current chat with its rejected question still editable', async ({
   page,
 }) => {

@@ -66,9 +66,17 @@ The first real five-turn development sequence cost $0.02906768. Three answers
 were source-supported; the resolver unnecessarily expanded terminology, redirected
 a policy-number question without searching the PDF, and exposed an internal ID
 while correctly quoting the first question. A generic resolver prompt revision
-preserves old frozen instructions and is under live comparison. See [the recorded
-observations](conversations.md#follow-up-development-sequence--november-13).
-Hybrid memory remains unfinished; this short sequence does not test compaction.
+preserves old frozen instructions. Its five-turn comparison cost $0.03034205 and
+fixed the observed policy-number routing and visible-ID behavior. Query expansion
+remains in one rewrite despite a correct final answer; this is development-set
+tuning, not a held-out benchmark. Combined follow-up usage is $0.05940973, with
+$0.688830076 remaining and no held charges. See [the recorded observations](conversations.md#follow-up-development-sequence--november-13).
+Hybrid memory is in progress; these short sequences do not test compaction.
+Browser checks verified persistence and source/original-turn links, then exposed
+a second scrollbar from a hidden input label. Its regression and the memory-wait
+status check passed red-to-green; all sixteen affected chat/navigation checks,
+types, formatting and build passed. Aside verified the deployed fix at desktop
+and mobile widths. Memory backend failure-path work and review remain active.
 
 ## Answer default — November 12
 

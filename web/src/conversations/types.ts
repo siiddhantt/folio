@@ -33,6 +33,7 @@ export interface Turn {
   resolved_question: string | null;
   question: string;
   state: TurnState;
+  context_state?: 'preparing' | null;
   created_at: string;
   started_at: string | null;
   finished_at: string | null;

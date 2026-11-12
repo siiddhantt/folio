@@ -312,6 +312,36 @@ selected PDF for factual lookup, avoid invented categories and keep reference
 identifiers out of prose. Saved policies retain the original instructions. A
 comparison is development-set tuning and must not replace these original results.
 
+The revised five-turn run cost **$0.03034205**, including question embeddings.
+All charges are known; both follow-up runs together cost $0.05940973. The original
+and revised runs remain separate saved conversations and ignored local traces.
+
+| Revised check | Observation |
+| --- | --- |
+| Garage amount/business use | Both answers preserve the source conditions; chunk 10 still ranks first. The business-use query no longer invents a coverage category. |
+| Correction to main dwelling | Answer correctly distinguishes the garage limit from dwelling coverage. The query still adds “other structure”; this unsupported expansion remains a known limitation. |
+| Personal policy number | Searches the selected PDF, then reports that the supplied passages cannot identify the number. Independent review checked all six retrieved chunks. |
+| First-question quotation | Exact original wording, correct original-turn link, no internal ID in prose and no PDF calls. |
+
+Answer prompt/schema remain version 3, retrieval version 2; new resolver policies
+save `rewrite_prompt_version=2`. Older frozen policies keep their original prompt.
+This is one generic prompt change after observing development examples, not a
+held-out quality benchmark. Maximum revised history was only 468 tokens: neither
+run establishes long-history memory quality or the evidence-dropping path.
+
+A host WSL restart interrupted the revised first question before paid admission.
+After restoration, PostgreSQL still held the question; lease expiry and bounded
+recovery produced one admitted embedding/answer attempt without resubmission.
+This does not exercise recovery after an uncertain provider bill. All five turns
+and their generated title survived reload. Real browser checks confirmed PDF
+page rendering and original-exchange focus. Inspection subsequently found a
+second document scrollbar caused by an uncontained hidden input label. Making
+the reader its positioning container fixed the measured overflow: document
+height now equals the viewport at 1440×1000 and 390×844, while the reader still
+scrolls. Two observed failing UI regressions now pass, and sixteen affected
+chat/navigation checks, types, formatting and build pass. Aside rechecked the
+header, original-turn focus and rendered PDF after the production web rebuild.
+
 ## Outcome and example
 
 Open an indexed PDF, ask a question, inspect the answer's source page, ask a

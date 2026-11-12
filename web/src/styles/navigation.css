@@ -17,6 +17,7 @@
   grid-template-columns: 256px minmax(0, 1fr);
 }
 .app-workspace > main {
+  position: relative;
   min-width: 0;
   min-height: 0;
   overflow-y: auto;

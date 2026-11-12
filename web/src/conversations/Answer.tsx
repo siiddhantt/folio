@@ -18,9 +18,11 @@ export function Answer({
       </article>
       {active ? (
         <p className="answer-pending" role="status">
-          {turn.state === 'pending'
-            ? 'Waiting to answer…'
-            : 'Finding evidence and preparing an answer…'}
+          {turn.context_state === 'preparing'
+            ? 'Preparing conversation context…'
+            : turn.state === 'pending'
+              ? 'Waiting to answer…'
+              : 'Finding evidence and preparing an answer…'}
         </p>
       ) : turn.error ? (
         <Notice error>{turn.error.message}</Notice>

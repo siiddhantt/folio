@@ -25,10 +25,11 @@ including a 59-page report, without exhausting output. Source review still finds
 citation and qualification weaknesses; no general quality pass is claimed. Generation defaults to disabled.
 Source-linked indexing uses Docling merging and OpenRouter embeddings stored in
 pgvector. Activity shows batch progress and billing; only complete indexes expose
-their chunks. A separate chat worker answers one question per saved conversation,
-using only that document's retrieved passages. Saved conversations stay in a desktop
-sidebar or a mobile drawer; home opens a document. Follow-ups
-and conversation memory are the next increment. GPT-5.2 is the selected answer
+their chunks. A separate chat worker answers ordered questions and follow-ups,
+using fresh passages from the conversation's pinned document index. Saved chats
+stay in a desktop sidebar or a mobile drawer, with generated titles, rename and
+retained-record deletion. Home offers New chat and Upload. Long-history memory is
+the active next checkpoint. GPT-5.2 is the selected answer
 model after three independently supported examples; broader answer quality remains
 unproven. Summaries retain their separate DeepSeek configuration.
 
