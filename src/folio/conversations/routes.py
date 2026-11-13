@@ -23,6 +23,18 @@ class NewQuestion(BaseModel):
     question: str = Field(min_length=1, max_length=4000)
     observed_head: int = Field(default=0, ge=0, strict=True)
 
+    @field_validator("question", mode="before")
+    @classmethod
+    def valid_question(cls, value):
+        if isinstance(value, str):
+            try:
+                value.encode("utf-8")
+            except UnicodeError:
+                raise HTTPException(422, "Enter a question with valid Unicode text.") from None
+            if "\x00" in value:
+                raise HTTPException(422, "Remove the null character from your question.")
+        return value
+
 
 class RenameConversation(BaseModel):
     model_config = ConfigDict(extra="forbid")

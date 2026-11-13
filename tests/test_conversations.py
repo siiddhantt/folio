@@ -128,6 +128,23 @@ def test_first_answer_is_scoped_cited_and_readable_after_reload(chat_document):
 
 
 @pytest.mark.integration
+@pytest.mark.parametrize("bad_question", ["When\x00does it begin?", "When\ud800does it begin?"])
+def test_unstorable_question_is_rejected_without_consuming_submission(chat_document, bad_question):
+    _, client, indexes = chat_document
+    chat = start_chat(client, indexes[0])
+    url = f"/conversations/{chat['id']}/turns"
+    headers = {"Idempotency-Key": str(uuid4()), "Content-Type": "application/json"}
+    response = client.post(url, content=json.dumps({"question": bad_question}), headers=headers)
+    assert response.status_code == 422
+    assert client.get(url).json()["items"] == []
+
+    question = "Quelle est l’échéance ?\nक्या तारीख है?"
+    accepted = client.post(url, json={"question": question}, headers=headers)
+    assert accepted.status_code == 202
+    assert client.get(url).json()["items"][0]["question"] == question
+
+
+@pytest.mark.integration
 def test_submission_replay_and_stale_head_are_explicit(chat_document):
     settings, client, indexes = chat_document
     key = {"Idempotency-Key": str(uuid4())}
