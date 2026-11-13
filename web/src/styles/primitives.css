@@ -7,7 +7,7 @@
   min-width: 0;
   padding: 6px 10px;
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   font-size: 0.8125rem;
   text-align: start;
   background: var(--background);
@@ -35,7 +35,7 @@
   overscroll-behavior: contain;
   padding: 4px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   background: var(--background);
   box-shadow: 0 4px 16px #0002;
 }
@@ -45,7 +45,7 @@
   gap: 8px;
   min-height: 36px;
   padding: 8px;
-  border-radius: 4px;
+  border-radius: var(--radius-md);
   font-size: 0.8125rem;
   cursor: pointer;
   overflow-wrap: anywhere;
@@ -91,7 +91,7 @@
   z-index: 70;
   background: var(--background);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   box-shadow: 0 4px 16px #0002;
   max-height: var(--radix-dropdown-menu-content-available-height);
   overflow-y: auto;
@@ -103,7 +103,7 @@
   gap: 8px;
   min-height: 36px;
   padding: 8px;
-  border-radius: 4px;
+  border-radius: var(--radius-md);
   cursor: pointer;
 }
 .dropdown-menu [data-highlighted] {

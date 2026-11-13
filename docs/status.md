@@ -23,6 +23,18 @@ ignored `.env` and a safe template.
 
 ## Conversation reading polish and capability audit — November 13
 
+Follow-up refinement: sidebar selection now includes the menu area and its action
+opens New conversation. Paragraph citations are inline rounded controls, spacing
+is tighter, and shared radii are consistent. The composer extraction banner is
+removed; known limitations remain in the source drawer and document view. Loading
+feedback respects reduced motion. Reply arrival follows the bottom unless the
+reader has moved back; Latest reply explicitly resumes following. Forty affected
+mocked browser checks, types, formatting and the Docker web build passed.
+Independent static review found no blocker. Read-only browser checks at
+1440/390/320 pixels verified the selected row, inline citations, source/PDF
+navigation, focus restoration and New conversation route. No backend changes
+or paid calls.
+
 The accepted polish is implemented: a compact bottom-anchored composer with
 independent transcript scrolling, Enter/Shift+Enter and IME handling, safe
 Markdown, five cited-passage previews and a full passage/original-page drawer.

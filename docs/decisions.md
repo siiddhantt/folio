@@ -550,6 +550,15 @@ Verify keyboard behavior, independent scrolling, safe Markdown and source/focus
 navigation through the accepted mocked-browser boundary; inspect the deployed
 saved-chat flow without generating new answers.
 
+Later November 13 refinement: the owner removed the extraction notice from the
+composer area. Keep those details in the source drawer and document view. Source
+references become inline rounded controls, with normal Markdown block fallback.
+Selection covers the full sidebar row; its menu remains a separate accessible
+button. New conversation replaces the sidebar upload shortcut. Use shared rounded
+tokens, truthful loading feedback and bottom-following only while the reader has
+not moved back; an explicit Latest reply action resumes following. No backend,
+prompt, streaming or retrieval change is needed.
+
 ## Slice order and remaining decisions
 
 November 11 planning recommendation, not an accepted implementation contract:

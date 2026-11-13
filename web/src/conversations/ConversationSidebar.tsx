@@ -1,7 +1,7 @@
 import { Link, NavLink } from 'react-router-dom';
 import { useState } from 'react';
 import { Dialog } from 'radix-ui';
-import { FilePlus2, RefreshCw, X } from 'lucide-react';
+import { MessageSquarePlus, RefreshCw, X } from 'lucide-react';
 import { Button } from '../components/ui';
 import { useConversationList } from './useConversationList';
 import type { Conversation } from './types';
@@ -26,10 +26,10 @@ export function ConversationSidebar({
   const [action, setAction] = useState<ConversationAction | null>(null);
   const content = (
     <>
-      <Button variant="outline" className="sidebar-open-document" asChild>
-        <Link to="/upload" onClick={onNavigate}>
-          <FilePlus2 aria-hidden="true" />
-          Open document
+      <Button variant="outline" className="sidebar-new-conversation" asChild>
+        <Link to="/new-chat" onClick={onNavigate}>
+          <MessageSquarePlus aria-hidden="true" />
+          New conversation
         </Link>
       </Button>
       <div className="sidebar-section-heading">

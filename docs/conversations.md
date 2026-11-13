@@ -17,14 +17,24 @@ The accepted polish keeps the composer below a separately scrolling transcript.
 Enter submits; Shift+Enter inserts a newline, and IME composition must never
 submit accidentally. The input starts compact, grows to a bounded height and then
 scrolls internally. Submission, retry and draft ownership retain their existing
-contracts. A small AI notice does not replace the separate known-extraction-gap
-link.
+contracts. The small AI notice stays below the composer; known extraction
+limitations are available in source details and the document view, without a
+separate composer banner.
 
 Markdown is a presentation choice, not a new answer schema or prompt. Render
 formatting without raw HTML or remote images. Preserve each statement's source
 references and show up to five passage previews below the answer. The source
 drawer presents the full cited set and opens physical PDF pages. It reuses the
 saved turn response rather than performing retrieval again.
+
+The later November 13 refinement places small rounded citation controls inline
+with each statement's final paragraph; lists, tables and code keep their block
+structure. A truthful pending/context-preparation indicator accompanies waiting.
+New answers follow the bottom while the reader remains near it. Scrolling up or
+opening an earlier exchange pauses following; Latest reply resumes it. Sending
+a question also resumes following. Earlier-history pagination keeps its anchor.
+The sidebar's New conversation action opens the document-selecting composer;
+selection covers the full row, including its separate menu button.
 
 For example, an answer may cite S1 for a garage limit and S3 for an exclusion.
 The backend returns those two original chunk texts and their page locations.

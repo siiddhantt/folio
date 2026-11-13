@@ -85,7 +85,7 @@ test('composer stays visible while reading and Enter sends only outside multilin
   const notice = page.getByText('AI-generated answers. Check the sources.', { exact: true });
   await expect(notice).toBeVisible();
   expect((await notice.boundingBox())!.y).toBeGreaterThan((await input.boundingBox())!.y);
-  await expect(page.getByRole('link', { name: 'Extraction gaps' })).toBeVisible();
+  await expect(page.getByText('Extraction gaps may affect answers.')).toHaveCount(0);
 });
 
 test('Markdown stays readable without executable markup or remote images', async ({ page }) => {
@@ -100,6 +100,49 @@ test('Markdown stays readable without executable markup or remote images', async
   await expect(response.getByRole('listitem')).toHaveCount(2);
   await expect(response.getByRole('cell', { name: '10%' })).toBeVisible();
   await expect(response.locator('img, script, a[href^="javascript:"]')).toHaveCount(0);
+});
+
+test('citations sit inline with the final formatted paragraph and open their passage', async ({
+  page,
+}) => {
+  await savedChat(page, {
+    ...answer,
+    answer: {
+      outcome: 'answer',
+      statements: [
+        { text: 'A short introduction.\n\nThe limit is **10%**.', source_ids: ['S1'] },
+        { text: 'Conditions still apply.', source_ids: ['S1'] },
+        { text: '- First item\n- Second item', source_ids: ['S1'] },
+        { text: '```text\nA quoted example.\n```', source_ids: ['S1'] },
+      ],
+    },
+    citations: [
+      {
+        source_id: 'S1',
+        chunk_ordinal: 0,
+        text: 'The limit is 10%, subject to conditions.',
+        pages: [1],
+      },
+    ],
+  });
+  const response = page.getByRole('article', { name: 'Folio answer' });
+  const paragraph = response.locator('p').filter({ hasText: 'The limit is 10%.' });
+  const citation = response
+    .getByRole('button', { name: 'See passage 1 for this statement' })
+    .first();
+  const textBox = await paragraph.boundingBox();
+  const citationBox = await citation.boundingBox();
+  expect(
+    Math.abs(citationBox!.y + citationBox!.height / 2 - (textBox!.y + textBox!.height / 2)),
+  ).toBeLessThan(8);
+  expect(citationBox!.x).toBeGreaterThan(textBox!.x + textBox!.width);
+  await expect(response.getByRole('listitem')).toHaveCount(2);
+  await expect(response.locator('pre')).toHaveText('A quoted example.\n');
+  await expect(response.locator('pre button')).toHaveCount(0);
+  await citation.click();
+  await expect(page.getByRole('dialog', { name: 'Sources' })).toContainText(
+    'The limit is 10%, subject to conditions.',
+  );
 });
 
 test('passage previews open every cited passage with a page link and restore focus', async ({
@@ -127,6 +170,10 @@ test('passage previews open every cited passage with a page link and restore foc
   const more = response.getByRole('button', { name: '1 more source' });
   await more.click();
   const drawer = page.getByRole('dialog', { name: 'Sources', exact: true });
+  await expect(drawer.getByRole('link', { name: 'Extraction details' })).toHaveAttribute(
+    'href',
+    '/documents/document-1',
+  );
   await expect(drawer.getByRole('article')).toHaveCount(6);
   await expect(drawer.getByText(citations[5].text, { exact: true })).toBeVisible();
   await drawer.getByRole('button', { name: 'View page 1 in original' }).last().click();

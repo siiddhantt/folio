@@ -19,6 +19,9 @@
 .markdown p {
   white-space: normal;
 }
+.markdown > p:has(+ .markdown-trailing) {
+  display: inline;
+}
 .markdown ul,
 .markdown ol {
   padding-inline-start: 24px;

@@ -1,7 +1,8 @@
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import type { ReactNode } from 'react';
 
-export function Markdown({ children }: { children: string }) {
+export function Markdown({ children, trailing }: { children: string; trailing?: ReactNode }) {
   return (
     <div className="markdown">
       <ReactMarkdown
@@ -31,6 +32,7 @@ export function Markdown({ children }: { children: string }) {
       >
         {children}
       </ReactMarkdown>
+      {trailing && <span className="markdown-trailing">{trailing}</span>}
     </div>
   );
 }

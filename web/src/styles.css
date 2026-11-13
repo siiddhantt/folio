@@ -29,8 +29,8 @@
   --color-border: var(--line);
   --color-input: var(--line);
   --color-ring: var(--muted);
-  --radius-md: 6px;
-  --radius-lg: 8px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
 }
 
 :root {

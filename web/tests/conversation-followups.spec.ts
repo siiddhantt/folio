@@ -619,9 +619,7 @@ test('a delayed older page cannot hide the gap discovered by a newer history ref
   await expect(composer).toHaveValue('Keep this draft after the conflict');
 });
 
-test('the pinned document extraction gap is shown once across multiple exchanges', async ({
-  page,
-}) => {
+test('extraction gaps stay in source details without a composer notice', async ({ page }) => {
   test.setTimeout(30000);
   const items = [1, 2].map((sequence) => ({
     ...readyTurn(sequence, `Question ${sequence}?`, 'Saved answer.', 'Evidence.'),
@@ -640,9 +638,14 @@ test('the pinned document extraction gap is shown once across multiple exchanges
   });
   await page.goto('/conversations/chat-1');
   await expect(page.getByRole('region', { name: 'Exchange 2', exact: true })).toHaveCount(1);
-  const note = page.getByRole('note').filter({ hasText: 'Extraction gaps may affect answers.' });
-  await expect(note).toHaveCount(1, { timeout: 5000 });
-  await expect(note.getByRole('link', { name: 'Extraction gaps', exact: true })).toHaveAttribute(
+  await expect(page.getByRole('note')).toHaveCount(0);
+  await page
+    .getByRole('region', { name: 'Exchange 2', exact: true })
+    .getByRole('button', { name: /^Source S1/ })
+    .click();
+  const note = page.getByRole('dialog', { name: 'Sources' }).getByRole('note');
+  await expect(note).toBeVisible();
+  await expect(note.getByRole('link', { name: 'Extraction details', exact: true })).toHaveAttribute(
     'href',
     '/documents/document-1',
   );

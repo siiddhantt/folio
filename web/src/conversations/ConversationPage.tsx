@@ -1,13 +1,13 @@
 import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { FileText } from 'lucide-react';
+import { ArrowDown, FileText } from 'lucide-react';
 import { Button, Notice } from '../components/ui';
 import { Answer } from './Answer';
 import { NewChatButton } from './NewChatButton';
 import { QuestionComposer } from './QuestionComposer';
 import { SourcePanel } from './SourcePanel';
 import { useConversation } from './useConversation';
-import type { Citation, Conversation } from './types';
+import type { Citation, Conversation, Turn } from './types';
 
 export function ConversationPage({
   revision,
@@ -59,12 +59,30 @@ function ConversationWorkspace({
   const [source, setSource] = useState<{
     turnId: string;
     citations: Citation[];
+    coverage: Turn['coverage'];
     selected?: string;
   } | null>(null);
   const [focusTurn, setFocusTurn] = useState<string | null>(null);
-  const [submittedTurn, setSubmittedTurn] = useState<string | null>(null);
-  const initiallyScrolled = useRef(false);
+  const [unseenReply, setUnseenReply] = useState(false);
+  const following = useRef(true);
   const messages = useRef<HTMLDivElement>(null);
+  const latestTurn = turns.at(-1);
+  useLayoutEffect(() => {
+    if (!loaded) return;
+    if (following.current) showLatest();
+    else setUnseenReply(true);
+  }, [loaded, latestTurn?.id, latestTurn?.state, latestTurn?.context_state]);
+  function showLatest() {
+    following.current = true;
+    setUnseenReply(false);
+    messages.current?.scrollTo({ top: messages.current.scrollHeight });
+  }
+  function trackReadingPosition() {
+    const main = messages.current;
+    if (!main) return;
+    following.current = main.scrollHeight - main.scrollTop - main.clientHeight < 64;
+    if (following.current) setUnseenReply(false);
+  }
   const readingAnchor = useRef<{ element: HTMLElement; top: number } | null>(null);
   useLayoutEffect(() => {
     const anchor = readingAnchor.current;
@@ -75,18 +93,6 @@ function ConversationWorkspace({
     }
   }, [turns]);
   useLayoutEffect(() => {
-    if (loaded && !initiallyScrolled.current) {
-      initiallyScrolled.current = true;
-      const main = messages.current;
-      main?.scrollTo({ top: main.scrollHeight });
-    }
-  }, [loaded]);
-  useLayoutEffect(() => {
-    if (!submittedTurn) return;
-    document.getElementById(`exchange-${submittedTurn}`)?.scrollIntoView({ block: 'start' });
-    setSubmittedTurn(null);
-  }, [submittedTurn, turns]);
-  useLayoutEffect(() => {
     if (!focusTurn) return;
     const target = document.getElementById(`exchange-${focusTurn}`);
     if (target) {
@@ -96,10 +102,12 @@ function ConversationWorkspace({
     }
   }, [focusTurn, turns]);
   async function showTurn(turnId: string) {
+    following.current = false;
     if (await loadTurn(turnId)) setFocusTurn(turnId);
   }
   function loadEarlier() {
     void loadOlder(() => {
+      following.current = false;
       const main = messages.current;
       if (!main) return;
       const top = main.getBoundingClientRect().top;
@@ -135,6 +143,7 @@ function ConversationWorkspace({
       <div
         className="chat-scroll"
         ref={messages}
+        onScroll={trackReadingPosition}
         role="region"
         aria-label="Conversation messages"
         tabIndex={0}
@@ -188,6 +197,7 @@ function ConversationWorkspace({
                         setSource({
                           turnId: turn.id,
                           citations: turn.citations,
+                          coverage: turn.coverage,
                           selected: citation?.source_id,
                         })
                       }
@@ -202,15 +212,12 @@ function ConversationWorkspace({
       </div>
       {loaded && conversation && (
         <div className="chat-composer-dock">
-          {turns.some(
-            (turn) =>
-              turn.coverage.pages_without_content.length > 0 ||
-              turn.coverage.diagnostics.length > 0,
-          ) && (
-            <p className="chat-coverage" role="note">
-              <Link to={`/documents/${conversation.document_id}`}>Extraction gaps</Link> may affect
-              answers.
-            </p>
+          {unseenReply && (
+            <div className="chat-latest">
+              <Button variant="outline" size="sm" onClick={showLatest}>
+                <ArrowDown aria-hidden="true" /> Latest reply
+              </Button>
+            </div>
           )}
           <QuestionComposer
             conversationId={id}
@@ -218,8 +225,8 @@ function ConversationWorkspace({
             waiting={active || historyLoading}
             documentName={conversation.document_name}
             onAccepted={(turn) => {
+              showLatest();
               acceptTurn(turn);
-              setSubmittedTurn(turn.id);
               onTurnChanged();
             }}
             onConflict={reload}
@@ -231,6 +238,7 @@ function ConversationWorkspace({
           key={`${source.turnId}:${source.selected || 'all'}`}
           documentId={conversation.document_id}
           sources={source.citations}
+          coverage={source.coverage}
           selected={source.selected}
           onClose={() => setSource(null)}
         />

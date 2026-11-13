@@ -1,18 +1,21 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, X } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { Button } from '../components/ui';
 import { Sheet, SheetClose, SheetContent, SheetTitle } from '../components/ui/sheet';
 import { PdfPreview } from '../documents/PdfPreview';
-import type { Citation } from './types';
+import type { Citation, Turn } from './types';
 
 export function SourcePanel({
   documentId,
   sources,
+  coverage,
   selected,
   onClose,
 }: {
   documentId: string;
   sources: Citation[];
+  coverage: Turn['coverage'];
   selected?: string;
   onClose: () => void;
 }) {
@@ -55,6 +58,12 @@ export function SourcePanel({
             </Button>
           </SheetClose>
         </div>
+        {(coverage.pages_without_content.length > 0 || coverage.diagnostics.length > 0) && (
+          <p className="source-coverage" role="note">
+            Known extraction limitations.{' '}
+            <Link to={`/documents/${documentId}`}>Extraction details</Link>
+          </p>
+        )}
         <div className="chat-source-content">
           {page === null ? (
             sources.map((source, index) => (

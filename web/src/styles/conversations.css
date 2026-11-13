@@ -74,6 +74,14 @@
 .chat-composer-dock .question-composer {
   margin-block-start: 0;
 }
+.chat-latest {
+  display: flex;
+  justify-content: center;
+  margin-block-end: 8px;
+}
+.chat-latest button {
+  border-radius: 999px;
+}
 .composer-notice {
   margin: 8px 0 0;
   color: var(--muted);
@@ -175,7 +183,7 @@
   max-width: 88%;
   margin-inline-start: auto;
   padding: 14px 18px;
-  border-radius: 8px;
+  border-radius: 16px;
   background: var(--secondary);
 }
 .question-message p {
@@ -196,12 +204,33 @@
 .answer-outcome {
   color: var(--muted);
 }
+.answer-pending {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+}
+.answer-pending svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .answer-pending svg {
+    animation: answer-loading 1.2s linear infinite;
+  }
+}
+@keyframes answer-loading {
+  to {
+    transform: rotate(360deg);
+  }
+}
 .answer-outcome {
   font-size: 13px;
   margin-bottom: 16px;
 }
 .answer-statement + .answer-statement {
-  margin-top: 18px;
+  margin-top: 12px;
 }
 .answer-citations {
   display: flex;
@@ -214,8 +243,10 @@
   padding: 0 10px;
   font-size: 0.75rem;
 }
-.chat-coverage {
-  margin-block: 0 8px;
+.source-coverage {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 12px 24px 0;
   color: var(--muted);
   font-size: 0.8125rem;
   line-height: 1.6;
@@ -259,15 +290,12 @@
 .source-back {
   margin-block-end: 16px;
 }
-.statement-sources {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-block-start: 6px;
-}
-.statement-sources button {
+.markdown-trailing button {
   min-width: 24px;
+  margin-inline-start: 4px;
   padding: 0 6px;
+  border-radius: 999px;
+  vertical-align: baseline;
   background: var(--secondary);
   font-variant-numeric: tabular-nums;
 }
@@ -283,6 +311,7 @@
   font-size: 0.75rem;
   font-weight: 400;
   height: 36px;
+  border-radius: 999px;
   padding-inline: 8px;
   gap: 8px;
 }
@@ -316,5 +345,8 @@
   }
   .chat-source-content {
     padding: 16px;
+  }
+  .source-coverage {
+    padding-inline: 16px;
   }
 }

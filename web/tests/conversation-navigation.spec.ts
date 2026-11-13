@@ -24,6 +24,8 @@ test('history stays available, recovers a failed load and supports mobile keyboa
       await route.fulfill({
         json: { development_mode: false, max_pages: 100, max_upload_bytes: 26214400 },
       });
+    } else if (path === '/conversation-documents') {
+      await route.fulfill({ json: { items: [], next_cursor: null } });
     } else if (path === '/conversations') {
       if (!historyAvailable) {
         await route.fulfill({ status: 503, json: { detail: 'History temporarily unavailable.' } });
@@ -72,6 +74,10 @@ test('history stays available, recovers a failed load and supports mobile keyboa
     'aria-current',
     'page',
   );
+  const selectedRow = sidebar.getByRole('link', { name: /Where does cover apply/ }).locator('..');
+  expect(await selectedRow.evaluate((row) => getComputedStyle(row).backgroundColor)).not.toBe(
+    'rgba(0, 0, 0, 0)',
+  );
   await sidebar.getByRole('button', { name: 'Older conversations' }).click();
   await sidebar.getByRole('link', { name: /What is excluded/ }).click();
   await expect(page.getByRole('main').getByText('Answer unavailable.')).toBeVisible();
@@ -108,6 +114,16 @@ test('history stays available, recovers a failed load and supports mobile keyboa
   await sidebar.getByRole('button', { name: 'Refresh conversations' }).click();
   await expect(sidebar.getByRole('button', { name: 'Retry history' })).toBeVisible();
   await expect(sidebar.getByRole('link', { name: /Where does cover apply/ })).toBeVisible();
+  const newConversation = sidebar.getByRole('link', { name: 'New conversation', exact: true });
+  await expect(newConversation).toBeVisible({ timeout: 5000 });
+  await newConversation.click();
+  await expect(page).toHaveURL(/\/new-chat$/);
+  await expect(page.getByRole('textbox', { name: 'Your question' })).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await toggle.click();
+  await drawer.getByRole('link', { name: 'New conversation', exact: true }).click();
+  await expect(drawer).not.toBeVisible();
+  await expect(page).toHaveURL(/\/new-chat$/);
 });
 
 test('switching chats keeps drafts and a new chat returns history to the latest page', async ({

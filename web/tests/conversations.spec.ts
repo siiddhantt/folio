@@ -276,7 +276,10 @@ test('clarification and evidence limits remain readable without invented source 
     answer.statements[0].text,
   );
   await expect(page.getByRole('button', { name: /^Source / })).toHaveCount(0);
-  await expect(page.getByRole('note')).toContainText('Extraction gaps may affect answers.');
+  await expect(page.getByRole('link', { name: 'View document', exact: true })).toHaveAttribute(
+    'href',
+    '/documents/document-1',
+  );
   await expect(page.getByRole('textbox', { name: 'Your question' })).toBeEditable();
   await expect(page.getByRole('link', { name: 'New chat', exact: true })).toBeVisible();
 });
