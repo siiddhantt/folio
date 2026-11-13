@@ -56,15 +56,20 @@ function ConversationWorkspace({
     loadOlder,
     loadTurn,
   } = useConversation(id, revision, onTurnChanged, renamedConversation);
-  const [source, setSource] = useState<{ turnId: string; citation: Citation } | null>(null);
+  const [source, setSource] = useState<{
+    turnId: string;
+    citations: Citation[];
+    selected?: string;
+  } | null>(null);
   const [focusTurn, setFocusTurn] = useState<string | null>(null);
   const [submittedTurn, setSubmittedTurn] = useState<string | null>(null);
   const initiallyScrolled = useRef(false);
+  const messages = useRef<HTMLDivElement>(null);
   const readingAnchor = useRef<{ element: HTMLElement; top: number } | null>(null);
   useLayoutEffect(() => {
     const anchor = readingAnchor.current;
     readingAnchor.current = null;
-    const main = document.getElementById('main');
+    const main = messages.current;
     if (anchor?.element.isConnected && main) {
       main.scrollTop += anchor.element.getBoundingClientRect().top - anchor.top;
     }
@@ -72,7 +77,7 @@ function ConversationWorkspace({
   useLayoutEffect(() => {
     if (loaded && !initiallyScrolled.current) {
       initiallyScrolled.current = true;
-      const main = document.getElementById('main');
+      const main = messages.current;
       main?.scrollTo({ top: main.scrollHeight });
     }
   }, [loaded]);
@@ -95,7 +100,7 @@ function ConversationWorkspace({
   }
   function loadEarlier() {
     void loadOlder(() => {
-      const main = document.getElementById('main');
+      const main = messages.current;
       if (!main) return;
       const top = main.getBoundingClientRect().top;
       const element = [...main.querySelectorAll<HTMLElement>('.chat-exchange')].find(
@@ -127,90 +132,106 @@ function ConversationWorkspace({
           </div>
         )}
       </div>
-      <div className={`chat-content${loaded && !turns.length ? ' chat-empty' : ''}`}>
-        <p className="sr-only" role="status">
-          {turns.at(-1)?.state === 'ready' ? 'Answer ready.' : ''}
-        </p>
-        {error && (
-          <Notice error>
-            {error}{' '}
-            <button className="inline-retry" onClick={reload}>
-              Reload chat
-            </button>
-          </Notice>
-        )}
-        {!loaded && !error && (
-          <p className="subtle" role="status">
-            Loading conversation…
+      <div
+        className="chat-scroll"
+        ref={messages}
+        role="region"
+        aria-label="Conversation messages"
+        tabIndex={0}
+      >
+        <div className="chat-content">
+          <p className="sr-only" role="status">
+            {turns.at(-1)?.state === 'ready' ? 'Answer ready.' : ''}
           </p>
-        )}
-        {loaded && conversation && (
-          <>
-            {nextBefore !== null && (
-              <Button
-                className="earlier-exchanges"
-                variant="ghost"
-                disabled={olderLoading}
-                onClick={loadEarlier}
-              >
-                {olderLoading ? 'Loading earlier exchanges…' : 'Load earlier exchanges'}
-              </Button>
-            )}
-            {turns.map((turn, index) => (
-              <Fragment key={turn.id}>
-                {index > 0 && turn.sequence > turns[index - 1].sequence + 1 && (
-                  <p className="chat-history-gap" role="note">
-                    Exchanges {turns[index - 1].sequence + 1}–{turn.sequence - 1} are not loaded.
-                    Use Load earlier exchanges to read them.
-                  </p>
-                )}
-                <section
-                  id={`exchange-${turn.id}`}
-                  aria-label={`Exchange ${turn.sequence}`}
-                  tabIndex={-1}
-                  className="chat-exchange"
+          {error && (
+            <Notice error>
+              {error}{' '}
+              <button className="inline-retry" onClick={reload}>
+                Reload chat
+              </button>
+            </Notice>
+          )}
+          {!loaded && !error && (
+            <p className="subtle" role="status">
+              Loading conversation…
+            </p>
+          )}
+          {loaded && conversation && (
+            <>
+              {nextBefore !== null && (
+                <Button
+                  className="earlier-exchanges"
+                  variant="ghost"
+                  disabled={olderLoading}
+                  onClick={loadEarlier}
                 >
-                  <Answer
-                    turn={turn}
-                    onSource={(citation) => setSource({ turnId: turn.id, citation })}
-                    onTurnReference={(turnId) => void showTurn(turnId)}
-                  />
-                </section>
-              </Fragment>
-            ))}
-            {turns.some(
-              (turn) =>
-                turn.coverage.pages_without_content.length > 0 ||
-                turn.coverage.diagnostics.length > 0,
-            ) && (
-              <p className="chat-coverage" role="note">
-                Some document content may be missing.{' '}
-                <Link to={`/documents/${conversation.document_id}`}>
-                  Check the document’s extraction details
-                </Link>{' '}
-                when verifying answers.
-              </p>
-            )}
-            <QuestionComposer
-              conversationId={id}
-              observedHead={observedHead}
-              waiting={active || historyLoading}
-              documentName={conversation.document_name}
-              onAccepted={(turn) => {
-                acceptTurn(turn);
-                setSubmittedTurn(turn.id);
-                onTurnChanged();
-              }}
-              onConflict={reload}
-            />
-          </>
-        )}
+                  {olderLoading ? 'Loading earlier exchanges…' : 'Load earlier exchanges'}
+                </Button>
+              )}
+              {turns.map((turn, index) => (
+                <Fragment key={turn.id}>
+                  {index > 0 && turn.sequence > turns[index - 1].sequence + 1 && (
+                    <p className="chat-history-gap" role="note">
+                      Exchanges {turns[index - 1].sequence + 1}–{turn.sequence - 1} are not loaded.
+                      Use Load earlier exchanges to read them.
+                    </p>
+                  )}
+                  <section
+                    id={`exchange-${turn.id}`}
+                    aria-label={`Exchange ${turn.sequence}`}
+                    tabIndex={-1}
+                    className="chat-exchange"
+                  >
+                    <Answer
+                      turn={turn}
+                      onSource={(citation) =>
+                        setSource({
+                          turnId: turn.id,
+                          citations: turn.citations,
+                          selected: citation?.source_id,
+                        })
+                      }
+                      onTurnReference={(turnId) => void showTurn(turnId)}
+                    />
+                  </section>
+                </Fragment>
+              ))}
+            </>
+          )}
+        </div>
       </div>
+      {loaded && conversation && (
+        <div className="chat-composer-dock">
+          {turns.some(
+            (turn) =>
+              turn.coverage.pages_without_content.length > 0 ||
+              turn.coverage.diagnostics.length > 0,
+          ) && (
+            <p className="chat-coverage" role="note">
+              <Link to={`/documents/${conversation.document_id}`}>Extraction gaps</Link> may affect
+              answers.
+            </p>
+          )}
+          <QuestionComposer
+            conversationId={id}
+            observedHead={observedHead}
+            waiting={active || historyLoading}
+            documentName={conversation.document_name}
+            onAccepted={(turn) => {
+              acceptTurn(turn);
+              setSubmittedTurn(turn.id);
+              onTurnChanged();
+            }}
+            onConflict={reload}
+          />
+        </div>
+      )}
       {source && conversation && (
         <SourcePanel
-          key={`${source.turnId}:${source.citation.source_id}`}
+          key={`${source.turnId}:${source.selected || 'all'}`}
           documentId={conversation.document_id}
-          source={source.citation}
+          sources={source.citations}
+          selected={source.selected}
           onClose={() => setSource(null)}
         />
       )}

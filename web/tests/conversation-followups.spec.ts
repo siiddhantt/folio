@@ -177,7 +177,8 @@ test('a first-send conflict opens the current chat with its rejected question st
     else throw new Error(`Unexpected request ${path}`);
   });
   await page.goto('/new-chat');
-  await page.getByRole('combobox', { name: 'Document', exact: true }).selectOption(chat.index_id);
+  await page.getByRole('combobox', { name: 'Document', exact: true }).click();
+  await page.getByRole('option', { name: 'Coverage.pdf', exact: true }).click();
   const composer = page.getByRole('textbox', { name: 'Your question' });
   await composer.fill(second.question);
   await page.getByRole('button', { name: 'Send question' }).click();
@@ -262,12 +263,11 @@ test('a follow-up stays in the same chat and each saved S1 opens its own evidenc
     [firstExchange, first.citations[0].text],
     [secondExchange, second.citations[0].text],
   ] as const) {
-    await exchange.getByRole('button', { name: 'Source S1, page 1' }).click();
-    const source = page.getByRole('dialog', { name: 'Source', exact: true });
-    await source.getByText('Retrieved passage · S1').click();
+    await exchange.getByRole('button', { name: /^Source S1, page 1:/ }).click();
+    const source = page.getByRole('dialog', { name: 'Sources', exact: true });
     await expect(source.getByText(passage, { exact: true })).toBeVisible();
-    await source.getByRole('button', { name: 'Close source' }).click();
-    await expect(exchange.getByRole('button', { name: 'Source S1, page 1' })).toBeFocused();
+    await source.getByRole('button', { name: 'Close sources' }).click();
+    await expect(exchange.getByRole('button', { name: /^Source S1, page 1:/ })).toBeFocused();
   }
 });
 
@@ -544,7 +544,7 @@ test('new questions remain visible while polling and older-page loads preserve r
   ).toBeInViewport();
   const oldView = page.getByRole('region', { name: 'Exchange 21', exact: true });
   await oldView.scrollIntoViewIfNeeded();
-  const main = page.getByRole('main');
+  const main = page.getByRole('region', { name: 'Conversation messages' });
   const readingPosition = await main.evaluate((element) => element.scrollTop);
   releasePoll();
   await expect(page.getByText(next.answer.statements[0].text, { exact: true })).toHaveCount(1);
@@ -640,9 +640,9 @@ test('the pinned document extraction gap is shown once across multiple exchanges
   });
   await page.goto('/conversations/chat-1');
   await expect(page.getByRole('region', { name: 'Exchange 2', exact: true })).toHaveCount(1);
-  const note = page.getByRole('note').filter({ hasText: 'Some document content may be missing.' });
+  const note = page.getByRole('note').filter({ hasText: 'Extraction gaps may affect answers.' });
   await expect(note).toHaveCount(1, { timeout: 5000 });
-  await expect(note.getByRole('link', { name: /extraction details/ })).toHaveAttribute(
+  await expect(note.getByRole('link', { name: 'Extraction gaps', exact: true })).toHaveAttribute(
     'href',
     '/documents/document-1',
   );

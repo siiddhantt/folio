@@ -49,7 +49,8 @@ test('a creation acknowledged after navigation preserves the question without su
     await route.fulfill({ json: responses[path] });
   });
   await page.goto('/new-chat');
-  await page.getByRole('combobox', { name: 'Document', exact: true }).selectOption('index-1');
+  await page.getByRole('combobox', { name: 'Document', exact: true }).click();
+  await page.getByRole('option', { name: 'Coverage.pdf', exact: true }).click();
   await page
     .getByRole('textbox', { name: 'Your question' })
     .fill('Keep this question with its chat.');
@@ -139,7 +140,8 @@ test('home separates upload and a document-scoped chat that starts only when sen
   await page.getByRole('link', { name: 'Folio home' }).click();
   await main.getByRole('link', { name: 'New chat', exact: true }).click();
   await expect(page).toHaveURL(/\/new-chat$/);
-  await page.getByRole('combobox', { name: 'Document', exact: true }).selectOption('index-1');
+  await page.getByRole('combobox', { name: 'Document', exact: true }).click();
+  await page.getByRole('option', { name: 'Coverage.pdf', exact: true }).click();
   await page
     .getByRole('textbox', { name: 'Your question' })
     .fill('Does the garage have a separate limit?');
@@ -147,8 +149,8 @@ test('home separates upload and a document-scoped chat that starts only when sen
   await expect(page.getByRole('textbox', { name: 'Your question' })).toHaveValue(
     'Does the garage have a separate limit?',
   );
-  await expect(page.getByRole('combobox', { name: 'Document', exact: true })).toHaveValue(
-    'index-1',
+  await expect(page.getByRole('combobox', { name: 'Document', exact: true })).toHaveText(
+    'Coverage.pdf',
   );
   expect(mutations).toEqual([]);
   await page.getByRole('button', { name: 'Send question', exact: true }).click();
@@ -226,7 +228,8 @@ test('a late first-send replay cannot erase a newer chat draft', async ({ page }
     await page.getByRole('main').getByRole('link', { name: 'New chat', exact: true }).click();
   };
   await page.goto('/new-chat');
-  await page.getByRole('combobox', { name: 'Document', exact: true }).selectOption('index-1');
+  await page.getByRole('combobox', { name: 'Document', exact: true }).click();
+  await page.getByRole('option', { name: 'Coverage.pdf', exact: true }).click();
   await page.getByRole('textbox', { name: 'Your question' }).fill(chat.question);
   await page.getByRole('button', { name: 'Send question' }).click();
   await expect.poll(() => submissions).toBe(1);
@@ -234,7 +237,8 @@ test('a late first-send replay cannot erase a newer chat draft', async ({ page }
   await page.getByRole('button', { name: 'Send question' }).click();
   await expect(page).toHaveURL(/\/conversations\/chat-1$/);
   await openNewChat();
-  await page.getByRole('combobox', { name: 'Document', exact: true }).selectOption('index-1');
+  await page.getByRole('combobox', { name: 'Document', exact: true }).click();
+  await page.getByRole('option', { name: 'Coverage.pdf', exact: true }).click();
   await page.getByRole('textbox', { name: 'Your question' }).fill('A different draft');
   const lateResponse = page.waitForResponse(
     (response) =>
@@ -275,18 +279,23 @@ test('a failed linked-document lookup never silently sends the previous document
     else throw new Error(`Unexpected request ${url.pathname}`);
   });
   await page.goto('/new-chat');
-  await page.getByRole('combobox', { name: 'Document', exact: true }).selectOption('index-a');
+  await page.getByRole('combobox', { name: 'Document', exact: true }).click();
+  await page.getByRole('option', { name: 'First.pdf', exact: true }).click();
   await page.getByRole('textbox', { name: 'Your question' }).fill('What does this report say?');
   await page.goto('/new-chat?document=index-b');
   await expect(page.getByRole('alert')).toContainText('Document lookup unavailable.');
-  await expect(page.getByRole('combobox', { name: 'Document', exact: true })).toHaveValue('', {
-    timeout: 5000,
-  });
+  await expect(page.getByRole('combobox', { name: 'Document', exact: true })).toHaveText(
+    'Choose a document',
+    {
+      timeout: 5000,
+    },
+  );
   await expect(page.getByRole('button', { name: 'Send question' })).toBeDisabled();
   await expect(page.getByRole('textbox', { name: 'Your question' })).toHaveValue(
     'What does this report say?',
   );
-  await page.getByRole('combobox', { name: 'Document', exact: true }).selectOption('index-a');
+  await page.getByRole('combobox', { name: 'Document', exact: true }).click();
+  await page.getByRole('option', { name: 'First.pdf', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Send question' })).toBeEnabled();
 });
 
@@ -350,7 +359,8 @@ test('confirming an uncertain send by exact replay clears the completed new-chat
     await route.fulfill({ json: responses[path] });
   });
   await page.goto('/new-chat');
-  await page.getByRole('combobox', { name: 'Document', exact: true }).selectOption('index-1');
+  await page.getByRole('combobox', { name: 'Document', exact: true }).click();
+  await page.getByRole('option', { name: 'Coverage.pdf', exact: true }).click();
   await page.getByRole('textbox', { name: 'Your question' }).fill(chat.question);
   await page.getByRole('button', { name: 'Send question' }).click();
   await expect(page.getByRole('alert')).toContainText('Retry sends the same question.');
@@ -422,8 +432,8 @@ test('empty choices keep a draft usable and a linked document can be selected be
   await expect(page.getByRole('button', { name: 'Send question' })).toBeDisabled();
   available = true;
   await page.goto('/new-chat?document=selected-index');
-  await expect(page.getByRole('combobox', { name: 'Document', exact: true })).toHaveValue(
-    'selected-index',
+  await expect(page.getByRole('combobox', { name: 'Document', exact: true })).toHaveText(
+    'Earlier report.pdf',
     { timeout: 5000 },
   );
   await expect(question).toHaveValue('What changed?');
@@ -480,7 +490,8 @@ test('an uncertain first send keeps both replay identities across reload and lea
     else throw new Error(`Unexpected request ${path}`);
   });
   await page.goto('/new-chat');
-  await page.getByRole('combobox', { name: 'Document', exact: true }).selectOption('index-1');
+  await page.getByRole('combobox', { name: 'Document', exact: true }).click();
+  await page.getByRole('option', { name: 'Coverage.pdf', exact: true }).click();
   await page.getByRole('textbox', { name: 'Your question' }).fill('What is covered?');
   await page.getByRole('button', { name: 'Send question' }).click();
   await expect(page.getByRole('alert')).toContainText('Retry sends the same question.');

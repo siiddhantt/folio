@@ -43,6 +43,13 @@ or second application backend is needed now. Use a small router, typed HTTP
 functions, feature components and a few reused controls. Extract abstractions
 when there is actual reuse; do not create a broad component framework.
 
+The November 13 conversation polish extends this foundation with shared
+Radix-backed Select, menu and sheet composition where used. Answer formatting
+uses pinned `react-markdown` and `remark-gfm`, without raw HTML or remote images.
+The [conversation reading contract](conversations.md#reading-answers--november-13)
+describes the composer and cited-passage drawer. Model/provider output remains
+untrusted data; Markdown support does not change source validation.
+
 The owner selected a restrained shadcn foundation after reviewing the first UI.
 Use neutral light/dark surfaces, one locally bundled DM Sans family, compact
 controls and a document/source split with page references in the content gutter.
@@ -98,5 +105,7 @@ The November 11 [development console](development-console.md) adds persisted
 processing controls beside the theme toggle. It applies only to new uploads;
 per-document generation controls remain deferred.
 
-Deferred: document library/listing, chat controls, full tracing collectors,
-live OCR percentages, streaming updates, authentication and public hosting.
+Conversation entry, history and controls are implemented separately; see the
+[conversation contract](conversations.md). Runs lists accepted uploads. A richer
+searchable document library, full tracing collectors, live OCR percentages,
+streaming updates, authentication and public hosting remain deferred.

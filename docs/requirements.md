@@ -33,7 +33,7 @@ The first journey is verified through APIs. On November 9, a minimal upload/deta
 | --- | --- | --- |
 | R01 | Intelligent upload and ingestion | First slice implemented: bounded PDF upload, immutable original and metadata, idempotent acceptance and useful invalid-input errors. Initial limits are 25 MiB and 100 physical pages; encrypted PDFs are terminal unsupported inputs. |
 | R02 | Asynchronous document processing | Extraction, summaries and indexing run through RQ/Redis with durable PostgreSQL intent and bounded recovery. Indexing checkpoints one bounded embedding batch per job and publishes readiness only after every planned chunk has a vector. Request/attempt history remains inspectable. |
-| R03 | Document retrieval | Metadata, processing state, original bytes and paginated revision evidence are available. A bounded Runs page lists accepted uploads and reopens documents separately from conversations. Filtering and content search remain open. |
+| R03 | Document retrieval | Metadata, processing state, original bytes and paginated revision evidence are available. A bounded Runs page lists accepted uploads and reopens documents separately from conversations. Filtering and content search are possible extensions, not required for this acceptance criterion. |
 | R04 | Summaries and AI insights | Automatically prepare a saved short overview and normally 3–5 cited key points (1–2 for short documents) from complete available evidence in one call per attempt, showing known gaps. No manual generation controls or generation on reads. Inputs over the selected limit remain readable with a summary-unavailable reason. Summaries and embeddings share the existing $1 cumulative and $0.40 document allowance, including retries/uncertain calls; indexing received no allowance increase. |
 | R05 | Start a chat session | Save a conversation pinned to one ready PDF index. New chat selects a ready document; the sidebar lists generated or manually renamed titles separately from Runs. Soft deletion hides the chat and blocks further work while retaining internal records. |
 | R06 | Ask a grounded question | Exact search retrieves at most six chunks from the pinned index. Return concise cited statements, clarification or insufficient evidence; preserve known gaps and validate citation membership. Semantic support is evaluated separately. |
@@ -42,7 +42,7 @@ The first journey is verified through APIs. On November 9, a minimal upload/deta
 | R09 | Document statistics API | Return real persisted document counts/status totals and agreed aggregate information. Do not substitute a static dashboard. |
 | R10 | Processing metrics API | Request status exposes attempts, failures and measured parser duration. That duration includes admission, imports/setup, conversion and mapping, not queue wait or publication. Development inspection also exposes individual summary/indexing attempts, timing and known/uncertain billing. Aggregate metrics remain unfinished. |
 | R11 | Durable data structures | Store document metadata/status, summaries/insights, conversations, messages/context/citations, processing history/metrics, and system performance observations. |
-| R12 | Usable APIs and failure behavior | Provide coherent request/response models, useful errors, and API documentation. Unsupported operations and limits should be explicit. |
+| R12 | Usable APIs and failure behavior | Coherent routes, validated inputs, useful errors and generated OpenAPI are implemented. Several success responses still advertise an empty schema; response models and useful examples need a documentation pass. Unsupported operations and limits should be explicit. |
 | R13 | Reproducible operation | Provide working backend source, setup/configuration instructions, and an architecture explanation alongside the implementation. |
 | R14 | Demonstration | Provide a reproducible document-chat walkthrough and a video demonstrating actual working behavior. The video remains required and has not yet been produced. Use safe fixtures. |
 | R15 | Transparent AI development | Maintain a concise AI-use record, design rationale, and versioned prompts with explanations of their goals and tradeoffs. |
@@ -96,7 +96,7 @@ Every item is accounted for. Deferred means intentionally outside the initial co
 | O07 | Simple frontend/dashboard | Minimal upload/detail/evidence/source UI accepted November 9 with React, TypeScript and Vite. Light/dark appearance included; a separate Runs page accepted November 12. A richer dashboard remains deferred. |
 | O08 | Real-time processing/chat updates | Deferred; polling is an initial option. SSE/WebSocket require a stated need. |
 | O09 | Smart embedding/response caching | Deferred; define invalidation and scope keys before enabling. |
-| O10 | Vector database integration | pgvector storage accepted and implemented in PostgreSQL 18. Exact search is the selected next direction; approximate vector indexes and other services remain deferred. |
+| O10 | Vector database integration | pgvector storage and exact scoped search are implemented in PostgreSQL 18. Approximate vector indexes and other services remain deferred. |
 | O11 | Streaming chat responses | Deferred; a final answer with verified source references is the first concern. |
 | O12 | Broader test coverage | Grow with actual behaviors and failures. Core behavior verification begins in the first slice; no arbitrary coverage target. |
 | O13 | AI cost tracking and optimization | Summaries and embeddings use one durable allowance with reservations and observed usage/cost; uncertain billed attempts retain their reservation. Broader optimization remains deferred. |
@@ -109,9 +109,9 @@ Every item is accounted for. Deferred means intentionally outside the initial co
 ## Unknowns to resolve in order
 
 1. Summary/insight usefulness and grounded-answer behavior for ambiguity, missing evidence and partial extraction, within the accepted one-PDF scope.
-2. Follow-up resolution and the precise token triggers/schema for accepted hybrid history compression; first-answer retrieval and index binding are now selected.
-3. Representative questions, wider OCR quality cases, latency expectations and an explicit live-evaluation budget.
-4. Retention/deletion, backpressure, total storage limits and any later private/public hosting boundary.
+2. Real long-history quality across compaction: the accepted triggers, frozen inputs and recovery are implemented, but repeated live compression has not been evaluated.
+3. Representative held-out questions, wider OCR quality cases and measured latency expectations. The existing live-evaluation allowance remains unchanged.
+4. Document retention/deletion, backpressure, total storage limits and any later private/public hosting boundary. Conversation removal already has the accepted retained-record behavior.
 
 Authentication, multi-tenancy, hosting, billing features, additional OCR languages and new workload limits are not silently assumed. Initial ingestion bounds are accepted starting policies, not measured capacity guarantees.
 
@@ -131,6 +131,24 @@ Three concerns receive comparable attention: thoughtful AI integration and trans
 Start with human-reviewed documents and questions. Observe extraction, evidence retrieval, answer support, citation correctness, follow-up behavior, and failures separately. A small development set is useful for finding errors but is not statistical proof of general accuracy.
 
 Consider thousands of documents in design discussion through asynchronous work, scoped retrieval, bounded resource use, pagination, and measured bottlenecks. Do not claim throughput or production readiness before measurement.
+
+## Capability review — November 13
+
+The core workflow is implemented through saved follow-ups and hybrid memory.
+Review distinguishes working behavior from model quality and unfinished delivery:
+
+| Area | Current evidence | Remaining work |
+| --- | --- | --- |
+| Upload, extraction and document retrieval | Persistent originals/evidence, asynchronous recovery, source pages and partial-result warnings; API and parser checks | Broader noisy/rotated OCR evaluation, not additional file formats by default |
+| Summaries and insights | Automatic cited overview/key points, saved results and explicit size/failure outcomes | Resolve documented citation/qualification weaknesses; completion is not a semantic quality pass |
+| Indexing and grounded conversations | Frozen source-linked chunks/vectors, scoped retrieval, saved answers/follow-ups, history, rename/delete and original-turn references | Held-out retrieval/answer checks beyond the development examples; one observed rewrite still adds terminology |
+| Long conversations | Durable older-history notes, separate worker, bounded waiting/recovery and preserved originals | Real compaction-quality evaluation; repeated compression may lose details |
+| Statistics and monitoring APIs | Individual attempts, timing, errors and usage are available | R09 document statistics and R10 aggregate processing metrics endpoints |
+| API documentation and operation | OpenAPI, README, architecture, prompt rationale, AI-use record and reproducible Docker setup | Typed success-response schemas/examples, final recorded walkthrough and measured workload limits |
+
+Document filtering/search, streaming, multi-document chat and a particular RAG
+framework are not prerequisites for the accepted core workflow. Keep them
+deferred rather than expanding scope to close the remaining API and quality gaps.
 
 ## Agreement rule
 

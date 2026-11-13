@@ -1,10 +1,16 @@
 import { useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Dialog, DropdownMenu } from 'radix-ui';
+import { Dialog } from 'radix-ui';
 import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import { ApiError, errorMessage, request } from '../api';
 import { Button, Notice } from '../components/ui';
 import { Input } from '../components/ui/input';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '../components/ui/dropdown-menu';
 import type { Conversation } from './types';
 import { clearConversationStorage } from './storage';
 
@@ -24,8 +30,8 @@ export function ConversationMenu({
   const trigger = useRef<HTMLButtonElement>(null);
   const openingDialog = useRef(false);
   return (
-    <DropdownMenu.Root>
-      <DropdownMenu.Trigger asChild>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
         <Button
           ref={trigger}
           className="history-actions-trigger"
@@ -35,39 +41,35 @@ export function ConversationMenu({
         >
           <MoreHorizontal aria-hidden="true" />
         </Button>
-      </DropdownMenu.Trigger>
-      <DropdownMenu.Portal>
-        <DropdownMenu.Content
-          className="conversation-action-menu"
-          align="end"
-          sideOffset={4}
-          onCloseAutoFocus={(event) => {
-            if (openingDialog.current) {
-              event.preventDefault();
-              openingDialog.current = false;
-            }
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="end"
+        onCloseAutoFocus={(event) => {
+          if (openingDialog.current) {
+            event.preventDefault();
+            openingDialog.current = false;
+          }
+        }}
+      >
+        <DropdownMenuItem
+          onSelect={() => {
+            openingDialog.current = true;
+            onAction({ conversation, trigger: trigger.current, kind: 'rename' });
           }}
         >
-          <DropdownMenu.Item
-            onSelect={() => {
-              openingDialog.current = true;
-              onAction({ conversation, trigger: trigger.current, kind: 'rename' });
-            }}
-          >
-            <Pencil aria-hidden="true" /> Rename
-          </DropdownMenu.Item>
-          <DropdownMenu.Item
-            className="conversation-delete-action"
-            onSelect={() => {
-              openingDialog.current = true;
-              onAction({ conversation, trigger: trigger.current, kind: 'delete' });
-            }}
-          >
-            <Trash2 aria-hidden="true" /> Delete
-          </DropdownMenu.Item>
-        </DropdownMenu.Content>
-      </DropdownMenu.Portal>
-    </DropdownMenu.Root>
+          <Pencil aria-hidden="true" /> Rename
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          className="conversation-delete-action"
+          onSelect={() => {
+            openingDialog.current = true;
+            onAction({ conversation, trigger: trigger.current, kind: 'delete' });
+          }}
+        >
+          <Trash2 aria-hidden="true" /> Delete
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 

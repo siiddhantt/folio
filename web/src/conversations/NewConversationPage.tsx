@@ -2,6 +2,13 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ApiError, errorMessage, request } from '../api';
 import { Button, Notice } from '../components/ui';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../components/ui/select';
 import { QuestionInput } from './QuestionComposer';
 import type { Conversation, Turn } from './types';
 import {
@@ -299,27 +306,29 @@ export function NewConversationPage() {
             <label className="sr-only" htmlFor="chat-document">
               Document
             </label>
-            <select
-              id="chat-document"
+            <Select
               name="document"
               value={draft.document?.index_id || ''}
               disabled={busy || !!intent || selectionLoading || !choices.length}
-              title={draft.document?.display_name}
-              onChange={(event) => {
+              onValueChange={(value) => {
                 setSelectionError('');
                 changeDraft({
                   ...draft,
-                  document: choices.find((value) => value.index_id === event.target.value) || null,
+                  document: choices.find((choice) => choice.index_id === value) || null,
                 });
               }}
             >
-              <option value="">Choose a document</option>
-              {choices.map((document) => (
-                <option key={document.index_id} value={document.index_id}>
-                  {document.display_name}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger id="chat-document" title={draft.document?.display_name}>
+                <SelectValue placeholder="Choose a document" />
+              </SelectTrigger>
+              <SelectContent>
+                {choices.map((document) => (
+                  <SelectItem key={document.index_id} value={document.index_id}>
+                    {document.display_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </>
         }
       />

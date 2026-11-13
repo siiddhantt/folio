@@ -2,6 +2,13 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { errorMessage, request } from '../api';
 import { Button, Notice } from '../components/ui';
 import { Input } from '../components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../components/ui/select';
 import { RuntimeDetails } from './RuntimeDetails';
 import type { Configuration, Controls } from './types';
 
@@ -32,6 +39,7 @@ export function SettingsPage({ onSaved }: { onSaved: () => void }) {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [reload, setReload] = useState(0);
+  const [formReset, setFormReset] = useState(0);
   useEffect(() => {
     const controller = new AbortController();
     setConfiguration(null);
@@ -103,9 +111,13 @@ export function SettingsPage({ onSaved }: { onSaved: () => void }) {
       {configuration && (
         <div className="settings-layout">
           <form
-            key={`${configuration.revision}-${reload}`}
+            key={`${configuration.revision}-${reload}-${formReset}`}
             onSubmit={(event) => void save(event)}
             onChange={() => setSaved(false)}
+            onReset={() => {
+              setFormReset((value) => value + 1);
+              setSaved(false);
+            }}
           >
             <fieldset disabled={saving}>
               <legend>Ingestion</legend>
@@ -147,26 +159,33 @@ export function SettingsPage({ onSaved }: { onSaved: () => void }) {
                 label="Output token limit"
                 value={configuration.values.summary_max_output_tokens}
               />
-              <label className="settings-field">
-                <span>Reasoning effort</span>
-                <select
+              <div className="settings-field">
+                <label htmlFor="reasoning-effort">Reasoning effort</label>
+                <Select
                   name="summary_reasoning_effort"
                   defaultValue={configuration.values.summary_reasoning_effort}
+                  disabled={saving}
+                  onValueChange={() => setSaved(false)}
                 >
-                  {!configuration.runtime.reasoning_options.includes(
-                    configuration.values.summary_reasoning_effort,
-                  ) && (
-                    <option value={configuration.values.summary_reasoning_effort} disabled>
-                      {configuration.values.summary_reasoning_effort} (unsupported)
-                    </option>
-                  )}
-                  {configuration.runtime.reasoning_options.map((value) => (
-                    <option key={value} value={value}>
-                      {value}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                  <SelectTrigger id="reasoning-effort">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {!configuration.runtime.reasoning_options.includes(
+                      configuration.values.summary_reasoning_effort,
+                    ) && (
+                      <SelectItem value={configuration.values.summary_reasoning_effort} disabled>
+                        {configuration.values.summary_reasoning_effort} (unsupported)
+                      </SelectItem>
+                    )}
+                    {configuration.runtime.reasoning_options.map((value) => (
+                      <SelectItem key={value} value={value}>
+                        {value}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </fieldset>
             <div className="settings-actions">
               <Button type="submit" disabled={saving}>

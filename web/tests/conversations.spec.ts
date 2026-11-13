@@ -115,12 +115,13 @@ test('a saved chat reloads its answer, keeps its composer and opens the cited PD
     page.getByText('The building limit includes garage coverage.', { exact: true }),
   ).toBeVisible();
   expect(submissions).toBe(1);
-  await page.getByRole('button', { name: 'Source S1, page 1', exact: true }).click();
-  const source = page.getByRole('dialog', { name: 'Source', exact: true });
+  await page.getByRole('button', { name: /^Source S1, page 1:/ }).click();
+  const source = page.getByRole('dialog', { name: 'Sources', exact: true });
   await expect(source).toBeVisible();
+  await source.getByRole('button', { name: 'View page 1 in original' }).click();
   await expect(source.getByRole('spinbutton', { name: 'PDF page number' })).toHaveValue('1');
-  await page.getByRole('button', { name: 'Close source', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Source S1, page 1', exact: true })).toBeFocused();
+  await page.getByRole('button', { name: 'Close sources', exact: true }).click();
+  await expect(page.getByRole('button', { name: /^Source S1, page 1:/ })).toBeFocused();
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(
     page.getByText('The building limit includes garage coverage.', { exact: true }),
@@ -132,8 +133,8 @@ test('a saved chat reloads its answer, keeps its composer and opens the cited PD
   await page.getByRole('link', { name: 'New chat', exact: true }).click();
   await expect(page).toHaveURL(/\/new-chat\?document=index-1$/);
   await expect(page.getByRole('textbox', { name: 'Your question' })).toHaveValue('');
-  await expect(page.getByRole('combobox', { name: 'Document', exact: true })).toHaveValue(
-    'index-1',
+  await expect(page.getByRole('combobox', { name: 'Document', exact: true })).toHaveText(
+    'Coverage.pdf',
   );
   expect(creations).toBe(0);
   expect(submissions).toBe(1);
@@ -275,7 +276,7 @@ test('clarification and evidence limits remain readable without invented source 
     answer.statements[0].text,
   );
   await expect(page.getByRole('button', { name: /^Source / })).toHaveCount(0);
-  await expect(page.getByRole('note')).toContainText('Some document content may be missing.');
+  await expect(page.getByRole('note')).toContainText('Extraction gaps may affect answers.');
   await expect(page.getByRole('textbox', { name: 'Your question' })).toBeEditable();
   await expect(page.getByRole('link', { name: 'New chat', exact: true })).toBeVisible();
 });

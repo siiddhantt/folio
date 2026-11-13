@@ -1,16 +1,12 @@
-.new-chat-action {
-  display: contents;
-}
-.new-chat-action [role='alert'] {
-  max-width: 360px;
-}
 .chat-page {
-  min-height: 100%;
+  height: 100%;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   padding: 0 var(--page-gutter);
 }
 .chat-heading {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -57,12 +53,33 @@
   margin: 0 auto;
   padding-block: 32px 20px;
   font-size: 1rem;
-  flex: 1;
   display: flex;
   flex-direction: column;
 }
-.chat-empty .question-composer {
-  margin-block-start: auto;
+.chat-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scroll-padding-block: 24px;
+}
+.chat-composer-dock {
+  flex-shrink: 0;
+  width: 100%;
+  max-width: 70ch;
+  font-size: 1rem;
+  margin-inline: auto;
+  padding-block: 8px max(12px, env(safe-area-inset-bottom));
+}
+.chat-composer-dock .question-composer {
+  margin-block-start: 0;
+}
+.composer-notice {
+  margin: 8px 0 0;
+  color: var(--muted);
+  text-align: center;
+  font-size: 0.75rem;
+  line-height: 1.4;
 }
 .chat-exchange + .chat-exchange {
   margin-block-start: 24px;
@@ -92,11 +109,11 @@
 .question-composer textarea {
   display: block;
   resize: none;
-  min-height: 72px;
+  min-height: 44px;
   max-height: min(200px, 35dvh);
   overflow-y: auto;
   width: 100%;
-  padding: 12px;
+  padding: 10px 12px;
   border: 0;
   background: transparent;
   color: var(--foreground);
@@ -128,15 +145,9 @@
   min-width: 0;
   max-width: 100%;
 }
-.composer-scope select {
+.composer-scope .select-trigger {
   max-width: 100%;
-  min-height: 36px;
-  padding-inline: 8px;
-  border-radius: 8px;
-  font-size: 1rem;
-  text-overflow: ellipsis;
   background: var(--secondary);
-  color: var(--foreground);
 }
 .composer-actions .subtle {
   font-size: 12px;
@@ -167,8 +178,7 @@
   border-radius: 8px;
   background: var(--secondary);
 }
-.question-message p,
-.answer-statement p {
+.question-message p {
   margin: 0;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -204,48 +214,14 @@
   padding: 0 10px;
   font-size: 0.75rem;
 }
-.chat-complete {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
-  padding-block: 16px;
-  margin-block-start: auto;
-  background: var(--background);
-  border-top: 1px solid var(--line);
-}
-.chat-complete p {
-  font-size: 12px;
-  margin: 0;
-}
 .chat-coverage {
-  margin-block: 20px 32px;
+  margin-block: 0 8px;
   color: var(--muted);
   font-size: 0.8125rem;
   line-height: 1.6;
 }
 .inline-retry {
   text-decoration: underline;
-}
-.chat-source-overlay {
-  position: fixed;
-  inset: 0;
-  background: #0006;
-  z-index: 60;
-}
-.chat-source-panel {
-  position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: min(760px, 100%);
-  background: var(--background);
-  z-index: 61;
-  display: flex;
-  flex-direction: column;
-  border-left: 1px solid var(--line);
-  box-shadow: -12px 0 36px #0002;
 }
 .chat-source-heading {
   flex-shrink: 0;
@@ -265,10 +241,12 @@
   overscroll-behavior: contain;
   padding: 20px 24px;
 }
-.source-passage {
-  margin-bottom: 20px;
+.source-passage + .source-passage {
+  padding-block-start: 24px;
+  margin-block-start: 24px;
+  border-block-start: 1px solid var(--line);
 }
-.source-passage summary {
+.source-passage h3 {
   font-size: 13px;
   color: var(--muted);
 }
@@ -277,6 +255,50 @@
   overflow-wrap: anywhere;
   line-height: 1.7;
   margin: 14px 0;
+}
+.source-back {
+  margin-block-end: 16px;
+}
+.statement-sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-block-start: 6px;
+}
+.statement-sources button {
+  min-width: 24px;
+  padding: 0 6px;
+  background: var(--secondary);
+  font-variant-numeric: tabular-nums;
+}
+.answer-sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-block-start: 20px;
+}
+.source-chip {
+  max-width: min(100%, 260px);
+  min-width: 0;
+  font-size: 0.75rem;
+  font-weight: 400;
+  height: 36px;
+  padding-inline: 8px;
+  gap: 8px;
+}
+.source-chip-preview {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.source-chip-number,
+.source-chip-page {
+  flex-shrink: 0;
+  color: var(--muted);
+}
+.source-chip-number {
+  font-variant-numeric: tabular-nums;
 }
 @media (max-width: 520px) {
   .chat-heading {
@@ -294,8 +316,5 @@
   }
   .chat-source-content {
     padding: 16px;
-  }
-  .chat-complete {
-    gap: 8px;
   }
 }

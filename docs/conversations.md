@@ -11,6 +11,33 @@ passed a read-only compatibility check; quality is evaluated separately.
 The [memory walkthrough](conversation-memory.md) covers its implemented flow,
 storage, debugging and remaining quality limitations.
 
+## Reading answers — November 13
+
+The accepted polish keeps the composer below a separately scrolling transcript.
+Enter submits; Shift+Enter inserts a newline, and IME composition must never
+submit accidentally. The input starts compact, grows to a bounded height and then
+scrolls internally. Submission, retry and draft ownership retain their existing
+contracts. A small AI notice does not replace the separate known-extraction-gap
+link.
+
+Markdown is a presentation choice, not a new answer schema or prompt. Render
+formatting without raw HTML or remote images. Preserve each statement's source
+references and show up to five passage previews below the answer. The source
+drawer presents the full cited set and opens physical PDF pages. It reuses the
+saved turn response rather than performing retrieval again.
+
+For example, an answer may cite S1 for a garage limit and S3 for an exclusion.
+The backend returns those two original chunk texts and their page locations.
+The drawer shows both passages; numbered references keep the statement-to-passage
+connection visible. Another exchange's S1 is a different reference. Neither
+identifier proves semantic support: the reader still checks the actual wording.
+
+Owner exercise: open a saved answer, inspect a passage and its original page,
+close the drawer with Escape, then scroll to an older exchange without moving
+the composer. In the Network response, compare `answer.statements[].source_ids`
+with `citations`. Display changes belong in the frontend; missing or incorrect
+retrieved evidence belongs in retrieval/evaluation, not in source-chip styling.
+
 ## Original first-answer increment
 
 The owner selected one question and its terminal answer per saved conversation,

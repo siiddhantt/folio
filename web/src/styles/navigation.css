@@ -95,31 +95,6 @@
 .history-actions-trigger {
   flex-shrink: 0;
 }
-.conversation-action-menu {
-  min-width: 140px;
-  padding: 4px;
-  z-index: 70;
-  background: var(--background);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  box-shadow: 0 4px 16px #0002;
-}
-.conversation-action-menu [role='menuitem'] {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 36px;
-  padding: 8px;
-  border-radius: 4px;
-  cursor: pointer;
-}
-.conversation-action-menu [data-highlighted] {
-  background: var(--secondary);
-}
-.conversation-action-menu svg {
-  width: 16px;
-  height: 16px;
-}
 .conversation-delete-action {
   color: var(--danger);
 }

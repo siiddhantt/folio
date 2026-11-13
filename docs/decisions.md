@@ -529,6 +529,27 @@ turns remain stored. Known preparation errors are isolated per chat; waiting
 dependencies do not monopolize a dispatch batch. These are implementation bounds
 within the accepted hybrid behavior, not new subscription or access policies.
 
+## Conversation reading polish — November 13
+
+The owner requested a compact composer anchored below an independently scrolling
+transcript, Enter to send and Shift+Enter for a newline. Preserve IME composition,
+pending-submission recovery and the document/index fixed for an existing chat.
+Reuse the shadcn/Radix foundation for document selection and shared controls.
+Render answer Markdown without raw HTML or automatically loaded remote images.
+
+Show up to five cited-passage previews below each answer, with a right-hand drawer
+for the full set and links to original physical pages. The existing turn response
+already contains cited chunk text and page locations; no new source endpoint,
+retrieval policy or model call is needed. Keep source identity scoped to its turn.
+These passages are model citations, not proof that every claim is supported or
+precise highlights of the words on a page.
+
+Keep a short AI notice below the composer and a separate concise link for known
+extraction gaps. The generic notice must not hide a known document limitation.
+Verify keyboard behavior, independent scrolling, safe Markdown and source/focus
+navigation through the accepted mocked-browser boundary; inspect the deployed
+saved-chat flow without generating new answers.
+
 ## Slice order and remaining decisions
 
 November 11 planning recommendation, not an accepted implementation contract:

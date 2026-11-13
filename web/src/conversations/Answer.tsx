@@ -1,4 +1,6 @@
 import { Button, Notice } from '../components/ui';
+import { Markdown } from '../components/Markdown';
+import { AnswerSources } from './AnswerSources';
 import type { Citation, Turn } from './types';
 
 export function Answer({
@@ -7,10 +9,11 @@ export function Answer({
   onTurnReference,
 }: {
   turn: Turn;
-  onSource: (citation: Citation) => void;
+  onSource: (citation?: Citation) => void;
   onTurnReference: (turnId: string) => void;
 }) {
   const active = turn.state === 'pending' || turn.state === 'running';
+  const sources = turn.citations;
   return (
     <>
       <article className="question-message" aria-label="Your question">
@@ -39,21 +42,21 @@ export function Answer({
           )}
           {turn.answer.statements.map((statement, index) => (
             <div key={index} className="answer-statement">
-              <p>{statement.text}</p>
+              <Markdown>{statement.text}</Markdown>
               {!!statement.source_ids.length && (
-                <div className="answer-citations">
+                <div className="statement-sources" aria-label="Sources for this statement">
                   {statement.source_ids.map((id) => {
                     const citation = turn.citations.find((source) => source.source_id === id);
                     if (!citation) return null;
                     return (
                       <Button
                         key={id}
-                        variant="outline"
-                        size="sm"
+                        variant="ghost"
+                        size="xs"
                         onClick={() => onSource(citation)}
-                        aria-label={`Source ${id}, page ${citation.pages[0]}`}
+                        aria-label={`See passage ${sources.indexOf(citation) + 1} for this statement`}
                       >
-                        {citation.pages.length > 1 ? 'Pages' : 'Page'} {citation.pages.join(', ')}
+                        {sources.indexOf(citation) + 1}
                       </Button>
                     );
                   })}
@@ -75,6 +78,7 @@ export function Answer({
               )}
             </div>
           ))}
+          <AnswerSources sources={sources} onSource={onSource} />
         </article>
       ) : (
         <Notice error>No answer was saved for this question.</Notice>

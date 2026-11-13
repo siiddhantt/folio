@@ -21,6 +21,37 @@ preservation, OpenRouter OpenAI small embeddings and PostgreSQL/pgvector. Scoped
 retrieval, saved follow-ups and hybrid memory are implemented. Configuration uses a commentless
 ignored `.env` and a safe template.
 
+## Conversation reading polish and capability audit — November 13
+
+The accepted polish is implemented: a compact bottom-anchored composer with
+independent transcript scrolling, Enter/Shift+Enter and IME handling, safe
+Markdown, five cited-passage previews and a full passage/original-page drawer.
+Statement references remain explicit and turn-scoped. Shared Select, menu and
+sheet components reuse the shadcn/Radix foundation; obsolete footer/menu styling
+was removed. The short AI notice remains separate from known extraction gaps.
+
+Five new behavior checks and 32 existing mocked browser cases passed across
+focused runs. Types, formatting, production/Docker builds and diff checks passed.
+Review caught and fixed selected-passage focus, mismatched composer/answer widths,
+incomplete accessible preview names and weak Select focus indication. Real
+read-only browser inspection covered saved chats, original pages, Escape/focus,
+aligned edges and 1440/390/320-pixel layouts in both themes. Full screen-reader
+coverage and mobile virtual-keyboard behavior were not verified. The build still
+warns about the approximately 652 kB main and 634 kB PDF bundles; no size limit was
+raised to suppress this. No paid model call was made.
+
+An independent backend review passed 64 isolated conversation checks and found
+one input edge: NUL/unpaired-surrogate questions could raise server errors. Two
+test-first regressions now require a useful 422 without consuming the submission
+key; all 14 tests in the affected conversation module and Ruff/formatting passed.
+API and web images were rebuilt without resetting data.
+
+The [capability checklist](requirements.md#capability-review--november-13)
+distinguishes implemented conversations from remaining work: aggregate document
+statistics/processing metrics, typed API success responses/examples, wider
+summary/retrieval/follow-up and long-memory quality checks, and the final recorded
+walkthrough. Filtering, streaming and multi-document chat remain optional.
+
 ## Conversation completion — November 13
 
 The owner accepted a natural conversation workflow: separate New chat/Upload
@@ -595,9 +626,11 @@ indexing attempts with the owner. The bounded DeepSeek comparison is complete,
 with source-support limitations recorded above; those remain relevant before
 selecting grounded-answer behavior. Previous GPT-5.1 results remain frozen;
 no document-specific prompt tuning is planned.
-Chat/history, global statistics,
-the final document-chat demonstration/video and selected optional capabilities
-remain unfinished; see the [requirements ledger](requirements.md). The current
+Saved chat/history and hybrid memory are now implemented through the checkpoints
+at the top of this file. Aggregate document statistics and processing metrics,
+complete API response documentation, the final document-chat demonstration/video
+and broader quality evaluation remain unfinished; see the
+[requirements ledger](requirements.md). The current
 [summary contract](summaries.md) supersedes the earlier size-aware proposal with
 automatic complete-input-only processing and bounded spending.
 

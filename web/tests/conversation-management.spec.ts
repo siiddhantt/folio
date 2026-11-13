@@ -30,7 +30,8 @@ test('a late deleted-chat response cannot clear a newer uncertain submission', a
     else throw new Error(`Unexpected API path ${path}`);
   });
   await page.goto('/new-chat');
-  await page.getByRole('combobox', { name: 'Document', exact: true }).selectOption('index-1');
+  await page.getByRole('combobox', { name: 'Document', exact: true }).click();
+  await page.getByRole('option', { name: 'Coverage.pdf', exact: true }).click();
   const question = page.getByRole('textbox', { name: 'Your question' });
   await question.fill('Old question');
   await page.getByRole('button', { name: 'Send question' }).click();
@@ -145,7 +146,8 @@ for (const terminal of [
       else throw new Error(`Unexpected API path ${path}`);
     });
     await page.goto('/new-chat');
-    await page.getByRole('combobox', { name: 'Document', exact: true }).selectOption('index-1');
+    await page.getByRole('combobox', { name: 'Document', exact: true }).click();
+    await page.getByRole('option', { name: 'Coverage.pdf', exact: true }).click();
     const question = page.getByRole('textbox', { name: 'Your question' });
     await question.fill('Keep my question');
     await page.getByRole('button', { name: 'Send question' }).click();

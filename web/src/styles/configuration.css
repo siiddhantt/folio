@@ -39,16 +39,9 @@
   margin-bottom: 16px;
 }
 .settings-field input:not([type='checkbox']),
-.settings-field select {
+.settings-field .select-trigger {
   width: 140px;
   flex-shrink: 0;
-}
-.settings-field select {
-  height: 36px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: 0 10px;
-  background: var(--background);
 }
 .settings-field input[type='checkbox'] {
   width: 16px;

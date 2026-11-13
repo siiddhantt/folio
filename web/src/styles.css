@@ -6,6 +6,8 @@
 @import './styles/runs.css';
 @import './styles/conversations.css';
 @import './styles/navigation.css';
+@import './styles/markdown.css';
+@import './styles/primitives.css';
 
 @custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
 

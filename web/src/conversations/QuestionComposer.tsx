@@ -180,12 +180,24 @@ export function QuestionInput({
           id={id}
           name="question"
           placeholder="Ask about this document…"
-          rows={2}
+          rows={1}
           maxLength={4000}
           value={question}
           disabled={busy || locked}
           onChange={(event) => {
             onChange(event.target.value);
+          }}
+          onKeyDown={(event) => {
+            if (
+              event.key === 'Enter' &&
+              !event.shiftKey &&
+              !event.nativeEvent.isComposing &&
+              event.nativeEvent.keyCode !== 229
+            ) {
+              event.preventDefault();
+              if (!busy && !unavailable && question.trim())
+                event.currentTarget.form?.requestSubmit();
+            }
           }}
         />
         <div className="composer-actions">
@@ -200,6 +212,7 @@ export function QuestionInput({
           </Button>
         </div>
       </div>
+      <p className="composer-notice">AI-generated answers. Check the sources.</p>
       {error && <Notice error>{error}</Notice>}
     </form>
   );
