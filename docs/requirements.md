@@ -1,6 +1,6 @@
 # Folio requirements agreement
 
-Status: ingestion accepted November 7; minimal interface and development inspection accepted November 9; automatic-only summary trigger accepted November 10; complete-input summaries, short-source output, revised spending limits and a development configuration console accepted by November 11; separate processing-run history, saved failure details and document indexing accepted November 12. First-answer retrieval and saved conversations are implemented. Conversation management, follow-ups and hybrid memory are accepted and proceeding through separate checkpoints. Updated: 2026-11-12.
+Status: ingestion accepted November 7; minimal interface and development inspection accepted November 9; automatic-only summary trigger accepted November 10; complete-input summaries, short-source output, revised spending limits and a development configuration console accepted by November 11; separate processing-run history, saved failure details and document indexing accepted November 12. Retrieval, saved conversations, management, follow-ups and hybrid memory are implemented through separate verified software checkpoints. Model-quality limitations remain explicit. Updated: 2026-11-13.
 
 This agreement separates product outcomes, engineering constraints, proposed behavior, and optional capabilities. A proposed detail is not accepted merely because it appears here.
 
@@ -38,7 +38,7 @@ The first journey is verified through APIs. On November 9, a minimal upload/deta
 | R05 | Start a chat session | Save a conversation pinned to one ready PDF index. New chat selects a ready document; the sidebar lists generated or manually renamed titles separately from Runs. Soft deletion hides the chat and blocks further work while retaining internal records. |
 | R06 | Ask a grounded question | Exact search retrieves at most six chunks from the pinned index. Return concise cited statements, clarification or insufficient evidence; preserve known gaps and validate citation membership. Semantic support is evaluated separately. |
 | R07 | Chat history | Persist ordered questions, terminal answers/failures and per-turn source context. Read the latest 20 exchanges and load earlier pages; replay cannot create a duplicate turn. |
-| R08 | Multi-turn context | Resolve follow-ups using frozen conversation context, then retrieve fresh evidence from the pinned index. Transcript references are separate from PDF citations. Hybrid history compression is the next accepted checkpoint. |
+| R08 | Multi-turn context | Resolve follow-ups using frozen context and fresh evidence from the pinned index. Keep original history; prepare bounded older-history notes in the background, with a durable before-answer fallback when required. Transcript references remain separate from PDF citations; notes do not authorize exact quotations. |
 | R09 | Document statistics API | Return real persisted document counts/status totals and agreed aggregate information. Do not substitute a static dashboard. |
 | R10 | Processing metrics API | Request status exposes attempts, failures and measured parser duration. That duration includes admission, imports/setup, conversion and mapping, not queue wait or publication. Development inspection also exposes individual summary/indexing attempts, timing and known/uncertain billing. Aggregate metrics remain unfinished. |
 | R11 | Durable data structures | Store document metadata/status, summaries/insights, conversations, messages/context/citations, processing history/metrics, and system performance observations. |
@@ -77,7 +77,7 @@ questions. GPT-5.2 on OpenRouter's OpenAI route starts with 16,384
 input and 4,096 output tokens, reasoning off. Shared allowances are unchanged.
 Accounting surrounds paid execution; retrieval and prompt preparation do not
 make financial decisions. No subscriptions are included. Follow-ups and rewriting
-are implemented; accepted hybrid history compression is next. Previous answers must
+and hybrid history compression are implemented. Previous answers must
 remain context rather than evidence. Uploaded text cannot change instructions
 or permissions. See the [conversation contract](conversations.md).
 

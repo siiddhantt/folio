@@ -22,7 +22,8 @@ def claim_turn(database, turn_id):
             return None
         row = conn.execute(
             "SELECT * FROM conversation_turns WHERE id=%s AND state='pending' "
-            "AND available_at<=clock_timestamp() FOR UPDATE",
+            "AND available_at<=clock_timestamp() "
+            "AND (NOT policy ? 'memory' OR context_snapshot IS NOT NULL) FOR UPDATE",
             (turn_id,),
         ).fetchone()
         if row is None:
@@ -71,8 +72,17 @@ def transition(conn, row, *, result=None, code=None, retryable=False, unavailabl
         "finished_at=CASE WHEN %s THEN NULL ELSE clock_timestamp() END,"
         "available_at=clock_timestamp()+%s*interval '1 "
         "second',next_dispatch_at=clock_timestamp()+%s*interval '1 second',"
-        "transport_job_id=NULL,delivery_failures=0 WHERE id=%s",
-        (state, Jsonb(result) if result else None, code, retry, delay, delay, row["id"]),
+        "transport_job_id=NULL,delivery_failures=0,memory_check_needed=%s WHERE id=%s",
+        (
+            state,
+            Jsonb(result) if result else None,
+            code,
+            retry,
+            delay,
+            delay,
+            not retry and "memory" in row["policy"],
+            row["id"],
+        ),
     )
     return state
 

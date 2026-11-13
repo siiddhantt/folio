@@ -179,12 +179,51 @@ console does not expose these controls yet.
 | `FOLIO_CHAT_REASONING_EFFORT` | `none`, verified for this model/route. |
 | `FOLIO_CHAT_TIMEOUT_SECONDS` | `90`, maximum wait per provider request within the saved worker deadline. |
 | `FOLIO_CHAT_RETRIEVAL_CHUNKS` | `6`, maximum passages from the conversation's pinned index. |
+| `FOLIO_CHAT_HISTORY_LIMIT_TOKENS` | `8000`, selected memory plus unchanged recent exchanges; not an additional model allowance. |
+| `FOLIO_CHAT_REWRITE_MODEL_ID` / `PROVIDER` | `openai/gpt-5.2` / `openai`, follow-up resolution through OpenRouter. |
+| `FOLIO_CHAT_REWRITE_INPUT_LIMIT_TOKENS` / `MAX_OUTPUT_TOKENS` | `16384` / `1024`; complete resolver request and completion ceiling. |
+| `FOLIO_CHAT_REWRITE_REASONING_EFFORT` / `TIMEOUT_SECONDS` | `none` / `90`; frozen per accepted question. |
 
 Prices and model capacity come from validated provider metadata, not these
 settings. At the observed GPT-5.2 rates, the answer reservation is $0.086016;
 actual reported cost replaces the reservation. Existing deployment/document
-allowances are unchanged. Summary settings stay separate. History compression
-and its own configuration remain a later increment.
+allowances are unchanged. Summary settings stay separate. Rewriting reserves
+$0.043008 at the same observed rates; successful stages are reused after retry.
+
+### Long-history controls
+
+The accepted memory checkpoint uses the following separate environment settings.
+They are captured with newly accepted questions; existing frozen contexts do not
+change. The development console does not expose them yet.
+
+| Setting | Default and purpose |
+| --- | --- |
+| `FOLIO_MEMORY_TRIGGER_TOKENS` | `6000`, start preparing older-history notes after an answer when selected context reaches this size. |
+| `FOLIO_MEMORY_TARGET_TOKENS` | `3000`, soft selection target for memory plus recent exchanges. Never permission to cut a message. |
+| `FOLIO_MEMORY_KEEP_TURNS` | `2`, minimum recent complete exchanges kept unchanged. |
+| `FOLIO_MEMORY_WAIT_SECONDS` | `600`, maximum pending-question wait for required context preparation. |
+| `FOLIO_MEMORY_MODEL_ID` / `PROVIDER` | `openai/gpt-5.2` / `openai`, the accepted memory model/route. |
+| `FOLIO_MEMORY_INPUT_LIMIT_TOKENS` / `MAX_OUTPUT_TOKENS` | `16384` / `2048`, complete compactor input and generous completion ceiling. |
+| `FOLIO_MEMORY_REASONING_EFFORT` / `TIMEOUT_SECONDS` | `none` / `90`. |
+
+Require target < trigger <= hard history allowance. The memory worker uses the
+existing execution/lease settings and bounded attempts. A separate queue/worker
+lets background work overlap reading and answering; it still shares database,
+provider and deployment resources. A required summary can add latency when it
+is not ready before the next question.
+
+At the observed rates a memory call reserves $0.057344. Background admission also
+checks that enough allowance remains for the next rewrite, answer and bounded
+query embedding, but only the memory call receives a reservation. If funds are
+tight, background work defers without spending. A question that actually needs
+that same job can promote it for ordinary admission; it cannot bypass the
+spending boundary or an accounting pause. Actual reported usage replaces the
+hold, including late bills from workers that can no longer publish.
+
+When rolling out changes to shared accounting, recreate **all** admitting
+processes: API, dispatcher, ingestion/summary/index worker, chat worker and memory
+worker. An older worker must not omit a newly introduced charge type. Apply the
+migration before starting the new versions; preserve existing data and allowance.
 
 The provider's model/endpoint context limit is a capability to verify, not a capacity that Folio can enlarge by changing an environment variable. The input-fit invariant is:
 

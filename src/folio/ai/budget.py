@@ -42,6 +42,10 @@ def spending(connection, document_id=None):
             SELECT i.document_id,a.cost_usd,a.reserved_usd
             FROM turn_invocations a JOIN conversation_turns t ON t.id=a.turn_id
             JOIN document_indexes i ON i.id=t.index_id
+            UNION ALL
+            SELECT i.document_id,a.cost_usd,a.reserved_usd
+            FROM memory_attempts a JOIN conversation_memories m ON m.id=a.memory_id
+            JOIN document_indexes i ON i.id=m.index_id
         )
         SELECT COALESCE(sum(cost_usd),0) AS spent_usd,
             COALESCE(sum(reserved_usd) FILTER (WHERE cost_usd IS NULL),0) AS held_usd,

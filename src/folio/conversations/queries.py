@@ -36,6 +36,8 @@ def turn(connection, turn_id):
     row = connection.execute(
         """SELECT t.id,t.conversation_id,t.sequence,t.parent_sequence,t.question,
         t.resolution->>'query' AS resolved_question,t.state,t.result AS answer,
+        CASE WHEN t.state='pending' AND t.memory_dependency_id IS NOT NULL
+          AND t.context_snapshot IS NULL THEN 'preparing' END AS context_state,
         t.created_at,t.started_at,t.finished_at,t.error_code,i.revision_id,r.diagnostics
         FROM conversation_turns t JOIN conversations c ON c.id=t.conversation_id
         JOIN document_indexes i ON i.id=t.index_id
@@ -64,6 +66,10 @@ def turn(connection, turn_id):
 
 
 def error_message(code):
+    if code == "CHAT_CONTEXT_WAIT_EXPIRED":
+        return "Preparing this chat's context took too long. Your messages are saved."
+    if code == "CHAT_CONTEXT_PREPARATION_FAILED":
+        return "Older messages could not be summarized safely. Your messages are saved."
     if code == "CHAT_HISTORY_LIMIT":
         return (
             "This chat's history exceeds the current context limit. Start a new chat to continue."

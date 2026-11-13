@@ -43,9 +43,9 @@ Example: a PDF page says a report covers April-June. A correct answer should ide
 
 ## D03: Conversation scope and answer policy
 
-Status: one selected PDF per conversation accepted. Answer and insufficient-evidence policies remain open.
+Status: one selected PDF, grounded answers, clarification/insufficient-evidence outcomes, ordered follow-ups and hybrid history are accepted and implemented. See the [current contract](conversations.md) and [memory walkthrough](conversation-memory.md).
 
-November 12: the owner requested the complete question/answer and history flow,
+November 12 planning history: the owner requested the complete question/answer and history flow,
 including researched context compression and scaling/failure tradeoffs. The
 [conversation proposal](conversations.md) is under review. Automatic history
 summaries and sharing the existing allowance across all conversation model calls
@@ -58,7 +58,7 @@ as the prerequisite increment before chat implementation.
 - A selected set: enables comparison but adds conflicts, cross-document citations, and more retrieval cases.
 - Entire library: convenient discovery, but ambiguity and unintended source mixing become harder to control.
 
-Decision: one document initially, with explicit document IDs in the retrieval boundary. Proposed answer policy: offer grounded answers, useful clarification, or an honest insufficient-evidence result, without adding outside factual claims. A larger collection of uploaded files must not broaden a conversation's scope.
+Decision: one document initially, with explicit document IDs in the retrieval boundary. Accepted answer policy: offer grounded answers, useful clarification, or an honest insufficient-evidence result, without adding outside factual claims. A larger collection of uploaded files must not broaden a conversation's scope.
 
 Example: "What about next year?" needs the prior question to identify the subject; it still needs document evidence for next year's answer.
 
@@ -521,6 +521,13 @@ settings are 6,000 trigger / roughly 3,000 target / 8,000 hard tokens, with the
 two latest exchanges unchanged. Every assembled provider request is checked too.
 Background memory must leave allowance for the next question. These are tunable
 starting values, not lossless-memory or latency guarantees.
+
+November 13 implementation records a separate memory queue/worker, immutable
+prefixes and a 600-second pending-question deadline. Memory's 16,384 input and
+2,048 output limits leave room for a shorter, frozen notes target. All original
+turns remain stored. Known preparation errors are isolated per chat; waiting
+dependencies do not monopolize a dispatch batch. These are implementation bounds
+within the accepted hybrid behavior, not new subscription or access policies.
 
 ## Slice order and remaining decisions
 

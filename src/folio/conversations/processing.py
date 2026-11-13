@@ -19,6 +19,7 @@ from .config import rewrite_policy
 from .context import ensure_context
 from .invocations import AdmissionError, reserve, settle
 from .lifecycle import claim_turn, fail, owned
+from .memory.context import prepare_pending
 from .preparation import prepare, validate
 from .resolver import prepare_resolution, validate_resolution
 from .retrieval import retrieve, save_evidence
@@ -44,6 +45,9 @@ def process_turn(turn_id, *, settings=None, embedder=None, generator=None, resol
     database.open()
     claim, stage, result = None, None, None
     try:
+        waiting = prepare_pending(database, turn_id)
+        if waiting:
+            return waiting
         claim = claim_turn(database, turn_id)
         if claim is None:
             return {"outcome": "ignored"}
@@ -85,6 +89,7 @@ def process_turn(turn_id, *, settings=None, embedder=None, generator=None, resol
                 claim["question"],
                 context["history"],
                 prompt_version=policy.get("rewrite_prompt_version", 1),
+                memory=context.get("memory"),
             )
             profile = resolver.profile()
             manifest = check_budget(messages, schema, resolving_policy, profile) | {
@@ -176,6 +181,7 @@ def process_turn(turn_id, *, settings=None, embedder=None, generator=None, resol
                 include_title=include_title,
                 history=context["history"] if context else None,
                 resolved_question=query,
+                memory=context.get("memory") if context else None,
             )
             try:
                 budget = check_budget(messages, schema, policy, profile)

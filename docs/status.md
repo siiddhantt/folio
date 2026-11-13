@@ -18,10 +18,10 @@ First-answer conversations are implemented. The owner accepted GPT-5.2 for new
 answers after three independently supported examples; broader quality remains
 unproven. Indexing uses Docling peer merging with heading
 preservation, OpenRouter OpenAI small embeddings and PostgreSQL/pgvector. Scoped question
-retrieval and saved follow-ups are implemented; hybrid memory remains next. Configuration uses a commentless
+retrieval, saved follow-ups and hybrid memory are implemented. Configuration uses a commentless
 ignored `.env` and a safe template.
 
-## Conversation completion in progress — November 12
+## Conversation completion — November 13
 
 The owner accepted a natural conversation workflow: separate New chat/Upload
 entry, an expanding composer with a ready-document selector, generated short
@@ -71,12 +71,30 @@ fixed the observed policy-number routing and visible-ID behavior. Query expansio
 remains in one rewrite despite a correct final answer; this is development-set
 tuning, not a held-out benchmark. Combined follow-up usage is $0.05940973, with
 $0.688830076 remaining and no held charges. See [the recorded observations](conversations.md#follow-up-development-sequence--november-13).
-Hybrid memory is in progress; these short sequences do not test compaction.
+Hybrid memory software is complete; these short sequences do not test compaction.
 Browser checks verified persistence and source/original-turn links, then exposed
 a second scrollbar from a hidden input label. Its regression and the memory-wait
 status check passed red-to-green; all sixteen affected chat/navigation checks,
 types, formatting and build passed. Aside verified the deployed fix at desktop
-and mobile widths. Memory backend failure-path work and review remain active.
+and mobile widths.
+
+Memory uses durable older-prefix jobs, a separate worker and before-claim context
+preparation. Waiting consumes no chat attempt; all originals and at least two
+recent exchanges remain intact. Frozen inputs, deadlines, recovery, late billing,
+deletion and unchanged shared allowances are enforced. Review caught missing-key
+holds, mismatched stage limits, late-ready deadline bypass, metadata omitted from
+reduction checks, and blocked preparation batches; focused regressions passed.
+The broad isolated suite passed 163 checks (parser/supervision excluded), followed
+by 38 final memory/follow-up checks after the three batch regressions. Ruff and
+format checks passed; independent review found no remaining concrete blocker.
+
+Migration 013 preserved document, turn/result/context and invocation hashes.
+All accounting participants were rebuilt with the same ledger code, and the
+memory worker is listening on its separate queue. Saved live chats still read
+correctly, with $0.688830076 remaining and no held charges. No paid memory call
+was made and no production threshold was lowered for demonstration. Loss of
+detail during repeated real compaction remains an evaluation need. Read the
+[flow, failure paths and owner exercise](conversation-memory.md).
 
 ## Answer default — November 12
 

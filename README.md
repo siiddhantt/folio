@@ -28,10 +28,13 @@ pgvector. Activity shows batch progress and billing; only complete indexes expos
 their chunks. A separate chat worker answers ordered questions and follow-ups,
 using fresh passages from the conversation's pinned document index. Saved chats
 stay in a desktop sidebar or a mobile drawer, with generated titles, rename and
-retained-record deletion. Home offers New chat and Upload. Long-history memory is
-the active next checkpoint. GPT-5.2 is the selected answer
+retained-record deletion. Home offers New chat and Upload. A separate memory worker
+prepares older-history notes when needed, preserving originals and recent exchanges;
+required context preparation has a bounded wait. GPT-5.2 is the selected answer
 model after three independently supported examples; broader answer quality remains
 unproven. Summaries retain their separate DeepSeek configuration.
+Memory persistence/recovery is verified with controlled model responses; live
+long-conversation memory quality remains unmeasured. See the [memory walkthrough](docs/conversation-memory.md).
 
 ## Run locally
 

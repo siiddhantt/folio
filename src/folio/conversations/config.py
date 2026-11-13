@@ -23,6 +23,8 @@ class ChatSettings(BaseSettings):
     rewrite_timeout_seconds: int = Field(default=90, gt=0)
 
     def policy(self, runtime):
+        from .memory.config import MemorySettings
+
         return (
             self.model_dump(mode="json")
             | BudgetSettings().model_dump(mode="json")
@@ -33,6 +35,7 @@ class ChatSettings(BaseSettings):
                 "schema_version": 3,
                 "rewrite_prompt_version": 2,
                 "retrieval_version": 2,
+                "memory": MemorySettings().policy(self.history_limit_tokens),
                 "job_timeout_seconds": runtime.job_timeout_seconds,
                 "lease_seconds": runtime.lease_seconds,
                 "max_attempts": 2,

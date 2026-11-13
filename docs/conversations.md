@@ -1,6 +1,6 @@
 # Document conversations
 
-Design checkpoint: November 13, 2026. **Saved follow-ups implemented; hybrid memory is next.** The owner
+Design checkpoint: November 13, 2026. **Saved follow-ups and hybrid memory are implemented.** The owner
 requested a complete question/answer flow with persisted history, bounded context,
 compression when needed, recovery and an explanation of scaling. One PDF per
 conversation and the existing immutable index are accepted. The owner has now
@@ -8,6 +8,8 @@ accepted automatic history summaries and sharing the unchanged allowance across
 question embeddings, rewriting, answers and memory calls. Hybrid timing and
 stage-allowance reservations are accepted. Initial chat model/token limits below
 passed a read-only compatibility check; quality is evaluated separately.
+The [memory walkthrough](conversation-memory.md) covers its implemented flow,
+storage, debugging and remaining quality limitations.
 
 ## Original first-answer increment
 
@@ -531,7 +533,7 @@ fit, expose the limitation instead of dropping it.
 ### Resources, cost and the limits of background work
 
 A memory job on the only chat worker can delay the next question even after the
-previous answer is displayed. For actual overlap, propose one separate lightweight
+previous answer is displayed. For actual overlap, use the accepted separate lightweight
 memory worker, reusing the API image and existing Redis/database; it does not need
 Docling. A priority queue alone cannot preempt a running job. Additional workers
 still share CPU, database connections, provider quotas and the spending allowance.
@@ -542,8 +544,9 @@ job's input stays immutable. Background compaction can be wasted if the user
 never returns. It must also leave allowance for foreground work: a previously
 started provider call cannot surrender its reservation just because a question
 arrives. The accepted stage-allowance reservation removes the previous
-full-context hold, but concrete answer/memory limits and the foreground reserve
-still need selection. A job may need to stay pending and the fallback may add delay.
+full-context hold; concrete answer/memory limits and foreground headroom are now
+recorded in [configuration](configuration.md). A job may need to stay pending and
+the fallback may add delay.
 
 Measure compaction duration, how often questions actually wait, tokens before
 and after, calls/cost and lost-detail failures. Do not claim a latency improvement

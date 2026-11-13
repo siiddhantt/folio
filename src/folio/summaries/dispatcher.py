@@ -120,11 +120,18 @@ def dispatch_once(settings=None):
 
 def run():
     from folio.conversations.dispatcher import dispatch_once as dispatch_chats
+    from folio.conversations.memory.dispatcher import dispatch_once as dispatch_memories
     from folio.indexing.dispatcher import dispatch_once as dispatch_indexes
 
     settings = Settings()
     while True:
-        for operation in (dispatch_ingestion, dispatch_once, dispatch_indexes, dispatch_chats):
+        for operation in (
+            dispatch_ingestion,
+            dispatch_once,
+            dispatch_indexes,
+            dispatch_chats,
+            dispatch_memories,
+        ):
             try:
                 operation(settings)
             except Exception as error:

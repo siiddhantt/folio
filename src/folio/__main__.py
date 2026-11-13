@@ -7,7 +7,9 @@ from folio.observability import configure_logging
 
 def main():
     parser = argparse.ArgumentParser(prog="folio")
-    parser.add_argument("command", choices=["migrate", "dispatch", "worker", "chat-worker"])
+    parser.add_argument(
+        "command", choices=["migrate", "dispatch", "worker", "chat-worker", "memory-worker"]
+    )
     parser.add_argument("--burst", action="store_true")
     args = parser.parse_args()
     settings = Settings()
@@ -28,6 +30,8 @@ def main():
 
         if args.command == "chat-worker":
             from folio.conversations.dispatcher import queue_for
+        elif args.command == "memory-worker":
+            from folio.conversations.memory.dispatcher import queue_for
 
         configure_logging("worker")
         queue = queue_for(settings)

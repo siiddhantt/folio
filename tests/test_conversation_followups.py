@@ -217,14 +217,19 @@ def test_non_document_followup_uses_original_turns_without_pdf_calls(
 
 
 @pytest.mark.integration
-def test_history_limit_fails_explicitly_before_any_new_paid_stage(completed_chat, monkeypatch):
+def test_saved_history_only_policy_retains_its_limit_before_paid_work(completed_chat):
     settings, client, url, _ = completed_chat
-    monkeypatch.setenv("FOLIO_CHAT_HISTORY_LIMIT_TOKENS", "1")
     second = client.post(
         url,
         json={"question": "Is that in May?", "observed_head": 1},
         headers={"Idempotency-Key": str(uuid4())},
     ).json()
+    with psycopg.connect(settings.database_url) as conn:
+        conn.execute(
+            "UPDATE conversation_turns SET policy=(policy-'memory') || "
+            "'{\"history_limit_tokens\":1}'::jsonb,context_snapshot=NULL WHERE id=%s",
+            (second["id"],),
+        )
     resolver, embedding, answer = Resolver(), QueryEmbedding(), AnswerModel()
     assert process_turn(
         second["id"], settings=settings, resolver=resolver, embedder=embedding, generator=answer
@@ -505,7 +510,8 @@ def test_saved_legacy_retry_keeps_original_prompt_without_context_or_resolver(
     ).json()
     with psycopg.connect(settings.database_url) as conn:
         conn.execute(
-            "UPDATE conversation_turns SET policy=policy || %s::jsonb WHERE id=%s",
+            "UPDATE conversation_turns SET policy=(policy-'memory') || %s::jsonb,"
+            "context_snapshot=NULL WHERE id=%s",
             (
                 json.dumps(
                     {"prompt_version": version, "schema_version": version, "retrieval_version": 1}

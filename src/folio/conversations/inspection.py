@@ -9,7 +9,7 @@ def inspect_turn(database, turn_id):
             return None
         run = conn.execute(
             "SELECT policy,input_manifest,context_snapshot,resolution,available_at,"
-            "lease_expires_at,dispatch_error "
+            "lease_expires_at,dispatch_error,memory_dependency_id,context_deadline "
             "FROM conversation_turns WHERE id=%s",
             (turn_id,),
         ).fetchone()

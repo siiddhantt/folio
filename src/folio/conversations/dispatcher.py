@@ -8,6 +8,7 @@ from folio.config import Settings
 from folio.database import Database
 
 from .lifecycle import recover_expired
+from .memory.context import prepare_batch
 
 
 def queue_for(settings):
@@ -25,10 +26,12 @@ def dispatch_once(settings=None, *, turn_id=None):
     delivered = []
     try:
         recover_expired(database, settings.batch_size)
+        prepare_batch(database, settings.batch_size, turn_id)
         with database.transaction() as conn:
             rows = conn.execute(
                 "SELECT * FROM conversation_turns WHERE state='pending' AND "
                 "available_at<=clock_timestamp() "
+                "AND (NOT policy ? 'memory' OR context_snapshot IS NOT NULL) "
                 "AND next_dispatch_at<=clock_timestamp() AND (%s::uuid IS NULL OR id=%s) "
                 "ORDER BY next_dispatch_at,id LIMIT %s FOR UPDATE SKIP LOCKED",
                 (turn_id, turn_id, settings.batch_size),
@@ -57,7 +60,8 @@ def dispatch_once(settings=None, *, turn_id=None):
                         changed = conn.execute(
                             "UPDATE conversation_turns SET "
                             "transport_job_id=%s,delivery_failures=%s,state=%s,error_code=%s,"
-                            "finished_at=CASE WHEN %s THEN clock_timestamp() END WHERE "
+                            "finished_at=CASE WHEN %s THEN clock_timestamp() END,"
+                            "memory_check_needed=%s WHERE "
                             "id=%s AND state='pending' "
                             "AND transport_job_id IS NOT DISTINCT FROM %s",
                             (
@@ -66,6 +70,7 @@ def dispatch_once(settings=None, *, turn_id=None):
                                 "failed" if terminal else "pending",
                                 "CHAT_DELIVERY_FAILED" if terminal else row["error_code"],
                                 terminal,
+                                terminal and "memory" in row["policy"],
                                 row["id"],
                                 job_id,
                             ),

@@ -3,7 +3,7 @@
 The [README](../README.md) starts the application. The initial parser image uses the
 same pinned Docling/CPU/model configuration as the inspected extraction comparison.
 The API image contains no Docling runtime. Builds do not receive the local API key;
-only the processing and chat workers receive it for configured model calls.
+only the processing, chat and memory workers receive it for configured model calls.
 The PostgreSQL image adds pinned pgvector 0.8.7 to the existing PostgreSQL 18 base.
 
 ## Read the slice
@@ -40,6 +40,25 @@ editable through the document configuration console. Question embeddings use the
 conversation's pinned index model, not the answer model. The development-only
 `GET /development/conversation-turns/{id}` shows attempts, safe failures, selected
 chunk identities, input manifest and known/uncertain charges. It exposes no API key.
+
+For follow-ups, read `conversations/context.py` → `resolver.py` before the existing
+retrieval/answer flow. The original question, selected history and resolved query
+remain separately inspectable. Source labels belong to one saved turn, so S1 on
+one answer never opens another answer's evidence.
+
+For long history, start with `conversations/memory/context.py`: it either freezes
+a fitting context or leaves the question pending on one memory dependency. Then
+read `memory/planning.py` (immutable older prefix), `memory/processing.py` (bounded
+provider call), and `memory/lifecycle.py` (ownership, billing and publication).
+The separate `memory-worker` reuses the API image and existing PostgreSQL/Redis.
+It does not require another parser or an agent framework. `FOLIO_MEMORY_*`
+settings are documented in [configuration](configuration.md#long-history-controls).
+
+Development turn inspection exposes the dependency, deadline and selected memory
+identity. `GET /development/conversation-memories/{id}` exposes its exact frozen
+input, covered-through sequence, safe failures, attempts and known/uncertain cost.
+These routes are unavailable when development mode is disabled and hide deleted
+chats. Full original messages stay available through the normal history routes.
 
 Keep files together by the behavior they own. Ingestion includes its HTTP routes,
 read queries, worker lifecycle, event history and parser. Configuration, database

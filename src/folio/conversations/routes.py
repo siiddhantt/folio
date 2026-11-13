@@ -8,6 +8,7 @@ from .catalog import create_router as create_catalog_router
 from .config import ChatSettings
 from .inspection import inspect_turn
 from .lifecycle import lock_conversation
+from .memory.lifecycle import cancel as cancel_memory
 from .queries import conversation, turn
 from .titles import normalized_title
 
@@ -43,6 +44,26 @@ def create_router(database, settings):
     router.include_router(create_catalog_router(database))
 
     if settings.development_mode:
+
+        @router.get("/development/conversation-memories/{memory_id}")
+        def memory_inspection(memory_id: UUID):
+            with database.transaction() as conn:
+                conn.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY")
+                memory = conn.execute(
+                    "SELECT m.* FROM conversation_memories m JOIN conversations c ON "
+                    "c.id=m.conversation_id "
+                    "WHERE m.id=%s AND c.deleted_at IS NULL",
+                    (memory_id,),
+                ).fetchone()
+                if memory is None:
+                    raise HTTPException(404, "Conversation memory not found.")
+                return {
+                    "memory": memory,
+                    "attempts": conn.execute(
+                        "SELECT * FROM memory_attempts WHERE memory_id=%s ORDER BY attempt_no",
+                        (memory_id,),
+                    ).fetchall(),
+                }
 
         @router.get("/development/conversation-turns/{turn_id}")
         def inspection(turn_id: UUID):
@@ -148,6 +169,7 @@ def create_router(database, settings):
                         "error_code='CHAT_DELETED' WHERE turn_id=%s AND finished_at IS NULL",
                         (row["id"],),
                     )
+                cancel_memory(conn, conversation_id)
         return Response(status_code=204)
 
     @router.post("/conversations/{conversation_id}/turns", status_code=202)
