@@ -56,10 +56,20 @@ def settle(
             "UPDATE turn_invocations SET cost_usd=COALESCE(cost_usd,%s),"
             "metadata=CASE WHEN cost_usd IS NULL THEN metadata || jsonb_strip_nulls(%s) "
             "ELSE metadata END,"
-            "finished_at=clock_timestamp(),billing_state=CASE WHEN COALESCE(cost_usd,%s) "
-            "IS NULL THEN 'unknown' ELSE 'known' END "
+            "finished_at=clock_timestamp(),billing_state=CASE "
+            "WHEN cost_usd IS NOT NULL THEN billing_state "
+            "WHEN COALESCE(cost_usd,%s) IS NULL THEN 'unknown' "
+            "WHEN %s='token_estimate' THEN 'estimated' ELSE 'known' END "
             "WHERE turn_id=%s AND attempt_id=%s AND stage=%s RETURNING *",
-            (cost, Jsonb(metadata or {}), cost, claim["id"], claim["attempt_id"], stage),
+            (
+                cost,
+                Jsonb(metadata or {}),
+                cost,
+                (metadata or {}).get("cost_basis", "provider_reported"),
+                claim["id"],
+                claim["attempt_id"],
+                stage,
+            ),
         ).fetchone()
         if charge:
             check_settlement(

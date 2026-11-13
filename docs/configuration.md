@@ -12,12 +12,14 @@ editable controls, not a way to overwrite an existing saved configuration.
 | Name | Meaning | Current state |
 | --- | --- | --- |
 | `OPENROUTER_API_KEY` | Server-side credential for OpenRouter | Supplied locally; never commit or print its value. |
+| `OPENAI_API_KEY` | Server-side credential for direct OpenAI generation | Optional; required only by generation stages selecting `openai`. |
 | `OPENROUTER_BASE_URL` | Summary gateway URL | `https://openrouter.ai/api/v1`; the embedding client fixes this same gateway URL in code. |
 
 The ingestion loader is [`Settings`](../src/folio/config.py). It validates positive bounds,
 retry delays and the timeout relationship at startup. Docker Compose forwards only the
-implemented settings. Only the worker receives the OpenRouter credential; it is
-never passed to the API, dispatcher or browser bundle. Summaries and indexing
+implemented settings. Processing, chat and memory workers receive the OpenRouter
+credential; only chat and memory workers receive the direct OpenAI credential.
+Neither key reaches the API, dispatcher or browser bundle. Summaries and indexing
 default to disabled.
 
 | Ingestion setting | Default / meaning |
@@ -172,7 +174,8 @@ console does not expose these controls yet.
 | Setting | Default and purpose |
 | --- | --- |
 | `FOLIO_CHAT_MODEL_ID` | `openai/gpt-5.2`, accepted after the limited source-reviewed comparison. |
-| `FOLIO_CHAT_PROVIDER` | `openai`, the selected OpenRouter route. |
+| `FOLIO_CHAT_GATEWAY` | `openrouter`; set `openai` for direct generation. |
+| `FOLIO_CHAT_PROVIDER` | `openai`, the upstream model host; distinct from the gateway. |
 | `FOLIO_CHAT_INPUT_LIMIT_TOKENS` | `16384`, complete question/instructions/evidence/schema estimate including safety margin. |
 | `FOLIO_CHAT_MAX_OUTPUT_TOKENS` | `4096`, completion headroom, not a requested answer length. |
 | `FOLIO_CHAT_TOKEN_MARGIN` | `2048`, allowance for uncertain framing/token overhead. |
@@ -181,12 +184,14 @@ console does not expose these controls yet.
 | `FOLIO_CHAT_RETRIEVAL_CHUNKS` | `6`, maximum passages from the conversation's pinned index. |
 | `FOLIO_CHAT_HISTORY_LIMIT_TOKENS` | `8000`, selected memory plus unchanged recent exchanges; not an additional model allowance. |
 | `FOLIO_CHAT_REWRITE_MODEL_ID` / `PROVIDER` | `openai/gpt-5.2` / `openai`, follow-up resolution through OpenRouter. |
+| `FOLIO_CHAT_REWRITE_GATEWAY` | `openrouter`; independent service choice for follow-up interpretation. |
 | `FOLIO_CHAT_REWRITE_INPUT_LIMIT_TOKENS` / `MAX_OUTPUT_TOKENS` | `16384` / `1024`; complete resolver request and completion ceiling. |
 | `FOLIO_CHAT_REWRITE_REASONING_EFFORT` / `TIMEOUT_SECONDS` | `none` / `90`; frozen per accepted question. |
 
-Prices and model capacity come from validated provider metadata, not these
-settings. At the observed GPT-5.2 rates, the answer reservation is $0.086016;
-actual reported cost replaces the reservation. Existing deployment/document
+OpenRouter prices/capacity come from validated route metadata; direct OpenAI uses
+the reviewed versioned profile described below. At the observed GPT-5.2 rates,
+the answer reservation is $0.086016; a reported cost or explicitly labeled token
+estimate replaces the reservation. Existing deployment/document
 allowances are unchanged. Summary settings stay separate. Rewriting reserves
 $0.043008 at the same observed rates; successful stages are reused after retry.
 
@@ -203,6 +208,7 @@ change. The development console does not expose them yet.
 | `FOLIO_MEMORY_KEEP_TURNS` | `2`, minimum recent complete exchanges kept unchanged. |
 | `FOLIO_MEMORY_WAIT_SECONDS` | `600`, maximum pending-question wait for required context preparation. |
 | `FOLIO_MEMORY_MODEL_ID` / `PROVIDER` | `openai/gpt-5.2` / `openai`, the accepted memory model/route. |
+| `FOLIO_MEMORY_GATEWAY` | `openrouter`; independent service choice for older-history notes. |
 | `FOLIO_MEMORY_INPUT_LIMIT_TOKENS` / `MAX_OUTPUT_TOKENS` | `16384` / `2048`, complete compactor input and generous completion ceiling. |
 | `FOLIO_MEMORY_REASONING_EFFORT` / `TIMEOUT_SECONDS` | `none` / `90`. |
 
@@ -217,8 +223,58 @@ checks that enough allowance remains for the next rewrite, answer and bounded
 query embedding, but only the memory call receives a reservation. If funds are
 tight, background work defers without spending. A question that actually needs
 that same job can promote it for ordinary admission; it cannot bypass the
-spending boundary or an accounting pause. Actual reported usage replaces the
-hold, including late bills from workers that can no longer publish.
+spending boundary or an accounting pause. Reported costs or token estimates replace
+the hold, including late usage from workers that can no longer publish.
+
+### Switching generation services
+
+To use direct OpenAI for all three chat tasks, set these in the ignored `.env`:
+
+```dotenv
+FOLIO_CHAT_GATEWAY=openai
+FOLIO_CHAT_REWRITE_GATEWAY=openai
+FOLIO_MEMORY_GATEWAY=openai
+```
+
+Keep their model IDs as `openai/gpt-5.2` and providers as `openai`. Set the three
+gateway values back to `openrouter` to switch back, or change just one task.
+Recreate API, chat and memory workers after editing:
+
+```sh
+docker compose up -d --no-deps --force-recreate api chat-worker memory-worker
+```
+
+Each accepted question freezes these settings. Old work without a gateway field
+still means OpenRouter; neither configuration edits nor key expiry reroute it.
+Query embeddings remain on the conversation's pinned OpenRouter index, so its
+credential is still needed. Document summaries retain their separate route.
+Credentials are loaded at execution and never stored inside a saved policy.
+
+The direct adapter initially supports GPT-5.2 only. Folio's canonical ID maps to
+the pinned native snapshot `gpt-5.2-2025-12-11`. Profile
+`openai-gpt-5.2-2026-11-13` records a 400,000-token context, 128,000 maximum output
+and standard rates of $1.75 input / $0.175 cached input / $14 output per million
+tokens. These are provider capacities, not Folio's much smaller configured limits.
+The adapter sends `service_tier=default`, `max_completion_tokens` and a strict
+JSON schema through Chat Completions. No proxy, automatic fallback or hidden
+client retry is added. Another direct model needs a reviewed profile and checks;
+changing a string alone does not establish compatibility or quality.
+
+Direct OpenAI reports tokens rather than a per-request dollar charge. Folio
+records `billing_state=estimated`, the actual returned model/tier, cached tokens
+and pricing version. Estimated cost is uncached input plus cached input plus
+completion tokens at those rates. Reasoning tokens are already included in
+completion tokens. For example, 1,000 input tokens, of which 200 are cached, and
+100 completion tokens cost an estimated $0.002835. This is not an invoice amount.
+Accounted spending includes these estimates alongside provider-reported costs.
+Missing/inconsistent usage or an uncertain timeout retains the full reservation.
+A late usage result can settle that hold without letting an expired worker
+publish an answer. The existing shared allowance and overrun checks still apply.
+
+Reviewed primary sources: [GPT-5.2 profile](https://developers.openai.com/api/docs/models/gpt-5.2),
+[Chat Completions contract](https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create),
+and [organization costs](https://developers.openai.com/api/reference/resources/admin/subresources/organization/subresources/usage/methods/costs).
+The latter provides aggregated daily costs, not per-response reconciliation.
 
 When rolling out changes to shared accounting, recreate **all** admitting
 processes: API, dispatcher, ingestion/summary/index worker, chat worker and memory

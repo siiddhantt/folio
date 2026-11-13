@@ -327,7 +327,10 @@ def test_background_defers_without_a_hold_and_foreground_reuses_it(long_chat, mo
 
 
 @pytest.mark.integration
-def test_expired_memory_retries_and_late_bill_cannot_replace_new_result(long_chat):
+@pytest.mark.parametrize(
+    "basis,state", [("provider_reported", "known"), ("token_estimate", "estimated")]
+)
+def test_expired_memory_retries_and_late_bill_cannot_replace_new_result(long_chat, basis, state):
     from folio.conversations.memory.dispatcher import dispatch_once
     from folio.conversations.memory.processing import process_memory
 
@@ -357,6 +360,7 @@ def test_expired_memory_retries_and_late_bill_cannot_replace_new_result(long_cha
                 embedder=QueryEmbedding(),
             ) == {"outcome": "ready"}
             result.cost_usd = Decimal("0.0005")
+            result.cost_basis = basis
             return result
 
     old = LostWorker()
@@ -371,7 +375,8 @@ def test_expired_memory_retries_and_late_bill_cannot_replace_new_result(long_cha
     trace = client.get(f"/development/conversation-memories/{memory_id}").json()
     assert trace["memory"]["state"] == "ready"
     assert len(trace["attempts"]) == 2
-    assert [entry["billing_state"] for entry in trace["attempts"]] == ["known", "known"]
+    assert [entry["billing_state"] for entry in trace["attempts"]] == [state, "known"]
+    assert trace["attempts"][0]["metadata"]["cost_basis"] == basis
     assert Decimal(str(trace["attempts"][0]["cost_usd"])) == Decimal("0.0005")
     assert retry_model.calls == old.calls
     budget = client.get("/development/settings").json()["runtime"]

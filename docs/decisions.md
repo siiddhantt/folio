@@ -559,6 +559,33 @@ tokens, truthful loading feedback and bottom-following only while the reader has
 not moved back; an explicit Latest reply action resumes following. No backend,
 prompt, streaming or retrieval change is needed.
 
+## Direct generation service selection — November 13
+
+The owner requested direct OpenAI support and easy switching with the existing
+OpenRouter account. Keep one small generation interface (`profile`, `generate`)
+and two HTTP adapters. Add a separate gateway setting for answers, follow-up
+interpretation and older-history notes; `provider` continues to identify the
+upstream model host. Existing OpenRouter defaults and canonical model IDs remain
+compatible. Capture service/endpoint/profile version per accepted question, with
+missing gateway fields interpreted as legacy OpenRouter. Preserve legacy profile
+shapes so retries do not invalidate saved manifests. Do not reroute query embeddings
+or document summaries as a side effect.
+
+The direct implementation uses the reviewed GPT-5.2 snapshot/profile and supported
+Chat Completions schema contract. Responses could support additional stateful
+capabilities, but this increment already owns transcript/retrieval state and needs
+no additional API migration or proxy. Configuration selects supported combinations;
+unsupported models, missing keys and expired credentials fail explicitly, without
+cross-account fallback.
+
+Direct usage multiplied by published rates is an estimate, not a reported bill.
+Record its basis, cached tokens, actual model/tier and pricing version; distinguish
+`estimated` from `known` and retain `unknown` holds when usage is unavailable.
+Keep admission/settlement separate from conversation logic and preserve the
+unchanged shared allowance. No reconciliation service, subscriptions or new
+financial product is included. See [configuration](configuration.md#switching-generation-services)
+for the model profile, switching steps and primary sources.
+
 ## Slice order and remaining decisions
 
 November 11 planning recommendation, not an accepted implementation contract:

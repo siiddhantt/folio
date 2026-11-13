@@ -1,34 +1,14 @@
 """Explicit text-generation routes; no implicit retries or fallback."""
 
 from copy import deepcopy
-from dataclasses import dataclass, replace
+from dataclasses import replace
 from decimal import Decimal, InvalidOperation
 
 import httpx
 
 from .deepseek import MODEL_ID as DEEPSEEK_MODEL_ID
+from .generation import Generation, ProviderError
 from .tokens import BudgetError, check_budget, tokenizer_name
-
-
-class ProviderError(Exception):
-    def __init__(self, code: str, retryable: bool = False, *, generation=None):
-        self.code = code
-        self.retryable = retryable
-        self.generation = generation
-        super().__init__(code)
-
-
-@dataclass(frozen=True)
-class Generation:
-    content: str
-    finish_reason: str
-    prompt_tokens: int | None
-    completion_tokens: int | None
-    cost_usd: Decimal | None
-    response_id: str | None
-    model: str
-    provider: str
-    reasoning_tokens: int | None = None
 
 
 class OpenRouter:

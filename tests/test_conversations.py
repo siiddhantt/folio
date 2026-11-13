@@ -54,6 +54,8 @@ class QueryEmbedding:
 @pytest.fixture
 def chat_document(summary_document, monkeypatch):
     settings, client, publish = summary_document
+    for name in ("FOLIO_CHAT_GATEWAY", "FOLIO_CHAT_REWRITE_GATEWAY", "FOLIO_MEMORY_GATEWAY"):
+        monkeypatch.setenv(name, "openrouter")
     monkeypatch.setenv("FOLIO_CHAT_MODEL_ID", "openai/gpt-5-nano")
     monkeypatch.setenv("FOLIO_CHAT_PROVIDER", "openai")
     monkeypatch.setenv("FOLIO_CHAT_REASONING_EFFORT", "minimal")
@@ -393,4 +395,4 @@ def test_saved_execution_limits_guard_paid_calls(chat_document, monkeypatch, cha
         else "CHAT_EXECUTION_CONFIG_MISMATCH"
     )
     assert not model.calls
-    assert len(embedding.calls) == (1 if change == "slow_metadata" else 0)
+    assert not embedding.calls

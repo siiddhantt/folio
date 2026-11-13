@@ -49,7 +49,7 @@ def plan(conn, conversation_id, index_id, through_sequence, chat_policy, *, fore
             "retry_delays_seconds",
         )
     }
-    policy = config | inherited | {"foreground_policy": chat_policy}
+    policy = inherited | config | {"foreground_policy": chat_policy}
     # Keep whole exchanges; reduce the selected old prefix only to fit the compactor itself.
     while eligible:
         retained_tokens = snapshot(

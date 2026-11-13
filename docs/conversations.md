@@ -710,6 +710,44 @@ conversations with bounded pagination, while home provides the upload entry. Act
 timings, context counts/memory version, supplied evidence identities and billing.
 No simulated progress or raw document/credential logging is introduced.
 
+## Direct generation verification — November 13
+
+The direct-service increment keeps retrieval, prompt/schema versions and the
+accepted GPT-5.2 model family unchanged. Answers, follow-up interpretation and
+memory now select one of two adapters using frozen service settings. Read
+`ai/routing.py` for selection, `ai/openai.py` for the direct request/usage contract,
+then `conversations/processing.py` and `invocations.py` for the saved workflow.
+The [configuration guide](configuration.md#switching-generation-services)
+explains environment controls, profile versions and estimated costs.
+
+The existing public [FEMA NFIP Dwelling Form](https://www.fema.gov/sites/default/files/documents/fema_F-122-Dwelling-SFIP_2021.pdf)
+was reused without reprocessing. Both questions came from the previously agreed
+development sequence. Direct model `gpt-5.2-2025-12-11`, standard tier, reasoning
+`none`, prompt/schema 3/3, resolver prompt 2 and profile
+`openai-gpt-5.2-2026-11-13` were recorded. Existing Docling normalization/chunking,
+62 merged 512-token chunks and 1,536-dimensional small embeddings stayed fixed.
+
+| Check | Observed result | Accounted cost |
+| --- | --- | --- |
+| Detached-garage limit | Answer preserved the no-more-than-10% limit, reduction to the building limit, and stated exclusions; cited S1, original pages 5–6. | $0.00597275 direct estimate + $0.00000026 embedding |
+| “What if I use it for business?” | Resolver retained the detached garage; answer stated the business-use exclusion and made the repeated limit conditional on coverage. Both statements cite S1. | $0.00182000 rewrite estimate + $0.00704900 answer estimate + $0.00000060 embedding |
+
+The first answer reported 2,573 prompt / 105 completion tokens, no cached or
+reasoning tokens, against a $0.086016 reservation. Total newly accounted cost was
+$0.01484261; all calls settled and no hold remained. Estimates are calculated
+from provider-reported usage, not invoice reconciliation. An independent reviewer
+checked statements against saved cited passages and confirmed the known page-2
+extraction gap remained in metadata. This checks the endpoint and two familiar
+examples, not general accuracy, held-out quality or live history compaction.
+
+Deterministic verification covered the full API → worker → saved answer flow
+with external HTTP responses controlled: exact service/key separation, settings
+changes after acceptance, legacy routes, mixed-service memory pricing, missing
+keys, safe provider failures, and late estimates that cannot publish stale work.
+171 affected backend checks passed. Migration 014 expands only billing-state
+checks and preserved existing record hashes. Model-output quality remains a
+separate review from those executable software checks.
+
 ## Verification and scaling questions
 
 Use three interfaces for test-first work: HTTP-to-persisted conversation/evidence;

@@ -6,6 +6,7 @@ from uuid import uuid4
 from psycopg.types.json import Jsonb
 
 from folio.ai.budget import admission_error, check_settlement, lock_account
+from folio.ai.generation import generation_usage
 from folio.conversations.context import latest_memory
 from folio.conversations.lifecycle import lock_conversation
 from folio.observability import exception_details
@@ -141,23 +142,16 @@ def finish(
         conn.execute("SELECT id FROM summary_budget_account WHERE id=true FOR UPDATE")
         row = owned(conn, claim)
         metadata = (
-            getattr(error, "metadata", {})
-            if generation is None
-            else {
-                "prompt_tokens": generation.prompt_tokens,
-                "completion_tokens": generation.completion_tokens,
-                "finish_reason": generation.finish_reason,
-                "response_id": generation.response_id,
-                "model": generation.model,
-                "provider": generation.provider,
-            }
+            getattr(error, "metadata", {}) if generation is None else generation_usage(generation)
         )
         cost = generation.cost_usd if generation else getattr(error, "cost_usd", None)
         charge = conn.execute(
             "UPDATE memory_attempts SET cost_usd=COALESCE(cost_usd,%s),"
             "metadata=CASE WHEN cost_usd IS NULL THEN metadata || jsonb_strip_nulls(%s) ELSE "
             "metadata END,"
-            "billing_state=CASE WHEN COALESCE(cost_usd,%s) IS NULL THEN 'unknown' ELSE 'known' END,"
+            "billing_state=CASE WHEN cost_usd IS NOT NULL THEN billing_state "
+            "WHEN COALESCE(cost_usd,%s) IS NULL THEN 'unknown' "
+            "WHEN %s='token_estimate' THEN 'estimated' ELSE 'known' END,"
             "finished_at=clock_timestamp(),error_code=COALESCE(error_code,%s),"
             "failure_diagnostics=COALESCE(failure_diagnostics,%s) "
             "WHERE id=%s AND memory_id=%s AND token=%s RETURNING *",
@@ -165,6 +159,7 @@ def finish(
                 cost,
                 Jsonb(metadata),
                 cost,
+                metadata.get("cost_basis", "provider_reported"),
                 code,
                 Jsonb(exception_details(error)) if error else None,
                 claim["attempt_id"],

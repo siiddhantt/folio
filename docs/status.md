@@ -21,6 +21,34 @@ preservation, OpenRouter OpenAI small embeddings and PostgreSQL/pgvector. Scoped
 retrieval, saved follow-ups and hybrid memory are implemented. Configuration uses a commentless
 ignored `.env` and a safe template.
 
+## Direct generation services — November 13
+
+Direct OpenAI is implemented alongside OpenRouter for answers, follow-up
+interpretation and older-history notes. Each task has an independent environment
+gateway/model setting. Accepted questions capture endpoints and profile versions;
+legacy policies retain OpenRouter. The direct adapter pins the reviewed GPT-5.2
+snapshot, translates the existing strict-schema contract and records token-based
+costs as estimates. Summary and embedding routes are unchanged. Missing keys,
+unsupported profiles, refusals, truncation and uncertain usage have explicit
+outcomes; there is no hidden retry or cross-account fallback.
+
+171 affected backend checks passed, including PostgreSQL lifecycle, mixed-service
+follow-ups/memory, old-policy compatibility and late estimated settlement. Ruff,
+formatting, frontend types and Docker API/worker/web builds passed. Independent
+review caught and fixed rewrite-profile freezing and a missing embedding-key
+preflight for memory. Migration 014 only expands conversation billing states;
+document, extraction, conversation-turn and allowance hashes were preserved.
+All execution services were recreated without resetting data.
+
+Two real turns on the existing public FEMA PDF completed through direct OpenAI,
+including follow-up interpretation and original source links. Independent review
+supported both answers against the cited passages. Three direct calls accounted
+for $0.01484175 in estimates; two OpenRouter embeddings reported $0.00000086.
+No holds remained. This is a narrow endpoint smoke check; wider answer quality
+and live memory-compaction quality remain unproven. See
+[configuration](configuration.md#switching-generation-services) and
+[the verification record](conversations.md#direct-generation-verification--november-13).
+
 ## Conversation reading polish and capability audit — November 13
 
 Follow-up refinement: sidebar selection now includes the menu area and its action

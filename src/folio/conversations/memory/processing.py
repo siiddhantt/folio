@@ -3,7 +3,8 @@ from time import monotonic
 
 import psycopg
 
-from folio.ai import OpenRouter, check_budget
+from folio.ai import check_budget
+from folio.ai.routing import generation_client
 from folio.config import Settings
 from folio.conversations.config import rewrite_policy
 from folio.conversations.invocations import AdmissionError
@@ -47,9 +48,9 @@ def process_memory(
         ):
             raise AdmissionError("MEMORY_EXECUTION_CONFIG_MISMATCH")
         key = SummaryCredentials().api_key.get_secret_value()
-        if generator is None and not key:
+        if embedder is None and not key:
             raise AdmissionError("MEMORY_PROVIDER_NOT_CONFIGURED")
-        generator = generator or OpenRouter(policy, key)
+        generator = generator or generation_client(policy)
         messages, schema = prepare(memory["input"], policy["notes_target_tokens"])
         profile = generator.profile()
         manifest = check_budget(messages, schema, policy, profile) | {
@@ -60,15 +61,24 @@ def process_memory(
         resolving = rewrite_policy(foreground)
         amount = Decimal(0)
         for stage_policy, model in ((foreground, answer_model), (resolving, resolver)):
-            same_route = all(
-                stage_policy[k] == policy[k] for k in ("model_id", "provider", "reasoning_effort")
+            same_route = stage_policy.get("gateway", "openrouter") == policy.get(
+                "gateway", "openrouter"
+            ) and all(
+                stage_policy.get(k) == policy.get(k)
+                for k in (
+                    "model_id",
+                    "provider",
+                    "reasoning_effort",
+                    "base_url",
+                    "provider_profile_version",
+                )
             )
             stage_profile = (
                 model.profile()
                 if model
                 else profile
                 if same_route
-                else OpenRouter(stage_policy, key).profile()
+                else generation_client(stage_policy).profile()
             )
             reservation = check_budget(
                 [{"role": "user", "content": "Question"}], {}, stage_policy, stage_profile

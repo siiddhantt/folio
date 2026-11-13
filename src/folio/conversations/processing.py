@@ -6,7 +6,9 @@ from time import monotonic
 import psycopg
 from psycopg.types.json import Jsonb
 
-from folio.ai import BudgetError, OpenRouter, check_budget
+from folio.ai import BudgetError, check_budget
+from folio.ai.generation import generation_usage
+from folio.ai.routing import generation_client
 from folio.ai.tokens import count_tokens
 from folio.config import Settings
 from folio.database import Database
@@ -23,18 +25,6 @@ from .memory.context import prepare_pending
 from .preparation import prepare, validate
 from .resolver import prepare_resolution, validate_resolution
 from .retrieval import retrieve, save_evidence
-
-
-def generation_usage(result):
-    return {
-        "prompt_tokens": result.prompt_tokens,
-        "completion_tokens": result.completion_tokens,
-        "reasoning_tokens": getattr(result, "reasoning_tokens", None),
-        "finish_reason": result.finish_reason,
-        "model": result.model,
-        "provider": result.provider,
-        "response_id": result.response_id,
-    }
 
 
 def process_turn(turn_id, *, settings=None, embedder=None, generator=None, resolver=None):
@@ -82,9 +72,7 @@ def process_turn(turn_id, *, settings=None, embedder=None, generator=None, resol
         if needs_resolution and resolution is None:
             resolving_policy = rewrite_policy(policy)
             if resolver is None:
-                if not key:
-                    raise AdmissionError("CHAT_PROVIDER_NOT_CONFIGURED")
-                resolver = OpenRouter(resolving_policy, key)
+                resolver = generation_client(resolving_policy)
             messages, schema = prepare_resolution(
                 claim["question"],
                 context["history"],
@@ -133,22 +121,28 @@ def process_turn(turn_id, *, settings=None, embedder=None, generator=None, resol
                 return {"outcome": "ready" if published else "superseded"}
             stage, result = None, None
         query = resolution["query"] if resolution else claim["question"]
+        # Validate the selected answer service before paying for a query embedding.
+        generator = generator or generation_client(policy)
+        profile = generator.profile()
         if claim["query_vector"] is None:
             if embedder is None:
                 if not key:
                     raise AdmissionError("CHAT_PROVIDER_NOT_CONFIGURED")
                 embedder = OpenRouterEmbeddings(index["policy"], key)
-            profile = embedder.profile()
+            embedding_profile = embedder.profile()
             if any(
-                profile[k] != index["policy"][k] for k in ("model_id", "provider", "dimensions")
+                embedding_profile[k] != index["policy"][k]
+                for k in ("model_id", "provider", "dimensions")
             ):
                 raise AdmissionError("CHAT_EMBEDDING_SPACE_CHANGED")
             tokens = count_tokens(query, index["policy"]["model_id"]) + 16
-            if tokens > profile["max_input_tokens"]:
+            if tokens > embedding_profile["max_input_tokens"]:
                 raise AdmissionError("CHAT_INPUT_LIMIT")
-            amount = Decimal(tokens) * Decimal(profile["input_price_per_million"]) / 1_000_000
+            amount = (
+                Decimal(tokens) * Decimal(embedding_profile["input_price_per_million"]) / 1_000_000
+            )
             ensure_time(deadline, index["policy"]["timeout_seconds"])
-            reserve(database, claim, "embedding", amount, tokens, {"profile": profile})
+            reserve(database, claim, "embedding", amount, tokens, {"profile": embedding_profile})
             stage = "embedding"
             result = embedder.embed([query])
             if not settle(
@@ -167,11 +161,6 @@ def process_turn(turn_id, *, settings=None, embedder=None, generator=None, resol
         if not passages:
             raise AdmissionError("CHAT_EVIDENCE_UNAVAILABLE")
         include_title = policy["schema_version"] >= 2 and claim["sequence"] == 1
-        if generator is None:
-            if not key:
-                raise AdmissionError("CHAT_PROVIDER_NOT_CONFIGURED")
-            generator = OpenRouter(policy, key)
-        profile = generator.profile()
         candidate_count = (claim["input_manifest"] or {}).get("evidence_candidates", len(passages))
         while True:
             messages, schema = prepare(

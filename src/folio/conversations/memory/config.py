@@ -1,6 +1,8 @@
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from folio.ai.routing import Gateway, gateway_policy
+
 
 class MemorySettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="FOLIO_MEMORY_", env_file=".env", extra="ignore")
@@ -10,6 +12,7 @@ class MemorySettings(BaseSettings):
     wait_seconds: int = Field(default=600, gt=0)
     model_id: str = "openai/gpt-5.2"
     provider: str = "openai"
+    gateway: Gateway = "openrouter"
     input_limit_tokens: int = Field(default=16384, gt=0)
     max_output_tokens: int = Field(default=2048, gt=0)
     timeout_seconds: int = Field(default=90, gt=0)
@@ -24,4 +27,4 @@ class MemorySettings(BaseSettings):
     def policy(self, hard_limit):
         if self.trigger_tokens > hard_limit:
             raise ValueError("Memory trigger must not exceed the history limit")
-        return self.model_dump(mode="json") | {"version": 1}
+        return self.model_dump(mode="json") | {"version": 1} | gateway_policy(self.gateway)

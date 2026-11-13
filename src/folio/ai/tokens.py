@@ -64,7 +64,9 @@ def check_budget(messages: list[dict], schema: dict, policy: dict, profile: dict
     name = tokenizer_name(policy.get("model_id"))
     if profile.get("model_id") != policy["model_id"] or profile.get("tokenizer") != name:
         raise BudgetError("SUMMARY_TOKENIZER_UNSUPPORTED")
-    if profile.get("provider") != policy.get("provider"):
+    if profile.get("provider") != policy.get("provider") or profile.get(
+        "gateway", "openrouter"
+    ) != policy.get("gateway", "openrouter"):
         raise BudgetError("SUMMARY_PROFILE_INVALID")
     try:
         reservation_version = policy.get("reservation_version", 1)

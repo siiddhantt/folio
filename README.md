@@ -37,6 +37,10 @@ prepares older-history notes when needed, preserving originals and recent exchan
 required context preparation has a bounded wait. GPT-5.2 is the selected answer
 model after three independently supported examples; broader answer quality remains
 unproven. Summaries retain their separate DeepSeek configuration.
+Answers, follow-up interpretation and memory can independently use OpenRouter or
+direct OpenAI. The direct adapter supports a reviewed GPT-5.2 snapshot; query
+embeddings retain their indexed route. See [service configuration](docs/configuration.md#switching-generation-services)
+for switching, frozen settings and reported-versus-estimated costs.
 Memory persistence/recovery is verified with controlled model responses; live
 long-conversation memory quality remains unmeasured. See the [memory walkthrough](docs/conversation-memory.md).
 

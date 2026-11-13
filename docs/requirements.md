@@ -135,6 +135,10 @@ Consider thousands of documents in design discussion through asynchronous work, 
 ## Capability review — November 13
 
 The core workflow is implemented through saved follow-ups and hybrid memory.
+Generation can use independently selected OpenRouter or direct OpenAI routes for
+answers, follow-up interpretation and memory; settings freeze per accepted
+question. Direct GPT-5.2 uses a reviewed profile and explicitly estimated costs.
+Existing summaries, indexed vectors and shared spending limits are unchanged.
 Review distinguishes working behavior from model quality and unfinished delivery:
 
 | Area | Current evidence | Remaining work |

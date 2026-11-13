@@ -16,7 +16,7 @@ export function RuntimeDetails({ runtime }: Pick<Configuration, 'runtime'>) {
     ],
     ['Total allowance', dollars(runtime.budget_usd)],
     ['Per-document allowance', dollars(runtime.document_budget_usd)],
-    ['Spent', dollars(runtime.spent_usd)],
+    ['Accounted', dollars(runtime.spent_usd)],
     ['Reserved / uncertain', dollars(runtime.held_usd)],
     ['Available', dollars(runtime.remaining_usd)],
   ];
@@ -44,6 +44,7 @@ export function RuntimeDetails({ runtime }: Pick<Configuration, 'runtime'>) {
           </div>
         ))}
       </dl>
+      <p className="subtle">Accounted usage may include token-based cost estimates.</p>
     </aside>
   );
 }
