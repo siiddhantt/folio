@@ -17,8 +17,9 @@ to a compatible agent; it does not run a workflow or add an application dependen
 | [`better-accessibility`](../.agents/skills/better-accessibility/SKILL.md) | Review navigation, focus, accessible controls and dynamic feedback. | For the changed user journey; distinguish executable checks from unverified assistive-technology coverage. |
 | [`better-typography`](../.agents/skills/better-typography/SKILL.md) | Review text hierarchy, line measure, wrapping and input readability. | Keep the existing font unless a font change is requested. |
 | [`better-ui`](../.agents/skills/better-ui/SKILL.md) | Refine consistent controls, surfaces and interaction states. | After the interaction works; preserve Folio's restrained visual style rather than adding decorative motion. |
+| [`humanizer`](../.agents/skills/humanizer/SKILL.md) | Edit documentation into plain, concise prose. | For accepted documentation work. Preserve supported facts, uncertainty, limitations and the AI-use record; do not invent experience, benchmarks, human authorship or detector claims. |
 
-No executable scripts are bundled in these eight folders. Their Markdown examples
+No executable scripts are bundled in these nine folders. Their Markdown examples
 are guidance, not commands that run during installation. `error-discovery` can
 generate and run a local review interface when explicitly invoked; any libraries
 or services needed at that point are a separate decision.
@@ -35,6 +36,12 @@ a promise about future maintenance.
 | [Matt Pocock's skills](https://github.com/mattpocock/skills) | `skills/engineering/tdd`, `skills/engineering/codebase-design` | [`4ae2317ddb22b046e26455e4f9c9b3aaaf62212d`](https://github.com/mattpocock/skills/commit/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d) | October 31, 2026 | MIT |
 | [AI Evals course skills](https://github.com/ai-evals-course/evals-skills) | `skills/evaluate-rag`, `skills/error-discovery` | [`80d5f7b0127c7572ed9e9339937adbfd7240ffeb`](https://github.com/ai-evals-course/evals-skills/commit/80d5f7b0127c7572ed9e9339937adbfd7240ffeb) | September 24, 2026 | Apache-2.0 |
 | [Jakub Krehel's skills](https://github.com/jakubkrehel/skills) | `skills/better-layout`, `skills/better-accessibility`, `skills/better-typography`, `skills/better-ui` | [`8b254eb75dadf3615a6abce87aed28e1b6e4d77c`](https://github.com/jakubkrehel/skills/commit/8b254eb75dadf3615a6abce87aed28e1b6e4d77c) | November 10, 2026 | MIT |
+| [Humanizer](https://github.com/blader/humanizer) | `SKILL.md`, `agents/openai.yaml` (v4.0.0) | [`b48c832f0f809c1b5658edbb838c2521b72f2413`](https://github.com/blader/humanizer/commit/b48c832f0f809c1b5658edbb838c2521b72f2413) | November 10, 2026 | MIT |
+
+Humanizer was reviewed November 13: all 15 upstream files were inspected, and
+the retained instructions/metadata were verified against the pinned revision.
+Repository maintenance, packaging and validation scripts were omitted. Folio's
+evidence rules take precedence over any suggestion to add plausible details.
 
 The four Jakub Krehel workflows were explicitly requested and reviewed on November
 12. All 28 upstream files, including local references and agent metadata, were

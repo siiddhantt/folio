@@ -1,0 +1,33 @@
+{
+  "repository": "https://github.com/blader/humanizer",
+  "commit": "b48c832f0f809c1b5658edbb838c2521b72f2413",
+  "path": ".",
+  "version": "4.0.0",
+  "license": "MIT",
+  "reviewed_on": "2026-11-13",
+  "upstream_revision_date": "2026-11-10T01:34:24Z",
+  "modifications": "Retained SKILL.md and agents/openai.yaml byte-for-byte. Copied upstream LICENSE to UPSTREAM-LICENSE.txt and added this manifest. Omitted upstream repository maintenance, packaging, README, changelog, and validation script files; no workflow text or invocation metadata changed.",
+  "upstream_files": {
+    "SKILL.md": "804a119e924ac30295b298213e0b71b3e38b2667b8ef4fb7b69e9246369b9045",
+    "agents/openai.yaml": "9d87ff83149a04f86a372948b8ee35fa249de20923867bbc2a49304290aad736"
+  },
+  "upstream_license": {
+    "path": "LICENSE",
+    "vendored_as": "UPSTREAM-LICENSE.txt",
+    "sha256": "4ac4810254ab36d45419141aeb8e69bf50652cfafe5b2dab947d06d44e5cbf96"
+  },
+  "reviewed_but_not_vendored": {
+    ".claude-plugin/marketplace.json": "e539740285b660d2288a38b6d9b237396c6769828c671c46b9f91e760db6cc29",
+    ".claude-plugin/plugin.json": "6e5986d4b59eaf4fe1b3e2a222d21b30416c074c9a203dde6dfede161313af37",
+    ".cursor-plugin/plugin.json": "e46f08aff6131bb895f3c8e9da0ab8a57dacade01864bb16f0b816831e425468",
+    ".github/ISSUE_TEMPLATE/config.yml": "cb7e95de7606d07654024c8d47916796b307033e23ddb2b0a821a9bf89e999ef",
+    ".github/ISSUE_TEMPLATE/new-pattern.yml": "7436d578fa0056a09da5da6da950a03cb49f3ce27cf268ae295eb3d7ca19f604",
+    ".github/ISSUE_TEMPLATE/rewrite-problem.yml": "ecfe5e82c5b6d44683e0cb63cfad117dfdd16e30cc6f03510ef335414eea4947",
+    ".github/workflows/validate.yml": "f2d6a8780fb0b3cf6fa7d2ffccd72d0fc8bee29b4e63ea0fd65924712c9055fd",
+    "AGENTS.md": "0f60ef3dc762eb5eceb7dcc1393e30053d136c2eb3db0e8df857b1465acfd344",
+    "CHANGELOG.md": "0f4135c99064f65838b1c443ada16a2a85996d033e851ef6214218b939429800",
+    "README.md": "bff3e7aae020e5eef8f2412774336be5102da3c92262ffb242bb76fb4d52c373",
+    "package.json": "5f410311d1b23d8d0d209de6cc4bd5a9b142333253d660fc1214c6ca17366336",
+    "scripts/validate-package.py": "941bd99e52b2ba21449719bb7969607ac8117e3dc173d0c9dfe64fd274c65938"
+  }
+}

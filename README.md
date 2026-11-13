@@ -1,138 +1,76 @@
 # Folio
 
-Understand your documents. Check the evidence.
+Upload a PDF, ask questions about it, and check the passages behind each answer.
 
-Folio turns uploaded PDFs into inspectable evidence: text, tables, physical-page references,
-and visible extraction limitations. Automatic cited summaries and saved questions
-build on that evidence, with links back to original pages.
+Folio reads native PDF text and English scans, saves a cited summary, and supports
+follow-up questions in a saved conversation. The reader puts extracted content
+beside the original page. Chat sources open the supporting passage and its page.
+Known extraction gaps stay visible.
 
-## Current state
+## Run it
 
-The first ingestion slice runs locally in Docker. FastAPI accepts a PDF, PostgreSQL records
-durable work, RQ/Redis delivers it, and a Docling worker publishes evidence. Native text and
-English OCR are supported; encrypted inputs receive a clear error. Recoverable partial
-content remains available. A minimal React interface supports upload, processing status,
-text/table evidence and a locally rendered original page. Content and Original
-sit side by side on desktop and use tabs on mobile. Compact coverage notices
-retain known gaps without overwhelming the reading view. An opt-in Activity panel
-shows real processing history; the configuration console saves controls for new uploads.
-**Runs** in the header reopens accepted uploads, with extraction and summary
-outcomes kept separate. Activity retains safe failure locations and individual
-summary attempts, including uncertain billing.
-Automatic summaries are implemented with checked persistence, budget and failure
-contracts. The current configuration completed summaries of three tested PDFs,
-including a 59-page report, without exhausting output. Source review still finds
-citation and qualification weaknesses; no general quality pass is claimed. Generation defaults to disabled.
-Source-linked indexing uses Docling merging and OpenRouter embeddings stored in
-pgvector. Activity shows batch progress and billing; only complete indexes expose
-their chunks. A separate chat worker answers ordered questions and follow-ups,
-using fresh passages from the conversation's pinned document index. Saved chats
-stay in a desktop sidebar or a mobile drawer, with generated titles, rename and
-retained-record deletion. Home offers New chat and Upload. The compact composer
-stays below a scrolling transcript; Enter sends and Shift+Enter adds a line.
-Answers render Markdown and cited-passage previews open full text and original
-pages in a source drawer. Shared Select, menu and sheet controls use the existing
-shadcn/Radix foundation. A separate memory worker
-prepares older-history notes when needed, preserving originals and recent exchanges;
-required context preparation has a bounded wait. GPT-5.2 is the selected answer
-model after three independently supported examples; broader answer quality remains
-unproven. Summaries retain their separate DeepSeek configuration.
-Answers, follow-up interpretation and memory can independently use OpenRouter or
-direct OpenAI. The direct adapter supports a reviewed GPT-5.2 snapshot; query
-embeddings retain their indexed route. See [service configuration](docs/configuration.md#switching-generation-services)
-for switching, frozen settings and reported-versus-estimated costs.
-Memory persistence/recovery is verified with controlled model responses; live
-long-conversation memory quality remains unmeasured. See the [memory walkthrough](docs/conversation-memory.md).
-
-## Run locally
-
-With Docker Compose installed, build the pinned parser/model image, then start Folio:
+Install Docker Compose. Copy `.env.example` to `.env` if you do not already have
+one, then build the parser image and start the services:
 
 ```sh
-docker build -t folio-docling:2.148.0 experiments/ingestion/docling
+docker build -t folio-docling:2.148.0 docker/docling
 docker compose up --build -d --wait
 ```
 
-The first parser build downloads model assets and can take several minutes. Processing uses
-those bundled assets locally; no inference API key is needed for ingestion.
+The first build downloads local parsing/OCR models and can take several minutes.
+Open [Folio](http://localhost:3000) or the [API docs](http://localhost:8000/docs).
+Upload a PDF; **Runs** reopens its processing history. Conversations have their
+own sidebar, generated titles, rename and remove controls.
 
-Open [Folio](http://localhost:3000) and choose your PDF. The document URL survives reload;
-processing continues after leaving the page. Use **Runs** to return to previous uploads.
-Light/dark themes and source-page links help
-inspect the recovered content. No sample documents or simulated workflows are built in.
+Parsing needs no inference API key. Paid processing is disabled in the template.
+To enable summaries, indexing and chat, follow the
+[configuration guide](docs/development.md#configuration). Keep credentials in the
+ignored `.env`; never put them in frontend configuration.
 
-For local inspection, set `FOLIO_DEVELOPMENT_MODE=true` in your existing `.env`, recreate
-services with `docker compose up -d`, and open **Activity** on a document.
-The header control beside the theme toggle opens [development settings](http://localhost:3000/development/settings).
-Saves survive restarts and apply to new uploads, including their later summaries.
-The development routes default to disabled. See the [hands-on walkthrough](docs/interface-walkthrough.md)
-and [console behavior](docs/development-console.md).
+With `FOLIO_DEVELOPMENT_MODE=true`, **Activity** shows attempts, timing, failures
+and model usage. The header settings control edits saved document/summary limits
+for new uploads. Changes do not rewrite queued work or existing results.
 
-The [interactive API documentation](http://localhost:8000/docs) remains available. Upload one PDF using
-`POST /documents`, a fresh `Idempotency-Key` header and the `file` field. Follow the returned
-`status_url`, then inspect `/revisions/{revision_id}/evidence` when processing succeeds.
-The same key and same input replay the original IDs; changed input with that key returns `409`.
+## How it works
 
-```sh
-uv sync --locked
-uv run python scripts/smoke.py
-```
+FastAPI saves processing intent in PostgreSQL. RQ/Redis delivers work to separate
+document, chat and history workers. Docling preserves text, tables and physical
+page references; its chunker prepares source-linked passages. Embeddings live in
+pgvector alongside the document metadata. Each chat searches one pinned index.
 
-The smoke check uses only committed synthetic PDFs. [Development and verification](docs/development.md)
-explains the tests, fault exercises and limitations. Copy `.env.example` to `.env` only when
-creating a new configuration; preserve an existing local file. `.env` is ignored by Git.
+Answers, follow-up interpretation and history notes can independently use
+OpenRouter or direct OpenAI through the supported GPT-5.2 profile. Summaries use
+DeepSeek through OpenRouter; embeddings use `text-embedding-3-small` through
+OpenRouter. These routes have separate configuration. Long chats keep their full
+transcript and use shorter notes for older exchanges when needed.
 
-Automatic summaries require an explicitly enabled saved summary setting and a worker-side
-OpenRouter key. `FOLIO_SUMMARY_ENABLED` seeds the setting on first use; subsequent changes
-use the development console. When enabled for an upload, its usable extraction schedules one saved
-summary from all available evidence. Oversized inputs remain readable with a summary
-unavailable reason. Reads never generate, and enabling summaries does not backfill old
-revisions. The persistent allowance is $1 total and $0.40 per document, including retries
-and uncertain calls. See [summary behavior and source reading order](docs/summaries.md)
-and [configuration](docs/configuration.md) before enabling generation. Local evaluation
-is enabled with DeepSeek V4.1 Flash 1017 through OpenRouter/Together, reasoning
-`none`, a fixed 16,384-token completion ceiling and prompt/schema/preparation
-versions 6/4/3; the template remains disabled. [Recorded live calls](docs/summary-evaluation.md)
-separate completion, spending and source correctness. The latest three calls
-cost $0.016125504. A subsequent public-document summary and indexing run bring
-cumulative measured spending to $0.232598024 with no unknown billing. These small
-development comparisons do not establish general accuracy.
+The React/TypeScript interface uses Vite, shadcn/Radix controls and a local PDF
+renderer. The composer stays below a scrolling transcript; Enter sends and
+Shift+Enter adds a line. There are no seeded runtime documents or canned answers.
 
-To index new uploads, set `FOLIO_INDEX_ENABLED=true` in the existing `.env` and
-recreate services. The same worker-side OpenRouter key is used. Summaries and
-embeddings share the existing allowance; enabling indexing adds no fresh budget.
-The template keeps paid processing disabled. Read the [indexing guide](docs/indexing.md)
-for saved chunks, explicit indexing of an older revision, failure recovery and
-inspection routes. The pinned PostgreSQL/pgvector build currently targets Linux amd64.
+## What to expect
 
-For the summary source walkthrough, read [preparation.py](src/folio/summaries/preparation.py),
-[processing.py](src/folio/summaries/processing.py), then [lifecycle.py](src/folio/summaries/lifecycle.py)
-alongside the [summary contract](docs/summaries.md). Preparation decides what evidence
-the model sees; processing coordinates the call; lifecycle owns reservations and saved
-outcomes. As a reading exercise, trace a provider timeout: identify why its reservation
-stays charged against the allowance and why a late worker cannot replace a newer result.
+The latest [evaluation](docs/evaluation.md) followed one new 56-page document
+through upload, summary, indexing and twelve questions, including real history
+compaction. It found useful table answers and retained corrections, but also
+retrieval misses and citation-attribution errors. A completed model call is not
+proof that its answer is supported.
 
-## Design and development
+PDFs are the supported input; chats cover one document. Oversized summaries report
+their limit instead of silently using only the beginning. Streaming, other file
+formats and multi-document chat are deferred. Aggregate statistics/metrics APIs,
+some OpenAPI response schemas and the recorded walkthrough remain unfinished.
 
-- [Requirements](docs/requirements.md): user outcomes, acceptance criteria, constraints, and deferred capabilities.
-- [Decisions](docs/decisions.md): options, tradeoffs, recommendations, and acceptance status.
-- [Current status](docs/status.md): what is complete and what comes next.
-- [Agent instructions](AGENTS.md): collaboration, verification, and development boundaries.
-- [Skills](docs/skills.md): selected workflows, pinned upstream sources, and licenses.
-- [Configuration](docs/configuration.md): supported environment values and their meaning.
-- [Development console](docs/development-console.md): saved controls for new uploads and reproducible experiments.
-- [Processing runs](docs/processing-runs.md): history, saved failures and the query/index walkthrough.
-- [Summaries](docs/summaries.md): automatic complete-input behavior, citations, spending and source walkthrough.
-- [Indexing](docs/indexing.md): source-linked chunks, embeddings, batch recovery and shared spending.
-- [Interface contract](docs/interface.md): the small document workflow, design and verification boundaries.
-- [Interface walkthrough](docs/interface-walkthrough.md): follow a real upload through the UI and backend.
-- [Ingestion investigation](docs/ingestion.md): parser research, local comparison, and source-preservation findings.
-- [Ingestion system design](docs/ingestion-system.md): upload flow, queue/storage choices, schema, retries, and the first implementation slice.
-- [Code and system-design walkthrough](docs/system-design-walkthrough.md): transactions, indexes, worker coordination and scaling through actual source files.
-- [AI use](AI_USAGE.md): how agents contribute and how their work is checked.
+Compose exposes the interface and API on localhost. It has no authentication or
+tenant isolation, and uses local credentials and named volumes. Public hosting
+needs access controls, backups and measured capacity. Removing volumes deletes
+documents, history and the usage ledger.
 
-Development proceeds through small vertical slices. Each slice should deliver a complete observable behavior, meaningful verification, and an explanation of its design.
+## Work on Folio
 
-The web interface and API are exposed only on localhost. Runtime files and database state live in Docker volumes.
-This is a single-host setup with local development credentials; it does not provide authentication,
-off-machine backup, online artifact cleanup or a measured production capacity guarantee.
+See [development](docs/development.md) for configuration, isolated tests and
+debugging, and [architecture](docs/architecture.md) for the data flow, recovery and
+source reading order. [Requirements](docs/requirements.md),
+[decisions](docs/decisions.md) and [status](docs/status.md) track scope and remaining
+work. [AGENTS.md](AGENTS.md), [AI use](AI_USAGE.md) and
+[pinned skills](docs/skills.md) describe how changes are made and reviewed.

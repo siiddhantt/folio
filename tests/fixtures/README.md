@@ -2,7 +2,7 @@
 
 These PDFs contain invented facts and were generated for Folio. They contain no
 user documents. The generation source is
-[`experiments/ingestion/make_fixtures.py`](../../experiments/ingestion/make_fixtures.py).
+[`generate.py`](generate.py).
 The small committed inputs let tests run without requiring a renderer or fixture
 generation before every check.
 
@@ -18,3 +18,18 @@ generation before every check.
 The generator also creates a DOCX for the earlier comparison. DOCX is not an
 accepted application input. Expected facts are asserted independently in parser
 tests and the HTTP smoke check; these small inputs are not a general accuracy benchmark.
+
+## Regenerate for inspection
+
+Use Python 3.12 and Poppler's `pdftoppm` on PATH (or pass its full path with
+`--pdftoppm`). From the repository root, install optional generator dependencies
+in an isolated uv environment and write to an ignored directory:
+
+```sh
+uv run --with reportlab --with pypdf --with python-docx python tests/fixtures/generate.py --output .local/fixture-regeneration
+```
+
+The output separates inputs, reference facts/hashes and page previews. Review
+changes before replacing committed inputs. The encrypted fixture was derived
+separately from `text.pdf` using `PdfWriter.encrypt("fixture-password")`;
+the generator produces the other five PDFs and the comparison DOCX.
