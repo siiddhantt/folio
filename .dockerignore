@@ -7,6 +7,8 @@ tmp
 data
 uploads
 artifacts
+output
+.ipynb_checkpoints
 .agents
 **/__pycache__
 .pytest_cache

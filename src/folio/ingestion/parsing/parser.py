@@ -89,7 +89,7 @@ def _converter(models_path: Path, timeout_seconds: float):
     return converter, options.model_dump(mode="json")
 
 
-def _elements(raw, page_metadata, diagnostics):
+def _elements(raw, page_metadata, diagnostics, normalization_version):
     by_reference = {
         item["self_ref"]: item
         for collection in ("texts", "tables", "groups", "pictures")
@@ -105,7 +105,9 @@ def _elements(raw, page_metadata, diagnostics):
         item = by_reference[reference]
         element_id = None
         table_data = None
-        if item.get("label") == "table":
+        if item.get("label") == "table" or (
+            normalization_version >= 2 and item.get("label") == "document_index"
+        ):
             data = item["data"]
             table_data = {
                 "row_count": data["num_rows"],
@@ -180,6 +182,7 @@ def parse_pdf(path: Path, config: dict) -> Extraction:
     started = time.perf_counter()
     max_pages = config.get("max_pages", 100)
     timeout_seconds = config.get("timeout_seconds", 240)
+    normalization_version = config.get("normalization_version", 2)
     models_path = Path(config.get("models_path", "/models"))
     actual_version = importlib.metadata.version("docling")
     expected_version = config.get("parser_version", DOCLING_VERSION)
@@ -204,14 +207,14 @@ def parse_pdf(path: Path, config: dict) -> Extraction:
             "pipeline_options": options,
         },
         "models": json.loads((models_path / "manifest.json").read_text(encoding="utf-8")),
-        "normalization_version": "1",
+        "normalization_version": str(normalization_version),
     }
     result = converter.convert(path, raises_on_error=False, max_num_pages=max_pages)
     diagnostics.extend(error.model_dump(mode="json") for error in result.errors)
     raw = None
     try:
         raw = result.document.export_to_dict()
-        elements = _elements(raw, page_metadata, diagnostics)
+        elements = _elements(raw, page_metadata, diagnostics, normalization_version)
         recovered = {location.page_no for element in elements for location in element.locations}
         if result.status.value == "partial_success":
             diagnostics.append(

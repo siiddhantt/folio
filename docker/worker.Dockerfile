@@ -14,4 +14,5 @@ COPY requirements-dev.lock ./
 RUN pip install --no-cache-dir --require-hashes -r requirements-dev.lock && pip check
 COPY pyproject.toml ./
 COPY tests ./tests
+COPY notebooks/*.py ./notebooks/
 CMD ["python", "-m", "pytest", "-q"]

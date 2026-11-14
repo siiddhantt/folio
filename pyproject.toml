@@ -18,6 +18,9 @@ dependencies = [
 
 [dependency-groups]
 dev = ["pytest==9.2.0", "ruff==0.17.4", "reportlab==5.1.0", "pypdf==7.0.0"]
+notebook = [
+    "ipykernel==7.4.0",
+]
 
 [tool.uv]
 # Match the parser image: docling-ibm-models 4.0.4 requires huggingface-hub <2.
@@ -25,7 +28,7 @@ constraint-dependencies = ["huggingface-hub==1.33.0"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["src"]
+pythonpath = ["src", "."]
 markers = ["parser: requires the Docling worker image", "integration: requires PostgreSQL and Redis", "supervision: opt-in native-hang process cleanup check"]
 
 [tool.ruff]

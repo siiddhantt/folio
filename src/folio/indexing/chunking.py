@@ -63,6 +63,9 @@ def prepare_chunks(raw, sources, *, token_limit=512):
             headings = {key: value for key, value in headings.items() if key < level}
             headings[level] = item
         context[item.self_ref] = list(headings.values())
+        # Docling serializes attached footnotes even when figure children aren't traversed.
+        for footnote in getattr(item, "footnotes", []):
+            context[footnote.cref] = list(headings.values())
 
     chunker = HybridChunker(
         tokenizer=DocumentTokenizer(tokenizer=encoding, max_tokens=token_limit),
@@ -154,6 +157,6 @@ def prepare_chunks(raw, sources, *, token_limit=512):
             "token_limit": token_limit,
             "merge_peers": True,
             "always_emit_headings": True,
-            "preparation_version": 1,
+            "preparation_version": 2,
         },
     }

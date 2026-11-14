@@ -67,6 +67,7 @@ x-settings: &settings
 
 services:
   web:
+    platform: linux/amd64
     image: folio-web:local
     build: {context: ., dockerfile: docker/web.Dockerfile}
     ports: ["127.0.0.1:${FOLIO_WEB_PORT:-3000}:80"]
@@ -78,6 +79,7 @@ services:
       timeout: 3s
       retries: 5
   postgres:
+    platform: linux/amd64
     image: folio-postgres:local
     build: {context: ., dockerfile: docker/postgres.Dockerfile}
     environment:
@@ -91,6 +93,7 @@ services:
       timeout: 3s
       retries: 20
   redis:
+    platform: linux/amd64
     image: redis:8@sha256:1f88291b4c57bdf249f02eb085a8669889b2d2954e91d4de5118a5da6b78dd53
     command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
     volumes: ["redis-data:/data"]
@@ -100,6 +103,7 @@ services:
       timeout: 3s
       retries: 20
   migrate:
+    platform: linux/amd64
     image: folio-api:local
     build: {context: ., dockerfile: docker/api.Dockerfile}
     environment: *settings
@@ -107,6 +111,7 @@ services:
     depends_on:
       postgres: {condition: service_healthy}
   api:
+    platform: linux/amd64
     image: folio-api:local
     build: {context: ., dockerfile: docker/api.Dockerfile}
     environment: *settings
@@ -120,6 +125,7 @@ services:
       timeout: 5s
       retries: 5
   dispatcher:
+    platform: linux/amd64
     image: folio-api:local
     environment: *settings
     command: ["python", "-m", "folio", "dispatch"]
@@ -127,6 +133,7 @@ services:
       migrate: {condition: service_completed_successfully}
       redis: {condition: service_healthy}
   worker:
+    platform: linux/amd64
     image: folio-worker:local
     build: {context: ., dockerfile: docker/worker.Dockerfile, target: worker}
     environment:
@@ -142,6 +149,7 @@ services:
       redis: {condition: service_healthy}
 
   chat-worker:
+    platform: linux/amd64
     image: folio-api:local
     environment:
       <<: *settings
@@ -157,6 +165,7 @@ services:
       redis: {condition: service_healthy}
 
   memory-worker:
+    platform: linux/amd64
     image: folio-api:local
     environment:
       <<: *settings

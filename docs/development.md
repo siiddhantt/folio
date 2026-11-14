@@ -23,6 +23,57 @@ Open [Folio](http://localhost:3000) or [OpenAPI](http://localhost:8000/docs). `F
 change those localhost ports. Files and database state live in named Docker volumes. `docker compose down`
 preserves them; removing volumes destroys local data and is not part of normal restart or testing.
 
+## Running on a Mac
+
+Use the same repository and Docker Compose commands above. The images explicitly target
+`linux/amd64`: the parser pins x86-64 PyTorch wheels and PostgreSQL pins an amd64 pgvector package.
+Intel Macs run that architecture directly inside the Linux VM. Apple Silicon uses emulation;
+native ARM images have not been built or validated.
+
+On Apple Silicon, Docker Desktop's Apple Virtualization framework supports optional Rosetta
+acceleration. Docker VMM currently does not support Rosetta and documents slower amd64 emulation.
+See Docker's [VM choices](https://docs.docker.com/desktop/features/vmm/) and
+[settings](https://docs.docker.com/desktop/settings-and-maintenance/settings/).
+The default VM memory allocation is half the Mac's RAM. Leave room for macOS and check the
+allocation before parsing: Folio's document worker can use up to 6 GiB, with other services
+using additional memory. That is a ceiling, not memory reserved at startup.
+
+A fresh clone has source code only. Create `.env` privately from the template or transfer your
+existing `.env` through a private channel. Git does not transfer credentials, Docker volumes,
+uploaded PDFs, saved console settings or notebook checkpoints.
+
+For a fresh database with summaries/indexing enabled and direct OpenAI chat, configure these
+before starting services and uploading. Both provider keys must be present in the private `.env`:
+
+```dotenv
+FOLIO_DEVELOPMENT_MODE=true
+FOLIO_SUMMARY_ENABLED=true
+FOLIO_INDEX_ENABLED=true
+FOLIO_CHAT_GATEWAY=openai
+FOLIO_CHAT_REWRITE_GATEWAY=openai
+FOLIO_MEMORY_GATEWAY=openai
+```
+
+The allowance is shared across the evaluation, not automatically shared between two separate
+databases. For a fresh Mac database, set `FOLIO_SUMMARY_BUDGET_USD` to the agreed **remaining**
+allowance before any paid work, and keep the existing per-document cap. Stop paid testing on the
+old installation while using that remainder. If transferring the full database and artifacts
+instead, preserve its usage ledger and original total; do not deduct spending twice.
+
+On an existing database, the saved summary switch takes precedence over the environment seed.
+Check the development console before uploading. Disabled jobs are not backfilled by changing
+settings afterward. Model IDs/providers remain independent of the gateway switches above.
+
+Start with a small PDF and inspect extraction, summary and index states before recording.
+The Windows/Linux timings in the evaluation are not Mac measurements. Emulation may require
+longer processing; if a timeout occurs, inspect the saved error before changing parser/job/lease
+bounds together. Do not claim that selecting the right architecture proves runtime compatibility.
+
+For the notebook, install its optional kernel as described below and download its public PDF.
+Use a new `RUN_DIR` for a fresh Mac database. Reusing Windows receipts without the corresponding
+server records intentionally stops with a missing-resource error. The notebook does not copy
+the old database or fabricate earlier results.
+
 ## Configuration
 
 [`.env.example`](../.env.example) lists supported deployment values without usable credentials. Keep `.env`
@@ -134,6 +185,38 @@ Each request uses one consistent read-only database snapshot. Reads trigger no
 work or paid calls. Public API schemas describe existing payloads, with examples
 for upload, answers and field values; development inspection remains untyped.
 
+## Notebook walkthrough
+
+Install the optional kernel with `uv sync --locked --group notebook`. Open
+[`notebooks/folio_demo.ipynb`](../notebooks/folio_demo.ipynb) in a notebook-capable
+editor and select this repository's `.venv` Python. No notebook server or global
+kernel registration is required. Start the existing Docker stack first.
+
+Download the public PDF linked in the notebook, then set `PDF_PATH` and a stable
+`RUN_DIR` under `output/`. Run cells in order. Requests and responses are visible;
+JSON snapshots persist beside the run manifest. Set `CAPTURE_WORKER_LOGS=True`
+for bounded, filtered local Compose logs, retaining service and process labels.
+Logs can have gaps; persisted attempts are the authoritative history.
+
+Upload automatically schedules extraction, summary and indexing. Inspection
+cells read their progress; they cannot pause workers between stages. A failed
+summary does not block chat on a ready index. The question cells share one
+conversation and show its source passages, usage and referenced history notes.
+A short conversation may not trigger history compression.
+
+After a timeout or kernel restart, rerun with the same directory. The
+[`submit_once` helper](../notebooks/checkpoint.py) preserves request keys and
+the original conversation head; it never refreshes an ambiguously accepted
+request into a new question. Use a new intent name for a genuinely new question.
+Keep one kernel per run, retain checkpoints, and stop if saved server IDs are
+missing. Outputs may contain document content: clear notebook outputs before
+committing, and keep executed copies under ignored `output/`.
+
+The experimental [`retrieval` helper](../notebooks/retrieval.py) combines two
+scoped candidate lists for evaluation. It is not selected by production chat.
+The [evaluation](evaluation.md) distinguishes retrieved evidence, prepared
+input cost and actual generated-answer support.
+
 ## Backend checks
 
 Integration tests truncate their selected database. Use only the isolated `folio_test` database:
@@ -143,8 +226,8 @@ state. Never point tests at application data.
 ```sh
 uv sync --locked
 docker compose -p folio-check -f compose.test.yaml up -d --build --wait
-docker build --target verification -t folio-verification:local -f docker/worker.Dockerfile .
-docker run --rm --network folio-check_default --cpus 4 --memory 6g --memory-swap 6g -e FOLIO_DATABASE_URL=postgresql://folio:folio@postgres:5432/folio_test -e FOLIO_REDIS_URL=redis://redis:6379/15 folio-verification:local python -m pytest -m "not supervision" -q
+docker build --platform linux/amd64 --target verification -t folio-verification:local -f docker/worker.Dockerfile .
+docker run --platform linux/amd64 --rm --network folio-check_default --cpus 4 --memory 6g --memory-swap 6g -e FOLIO_DATABASE_URL=postgresql://folio:folio@postgres:5432/folio_test -e FOLIO_REDIS_URL=redis://redis:6379/15 folio-verification:local python -m pytest -m "not supervision" -q
 ```
 
 Build the parser base first. The test database build includes pgvector. Parser checks use committed synthetic
@@ -209,7 +292,7 @@ advances its synthetic lease, so its result is not a measured seven-minute recov
 The optional native-hang probe uses a unique queue and takes roughly a minute:
 
 ```sh
-docker run --rm --init --network folio-check_default --cpus 1 --memory 512m --memory-swap 512m -e FOLIO_RUN_SUPERVISION=1 -e FOLIO_SUPERVISION_REDIS_URL=redis://redis:6379/15 --entrypoint timeout folio-verification:local --signal=TERM --kill-after=5s 100s python tests/test_supervision.py
+docker run --platform linux/amd64 --rm --init --network folio-check_default --cpus 1 --memory 512m --memory-swap 512m -e FOLIO_RUN_SUPERVISION=1 -e FOLIO_SUPERVISION_REDIS_URL=redis://redis:6379/15 --entrypoint timeout folio-verification:local --signal=TERM --kill-after=5s 100s python tests/test_supervision.py
 ```
 
 It checks workhorse/same-group descendant cleanup; detached process groups are outside that guarantee. The

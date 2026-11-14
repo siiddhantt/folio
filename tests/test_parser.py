@@ -19,6 +19,64 @@ CONFIG = {"max_pages": 100, "timeout_seconds": 240, "models_path": "/models"}
 
 
 class ParserContract(unittest.TestCase):
+    def test_document_index_table_keeps_cells_and_source_in_new_extractions(self):
+        from docling_core.types.doc import (
+            BoundingBox,
+            DocItemLabel,
+            DoclingDocument,
+            ProvenanceItem,
+            TableCell,
+            TableData,
+        )
+
+        doc = DoclingDocument(name="Contents")
+        doc.add_table(
+            label=DocItemLabel.DOCUMENT_INDEX,
+            data=TableData(
+                num_rows=1,
+                num_cols=1,
+                table_cells=[
+                    TableCell(
+                        text="Running costs ... 4",
+                        start_row_offset_idx=0,
+                        end_row_offset_idx=1,
+                        start_col_offset_idx=0,
+                        end_col_offset_idx=1,
+                    )
+                ],
+            ),
+            prov=ProvenanceItem(
+                page_no=1,
+                charspan=(0, 0),
+                bbox=BoundingBox(
+                    l=10,
+                    t=10,
+                    r=200,
+                    b=40,
+                    coord_origin="TOPLEFT",
+                ),
+            ),
+        )
+        parsed = SimpleNamespace(
+            status=SimpleNamespace(value="success"),
+            errors=[],
+            document=doc,
+        )
+        with patch("docling.document_converter.DocumentConverter.convert", return_value=parsed):
+            result = parse_pdf(FIXTURES / "text.pdf", CONFIG)
+
+        table = result.elements[0]
+        self.assertEqual(table.kind, "document_index")
+        self.assertEqual(table.table_data["cells"][0]["text"], "Running costs ... 4")
+        self.assertEqual(table.provider_ref, "#/tables/0")
+        self.assertEqual(table.locations[0].page_no, 1)
+        self.assertEqual(result.parser_manifest["normalization_version"], "2")
+        # Already accepted uploads keep their original normalization behavior.
+        with patch("docling.document_converter.DocumentConverter.convert", return_value=parsed):
+            with self.assertRaises(ExtractionError) as old:
+                parse_pdf(FIXTURES / "text.pdf", {**CONFIG, "normalization_version": 1})
+        self.assertEqual(old.exception.code, "NO_USABLE_CONTENT")
+
     def test_text_keeps_physical_pages_and_top_left_source_box(self):
         result = parse_pdf(FIXTURES / "text.pdf", CONFIG)
         revenue = next(element for element in result.elements if "125,000" in (element.text or ""))

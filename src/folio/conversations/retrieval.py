@@ -12,28 +12,31 @@ def retrieve(database, claim, *, defer_publication=False):
         saved = evidence(conn, claim["id"])
         if saved:
             return saved
-        matches = conn.execute(
-            "WITH matches AS (SELECT ordinal,text,embedding <=> %s::vector AS distance "
-            "FROM index_chunks WHERE index_id=%s AND embedding IS NOT NULL "
-            "ORDER BY distance,ordinal LIMIT %s) "
-            "SELECT m.ordinal AS chunk_ordinal,m.text,m.distance,"
-            "array_agg(DISTINCT l.page_no ORDER BY l.page_no) AS pages "
-            "FROM matches m JOIN chunk_sources s ON s.index_id=%s AND s.chunk_ordinal=m.ordinal "
-            "JOIN element_locations l ON l.revision_id=s.revision_id AND l.element_id=s.element_id "
-            "GROUP BY m.ordinal,m.text,m.distance ORDER BY m.distance,m.ordinal",
-            (
-                row["query_vector"],
-                claim["index_id"],
-                claim["policy"]["retrieval_chunks"],
-                claim["index_id"],
-            ),
-        ).fetchall()
-        for rank, chunk in enumerate(matches, 1):
-            chunk.update(rank=rank, source_id=f"S{rank}")
+        matches = vector_candidates(
+            conn, claim["index_id"], row["query_vector"], claim["policy"]["retrieval_chunks"]
+        )
         if defer_publication:
             return matches
         save_evidence(conn, claim, matches)
         return evidence(conn, claim["id"])
+
+
+def vector_candidates(conn, index_id, query_vector, limit):
+    """Read source-linked nearest chunks within one index, without saving evidence."""
+    matches = conn.execute(
+        "WITH matches AS (SELECT ordinal,text,embedding <=> %s::vector AS distance "
+        "FROM index_chunks WHERE index_id=%s AND embedding IS NOT NULL "
+        "ORDER BY distance,ordinal LIMIT %s) "
+        "SELECT m.ordinal AS chunk_ordinal,m.text,m.distance,"
+        "array_agg(DISTINCT l.page_no ORDER BY l.page_no) AS pages "
+        "FROM matches m JOIN chunk_sources s ON s.index_id=%s AND s.chunk_ordinal=m.ordinal "
+        "JOIN element_locations l ON l.revision_id=s.revision_id AND l.element_id=s.element_id "
+        "GROUP BY m.ordinal,m.text,m.distance ORDER BY m.distance,m.ordinal",
+        (query_vector, index_id, limit, index_id),
+    ).fetchall()
+    for rank, chunk in enumerate(matches, 1):
+        chunk.update(rank=rank, source_id=f"S{rank}")
+    return matches
 
 
 def save_evidence(conn, claim, passages):

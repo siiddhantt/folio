@@ -40,7 +40,7 @@ class Settings(BaseSettings):
         return {
             "parser": "docling",
             "parser_version": "2.148.0",
-            "normalization_version": 1,
+            "normalization_version": 2,
             "max_pages": self.max_pages,
             "timeout_seconds": self.parser_timeout_seconds,
             "models_path": self.models_path,

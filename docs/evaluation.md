@@ -1,5 +1,8 @@
 # Document-to-conversation evaluation
 
+Latest: [November 14 retrieval comparison](#november-14-retrieval-comparison).
+The earlier run below remains unchanged as historical evidence.
+
 November 13, 2026; application baseline `1c793a9`. One fresh frontend upload,
 one conversation, twelve sequential UI-submitted questions and one actual
 background history compression. No answer was replaced by a tuned retry.
@@ -148,3 +151,125 @@ Earlier parser, chunking and model comparisons remain available in the
 [historical docs](https://github.com/siiddhantt/folio/tree/1c793a9891e4aaf833acce53987eb7ee1beee3e0/docs)
 and [parser comparison](https://github.com/siiddhantt/folio/tree/1c793a9891e4aaf833acce53987eb7ee1beee3e0/experiments/ingestion).
 Those records include failed examples; this run does not erase them.
+
+## November 14 retrieval comparison
+
+One new 39-page EPA [Home Buyer's and Seller's Guide to Radon](https://www.epa.gov/sites/default/files/2015-05/documents/hmbuygud.pdf),
+March 2024 revised edition. SHA-256:
+`b3bca87cdb71d5c4bf38e578ccc4fde0898559b581cef976b428b1b0d852eddd`.
+The owner accepted ten source-checked questions before execution, seven for
+development and three held out. One independent agent mapped all 24 required
+facts to complete supporting chunk groups without seeing ranks or answers;
+another reviewed generated answers and citations. These are agent labels,
+not human-annotated gold data or a general accuracy benchmark.
+
+The official PDF's overlapping image table on physical p22 was excluded during
+question selection. Physical p19's two-test table is intact but Docling flattened
+its columns into separate chunks. All required facts survived in the index;
+this does not establish full extraction fidelity. Figure text and furniture
+exclusions, OCR noise and five chunker warnings remain inspectable.
+
+### Execution and repeatability
+
+A host engine interruption was recovered through a new extraction attempt.
+The first index then failed safely before embedding: a picture-attached footnote
+lacked its heading mapping. An offline check also found that structured contents
+tables labelled `document_index` had been omitted from normalized evidence.
+Focused failing regressions led to chunk preparation 2 and normalization 2.
+Old requests keep normalization 1. The failed run was retained; a separate
+upload exercised the fixes rather than rewriting its history.
+
+The new run extracted 788 elements in 164.17 measured parser seconds and saved
+78 chunks, maximum 511 tokens, in three embedding batches of 32/32/14. Indexing
+took 42.08 seconds from worker start to finish. Summary worker time was 4.07
+seconds. The summary's six claims were supported by their cited elements, but
+its repeated risk/threshold coverage left practical steps underrepresented.
+
+The [notebook](../notebooks/folio_demo.ipynb) completed all 14 code cells using
+real HTTP, workers and models. A complete rerun made no POST requests and left
+document/job totals and the spending ledger unchanged. Saved checkpoints expose
+source elements, chunks, attempts, citations, usage and filtered worker logs.
+Additional questions used the same conversation through the same HTTP routes.
+
+Parser/model versions match the earlier run except normalization/preparation
+above. Normal history thresholds remained 6,000/3,000/8,000; history grew from
+9 to 1,617 tokens and did not require compression. No compression quality claim
+follows from this run.
+
+### Retrieval result
+
+Every arm used the same saved question vector, resolved question, history,
+source index, model profile and prompt preparation. Both reconstructed saved
+inputs and recomputed vector-six inputs matched the original prompt hashes for
+all ten turns. Hybrid combined vector12 and English keyword12 using equal
+reciprocal-rank fusion with constant 60, returning six. Methods were fixed
+before results; there was no tuning against the held-out cases.
+
+| Method | Required facts supplied | Questions with complete evidence | Warm selection median | Mean prepared input | Estimated uncached input USD |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Vector 6 | 19/24 | 7/9 | 0.85 ms | 2,812 tokens | 0.00492 |
+| Vector 12 | 21/24 | 8/9 | 0.92 ms | 4,089 tokens | 0.00716 |
+| Hybrid 6 | 17/24 | 5/9 | 17.39 ms | 3,453 tokens | 0.00604 |
+
+Coverage excludes the unanswerable personal-values question. Development fact
+counts were 15/19, 16/19 and 12/19; held-out positive counts were 4/5, 5/5 and
+5/5 respectively. No selected chunk was dropped for input size, so selected and
+supplied coverage are equal. The personal-values case is assessed separately.
+
+Timings are medians of per-question medians from eleven warm repetitions, with
+rotated method order, on one small local index. They exclude embeddings, prompt
+preparation and generation; keyword search scans these 78 rows and is not a
+scaling benchmark. Cost estimates average all ten prepared answer requests,
+exclude the safety margin, use the frozen $1.75/million uncached input rate and
+exclude output, rewrite, embeddings and caching. They are not actual invoices
+or measurements of alternative model latency. No alternative answers were generated.
+
+Vector12 recovered the p23 qualification that a two-test average of 4.1 pCi/L
+still has about a 50% chance of a year-round average somewhat below 4. Hybrid
+also found it, but displaced no-power detector evidence, long-term testing
+details and post-mitigation confirmation testing on other questions. None supplied the
+complete two-test table: setup chunks 40/41 and threshold chunk 43 were missing.
+Wider retrieval recovered only that question's interference precaution.
+
+### Delivered answers and remaining defects
+
+| Case | Subject | Baseline result |
+| --- | --- | --- |
+| D01 | Detector power and more-than-90-day use | Complete, supported |
+| D02 | Gravel and crawlspace exception | Complete, supported |
+| D03 | Basement renovation testing | Complete, supported |
+| D04 | Simultaneous/sequential passive tests | Failed output validation; required table evidence also absent |
+| D05 | Year-round test duration and 48-hour minimum | Supported decisions; omitted daily/seasonal explanation despite supplied evidence |
+| D06 | Sealing, mitigation and confirmation | Supported; omitted explicit home-design dependency despite supplied evidence |
+| D07 | Well-water treatments and qualifications | Complete, supported |
+| H08 | 4.1 average uncertainty and below-4 risk | Supported claims; missing the expected roughly-50% qualification, not retrieved |
+| H09 | Three-day test, windows and weather | Complete, supported |
+| H10 | Exact personal home reading and contractor quote | Failed output validation; rewrite also drifted toward generic cost-range guidance |
+
+Eight delivered answers contained 20 supported statements; five covered all
+frozen expectations. Both failed turns reached the validator branch rejecting
+citations on a non-answer outcome. Their rejected text was not retained, so
+neither successful abstention nor a particular hallucination can be inferred.
+There were no replacement answers or hidden retries. These contract failures
+are separate from retrieval coverage and must be addressed before calling the
+workflow reliable for unavailable information.
+
+Acceptance-to-terminal median was 8.13 seconds, including failures. Actual
+answer input usage ranged from 1,418 to 3,552 tokens. Total accounted run cost
+was $0.10113222 across 33 stage calls, including $0.02097327 for the two failed
+turns: $0.08974770 direct-generation estimates and $0.01138452 provider-reported
+summary/embedding costs. The earlier failed-index run's summary cost another
+$0.0099258. Remaining shared allowance was $0.406827606, with no holds.
+
+The recommended next comparison is generated answers with vector12: roughly
+$0.00223 more estimated input cost per request here, with better measured
+coverage. Fix the non-answer citation contract and preserve personal-question
+intent in a separate focused increment. Do not adopt this hybrid rule or claim
+vector12 fixes the table miss. Production remains vector6 pending an explicit
+default decision. Existing mixed history/PDF attribution limits also remain.
+
+Ignored local artifacts under `output/retrieval-comparison/` preserve frozen
+questions, independent labels, exact vectors/context/profile snapshots, source
+hashes, per-arm passages/timings, coverage scores and the answer review. The
+connected notebook run is under `output/demo/folio/`; the earlier failure remains
+under `output/demo/epa-radon/`. Source PDFs and raw traces are not tracked.

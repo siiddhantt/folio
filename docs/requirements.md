@@ -21,7 +21,7 @@ Reports, policies and household guides are examples, not domain restrictions.
 | R11 | Durable data structures | Metadata, evidence, summaries, indexes, conversations, context, processing history and usage persist in PostgreSQL/artifact storage. |
 | R12 | Usable APIs and errors | Public success responses have typed OpenAPI schemas, workflow descriptions and examples; PDF downloads declare their binary media type. Existing serializers are preserved. Development inspection payloads remain outside the typed public contract. |
 | R13 | Reproducible operation | Docker setup, configuration, development checks and architecture are documented. Production capacity is not established. |
-| R14 | Demonstration | Real upload-to-chat walkthrough is measured in the evaluation. Record the video after the planned retrieval improvements. |
+| R14 | Demonstration | Real upload-to-chat and notebook walkthroughs are measured. Record the current version after a Mac smoke test; disclose known quality limits. Further retrieval work is deferred. |
 | R15 | Transparent AI development | Keep accepted rationale, versioned prompts, focused verification and a concise AI-use record. |
 
 ## Boundaries

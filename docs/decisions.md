@@ -184,3 +184,46 @@ Use short read-only PostgreSQL snapshots, with no new state or monitoring servic
 Exact totals scan retained rows; measure their cost before adding caching or
 precomputed aggregates. Public OpenAPI response descriptions preserve existing
 wire formats; documentation models do not add runtime validation to old routes.
+
+## November 14 retrieval comparison and walkthrough
+
+Compare the current top-six retrieval with wider and hybrid retrieval on a fresh
+PDF and new source-checked questions before selecting a new default. Separate
+evidence coverage from generated-answer support, latency and input cost. Keep
+the source, chunks and question embeddings fixed across methods; a comparison
+does not authorize promoting its winner automatically.
+
+The owner selected a Python notebook for the connected API walkthrough, with
+visible code and ordered cells rather than a CLI. Reuse existing HTTP routes and
+save local receipts/results under ignored `output/`. Upload starts background
+summary/index work automatically; later cells observe those stages. Rerunning a
+cell must preserve its original request intent rather than create duplicate work.
+The owner accepted the EPA guide and ten source-checked questions, including
+three held out. Compare vector6, vector12 and hybrid6 (vector12 plus English
+keyword12, equal reciprocal-rank fusion with constant 60). Freeze that rule
+before seeing results; use no extra model call for keyword selection/reranking.
+First measure evidence coverage, timing and prepared input cost, without claiming
+these measurements alone prove improved generated answers. The accepted test
+surfaces are the notebook HTTP/checkpoint helper and the retrieval selector with
+real PostgreSQL. Existing workflow checks still guard publication and token fitting.
+
+The fresh source exposed two source-mapping defects before embedding: attached
+figure footnotes were missing their active heading context, and structured
+`document_index` tables were omitted during normalization. Chunk preparation 2
+maps attached footnotes; normalization 2 retains those tables with their cells
+and locations. New uploads capture version 2; accepted version-1 requests keep
+their behavior. Existing failed runs remain intact. Neither fix relaxes source
+validation or adds an index-retry API.
+
+## November 14 release boundary
+
+Freeze feature work and prepare the current workflow for demonstration and review.
+Further retrieval changes and the recorded answer-quality defects are follow-up
+work, not prerequisites for recording this version. Keep those limits visible;
+do not present selected successful examples as a general accuracy claim.
+
+Keep the supported image architecture explicit as Linux amd64, including on
+Apple Silicon through Docker Desktop emulation. Native ARM dependency work is
+deferred. Verify the actual Mac before recording; Windows/Linux results do not
+establish Mac performance. Fresh installations preserve the agreed cumulative
+spending boundary rather than silently receiving a new allowance.

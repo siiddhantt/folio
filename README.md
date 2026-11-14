@@ -13,11 +13,13 @@ Install Docker Compose. Copy `.env.example` to `.env` if you do not already have
 one, then build the parser image and start the services:
 
 ```sh
-docker build -t folio-docling:2.148.0 docker/docling
+docker build --platform linux/amd64 -t folio-docling:2.148.0 docker/docling
 docker compose up --build -d --wait
 ```
 
 The first build downloads local parsing/OCR models and can take several minutes.
+Images target Linux amd64. Apple Silicon Macs use Docker Desktop's emulation;
+see [Mac setup](docs/development.md#running-on-a-mac) before building.
 Open [Folio](http://localhost:3000) or the [API docs](http://localhost:8000/docs).
 Upload a PDF; **Runs** reopens its processing history. Conversations have their
 own sidebar, generated titles, rename and remove controls.
@@ -32,6 +34,11 @@ and model usage. The header settings control edits saved document/summary limits
 for new uploads. Changes do not rewrite queued work or existing results.
 The [aggregate APIs](docs/development.md#aggregate-apis) report document totals
 and processing outcomes from the same saved records.
+
+For a step-by-step API walkthrough, open the [Folio notebook](notebooks/folio_demo.ipynb).
+Its cells show upload, worker attempts, evidence, summaries, chunks and a saved
+conversation. [Notebook setup](docs/development.md#notebook-walkthrough) explains
+the optional kernel and how to resume without submitting duplicate work.
 
 ## How it works
 
@@ -52,16 +59,18 @@ Shift+Enter adds a line. There are no seeded runtime documents or canned answers
 
 ## What to expect
 
-The latest [evaluation](docs/evaluation.md) followed one new 56-page document
-through upload, summary, indexing and twelve questions, including real history
-compaction. It found useful table answers and retained corrections, but also
-retrieval misses and citation-attribution errors. A completed model call is not
-proof that its answer is supported.
+The latest [evaluation](docs/evaluation.md#november-14-retrieval-comparison) used
+a 39-page guide and ten questions: eight answers with supported claims, including
+three omissions, and two answer-validation failures. Wider retrieval improved
+evidence coverage; the default remains six passages. An earlier run exercised
+history compaction and found citation-attribution errors. These limitations are
+recorded with the results.
 
 PDFs are the supported input; chats cover one document. Oversized summaries report
 their limit instead of silently using only the beginning. Streaming, other file
 formats and multi-document chat are deferred. Retrieval and citation quality need
-further evaluation; the recorded walkthrough follows that work.
+further evaluation. The working flow is ready for a recorded walkthrough, with
+these limits disclosed.
 
 Compose exposes the interface and API on localhost. It has no authentication or
 tenant isolation, and uses local credentials and named volumes. Public hosting

@@ -36,6 +36,42 @@ def passage(doc, text, page, element_id, *, heading=False):
 
 
 class ChunkPreparation(unittest.TestCase):
+    def test_figure_footnote_keeps_its_source_and_surrounding_heading(self):
+        from docling_core.types.doc import BoundingBox, DocItemLabel, ProvenanceItem
+
+        doc = document()
+        sources = [
+            passage(doc, "Running costs", 1, "heading", heading=True),
+            passage(doc, "The annual figure is 500.", 2, "body"),
+        ]
+        figure = doc.add_picture()
+        footnote = doc.add_text(
+            label=DocItemLabel.FOOTNOTE,
+            text="Figures exclude maintenance.",
+            parent=figure,
+            prov=ProvenanceItem(
+                page_no=2,
+                bbox=BoundingBox(l=10, t=50, r=200, b=70, coord_origin="TOPLEFT"),
+                charspan=(0, 27),
+            ),
+        )
+        figure.footnotes.append(footnote.get_ref())
+        sources.append(
+            {
+                "element_id": "footnote",
+                "provider_ref": footnote.self_ref,
+                "locations": [{"page_no": 2}],
+            }
+        )
+
+        result = prepare_chunks(doc.export_to_dict(), sources, token_limit=128)
+
+        chunk = next(c for c in result["chunks"] if "exclude maintenance" in c["text"])
+        self.assertIn("Running costs", chunk["text"])
+        self.assertIn({"element_id": "heading", "role": "context"}, chunk["sources"])
+        self.assertIn({"element_id": "footnote", "role": "body"}, chunk["sources"])
+        self.assertEqual(result["exclusions"], [])
+
     def test_heading_and_body_keep_separate_source_links(self):
         doc = document()
         sources = [
