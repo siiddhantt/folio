@@ -13,15 +13,21 @@ to a compatible agent; it does not run a workflow or add an application dependen
 | [`codebase-design`](../.agents/skills/codebase-design/SKILL.md) | Keep complex behavior behind a small, understandable interface. Supplies the design vocabulary referenced by `tdd`. | When an interface or test boundary needs a design decision. It does not require an architecture workshop for every change. |
 | [`evaluate-rag`](../.agents/skills/evaluate-rag/SKILL.md) | Diagnose retrieval separately from answer generation, then measure the failure that matters. | After inspecting real traces from Folio. Start with manually checked questions and supporting passages; synthetic questions are supplementary. |
 | [`error-discovery`](../.agents/skills/error-discovery/SKILL.md) | Organize a human review of output traces into concrete failure modes. | Only when the user explicitly chooses an interactive trace-review session. Its larger annotation interface is optional development tooling, outside Folio's product scope. |
+| [`better-layout`](../.agents/skills/better-layout/SKILL.md) | Review grouping, shared alignment edges and responsive structure. | For an accepted interface change; preserve the existing spacing and density conventions. |
+| [`better-accessibility`](../.agents/skills/better-accessibility/SKILL.md) | Review navigation, focus, accessible controls and dynamic feedback. | For the changed user journey; distinguish executable checks from unverified assistive-technology coverage. |
+| [`better-typography`](../.agents/skills/better-typography/SKILL.md) | Review text hierarchy, line measure, wrapping and input readability. | Keep the existing font unless a font change is requested. |
+| [`better-ui`](../.agents/skills/better-ui/SKILL.md) | Refine consistent controls, surfaces and interaction states. | After the interaction works; preserve Folio's restrained visual style rather than adding decorative motion. |
+| [`humanizer`](../.agents/skills/humanizer/SKILL.md) | Edit documentation into plain, concise prose. | For accepted documentation work. Preserve supported facts, uncertainty, limitations and the AI-use record; do not invent experience, benchmarks, human authorship or detector claims. |
 
-No executable scripts are bundled in these four folders. Their Markdown examples
+No executable scripts are bundled in these nine folders. Their Markdown examples
 are guidance, not commands that run during installation. `error-discovery` can
 generate and run a local review interface when explicitly invoked; any libraries
 or services needed at that point are a separate decision.
 
 ## Provenance and licensing
 
-Reviewed on November 6, 2026. These exact commits were the upstream default-branch
+Initial workflows reviewed on November 6, 2026; interface additions on November
+12. These exact commits were the upstream default-branch
 revisions observed during the review; a date establishes what was inspected, not
 a promise about future maintenance.
 
@@ -29,6 +35,21 @@ a promise about future maintenance.
 | --- | --- | --- | --- | --- |
 | [Matt Pocock's skills](https://github.com/mattpocock/skills) | `skills/engineering/tdd`, `skills/engineering/codebase-design` | [`4ae2317ddb22b046e26455e4f9c9b3aaaf62212d`](https://github.com/mattpocock/skills/commit/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d) | October 31, 2026 | MIT |
 | [AI Evals course skills](https://github.com/ai-evals-course/evals-skills) | `skills/evaluate-rag`, `skills/error-discovery` | [`80d5f7b0127c7572ed9e9339937adbfd7240ffeb`](https://github.com/ai-evals-course/evals-skills/commit/80d5f7b0127c7572ed9e9339937adbfd7240ffeb) | September 24, 2026 | Apache-2.0 |
+| [Jakub Krehel's skills](https://github.com/jakubkrehel/skills) | `skills/better-layout`, `skills/better-accessibility`, `skills/better-typography`, `skills/better-ui` | [`8b254eb75dadf3615a6abce87aed28e1b6e4d77c`](https://github.com/jakubkrehel/skills/commit/8b254eb75dadf3615a6abce87aed28e1b6e4d77c) | November 10, 2026 | MIT |
+| [Humanizer](https://github.com/blader/humanizer) | `SKILL.md`, `agents/openai.yaml` (v4.0.0) | [`b48c832f0f809c1b5658edbb838c2521b72f2413`](https://github.com/blader/humanizer/commit/b48c832f0f809c1b5658edbb838c2521b72f2413) | November 10, 2026 | MIT |
+
+Humanizer was reviewed November 13: all 15 upstream files were inspected, and
+the retained instructions/metadata were verified against the pinned revision.
+Repository maintenance, packaging and validation scripts were omitted. Folio's
+evidence rules take precedence over any suggestion to add plausible details.
+
+The four Jakub Krehel workflows were explicitly requested and reviewed on November
+12. All 28 upstream files, including local references and agent metadata, were
+inspected and verified against the pinned Git objects. Only provenance and the
+upstream MIT license were added. The umbrella and unrelated workflows were not
+installed. Cross-references to other domains are guidance, not authorization to
+install more skills or expand the product scope. These are repository-local
+instructions, not frontend runtime dependencies or a global tool installation.
 
 Every folder contains `UPSTREAM.json` with the source, commit, path, original file
 hashes and modifications, plus `UPSTREAM-LICENSE.txt`. The complete instructions,
@@ -64,7 +85,31 @@ review process. `evaluate-rag` and `error-discovery` have no mandatory skill-pac
 dependencies. Personal teaching or code-walkthrough tools can complement these
 workflows without becoming a requirement for contributors.
 
-The four folders are ordinary repository files, so they travel with a clone.
+The skill folders are ordinary repository files, so they travel with a clone.
 Compatible agents discover `.agents/skills` according to their own support for the
 [Agent Skills format](https://agentskills.io/home). Discovery, execution tooling,
 authentication and updates remain separate concerns.
+
+## Interface review references
+
+The November 11 reading-workspace review used Aside to inspect maintained primary
+sources. These are reviewed references, not additional installed skill packs:
+
+- Vercel's [interface checklist](https://github.com/vercel-labs/web-interface-guidelines/blob/4ecfb9fb8d1d3b7009674869b3aaee2f904042e1/command.md)
+  at `4ecfb9f` (October 5, MIT) is the closest fit: semantic controls, visible
+  focus, long-content handling, bounded large lists and preserved navigation.
+  The separate [web-design-guidelines skill](https://github.com/vercel-labs/agent-skills/blob/ba46938889d4e58635362fb8f618e1178ac3ec46/skills/web-design-guidelines/SKILL.md)
+  fetches a mutable guidelines URL. Its separate wrapper license was not
+  established in this review, so it was not vendored. Folio references the
+  inspected checklist revision instead.
+- Anthropic's [frontend-design](https://github.com/anthropics/skills/blob/41bbe19d1a1a7eaab5e7bb9050a417e5c6cffc8f/skills/frontend-design/SKILL.md)
+  at `41bbe19` (September 3, skill-local Apache-2.0) includes useful readability
+  and restraint guidance. Its broader visual-direction workflow was not needed
+  to change the accepted neutral design.
+- The official [shadcn skill](https://github.com/shadcn-ui/ui/blob/4233ed1caded8c38f4bc14b14afe1f93ebcaf966/skills/shadcn/SKILL.md)
+  at `4233ed1` (October 14, repository MIT) provides component-composition
+  guidance. Implementation uses the existing shadcn/Radix foundation and primary
+  Dialog/Tabs documentation, without importing a component collection.
+
+Apply relevant guidance to the accepted behavior; a checklist is not authority
+to add unrelated dependencies, redesign the product, or change its scope.

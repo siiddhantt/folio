@@ -1,0 +1,96 @@
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.settings-page {
+  max-width: 960px;
+  margin: auto;
+  padding: 48px 24px;
+}
+.settings-heading h1 {
+  font-size: 24px;
+  letter-spacing: -0.6px;
+  margin-bottom: 12px;
+}
+.settings-heading p + p {
+  margin-top: 6px;
+}
+.settings-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 48px;
+  margin-top: 36px;
+}
+.settings-page legend,
+.settings-runtime h2 {
+  font-size: 15px;
+  font-weight: 500;
+  margin-bottom: 20px;
+}
+.settings-page fieldset + fieldset {
+  margin-top: 32px;
+}
+.settings-field {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.settings-field input:not([type='checkbox']),
+.settings-field .select-trigger {
+  width: 140px;
+  flex-shrink: 0;
+}
+.settings-field input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--primary);
+}
+.settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 28px;
+}
+.settings-saved {
+  margin-top: 12px;
+}
+.settings-runtime {
+  border-left: 1px solid var(--line);
+  padding-left: 32px;
+}
+.settings-runtime h2 {
+  margin-bottom: 4px;
+}
+.settings-runtime dl {
+  margin-top: 24px;
+}
+.settings-runtime dl > div {
+  margin-top: 16px;
+}
+.settings-runtime dt {
+  font-size: 12px;
+  color: var(--muted);
+}
+.settings-runtime dd {
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 740px) {
+  .settings-layout {
+    grid-template-columns: 1fr;
+    gap: 36px;
+  }
+  .settings-runtime {
+    border-left: 0;
+    border-top: 1px solid var(--line);
+    padding: 28px 0 0;
+  }
+  .settings-runtime dl {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+}

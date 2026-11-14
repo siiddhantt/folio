@@ -1,28 +1,38 @@
 # AI use in Folio
 
-AI assists research, design comparison, implementation, and review. Siddhant retains responsibility for the product's requirements and accepted engineering decisions.
+AI agents assist research, design comparisons, implementation, testing and review.
+Siddhant owns scope, architectural choices and acceptance. Agents do not turn
+research recommendations into product decisions without that acceptance.
 
-## Working method
+Work proceeds through small vertical slices: define observable behavior, agree
+the boundary, write a meaningful failing test, implement, verify and obtain an
+independent review. Delegated work has owned files and exclusions. The integrator
+checks contracts and explains the data flow and failure paths to the owner.
 
-1. Define a user outcome and its acceptance criteria.
-2. Discuss the relevant design options and record the chosen boundary.
-3. Delegate a bounded vertical slice with explicit exclusions.
-4. Write and run a meaningful failing behavior test before implementation.
-5. Implement, verify, and request an independent review of the result.
-6. Walk through the data flow, failure behavior, and tradeoffs with Siddhant.
+Deterministic tests use controlled model responses to check persistence,
+recovery, scope and accounting. Live evaluations use actual providers and compare
+retrieved and cited passages with the original source. Agent review supplements
+executable checks and human judgment; it does not establish universal correctness.
 
-Model-assisted software tests and live AI evaluations serve different purposes. Deterministic tests check contracts; live evaluations check the quality of actual retrieval and answers. Both need human-defined expectations.
+## Contributions and checks
 
-## Activity record
-
-| Date | AI contribution | Verification and human ownership |
+| Area | Agent contribution | Evidence and limits |
 | --- | --- | --- |
-| 2026-11-06 | Parallel research into document pipelines, evaluation workflows, and maintained skills; initial requirements and decision drafts | Primary documentation checked. Recommendations remain explicitly proposed. No application correctness or performance results claimed. |
-| 2026-11-06 | Installed pinned skills and independently reviewed requirements coverage and public-source contents | Skill integrity checks passed. Review led to removing an irrelevant infrastructure reference and refreshing decision status. General-purpose document examples and environment-file preferences were confirmed by the human owner. |
-| 2026-11-06 | Compared current model metadata and reviewed ingestion acceptance examples; clarified model-budget configuration | The human owner selected OpenRouter, text-based PDFs, and one PDF per conversation. Credential authentication was checked without inference. Independent review caught separate route input/output limits missing from the initial budget contract; these were verified and added. Model quality and numerical budgets remain unverified; summaries were separated from the proposed first ingestion slice. |
-| 2026-11-06 | Researched maintained ingestion engines; delegated bounded Docling/LiteParse adapters and independent source/output review; ran an offline Docker comparison | The human owner selected partial-content availability, local Docker, and the comparison scope. Six synthetic fixtures produced 36 final attempts. Review found table-structure differences and silent corruption gaps; a failing-then-passing adapter test fixed loss of parser diagnostics on export failure. Raw outputs, logs, image identities and resource measurements were retained. The human owner then selected Docling and PDFs with English OCR, deferring DOCX. No paid model calls or application implementation occurred. |
-| 2026-11-06 | Drafted evidence/state alternatives and a modular, reviewable development workflow; checked current primary agent-engineering sources | Independent design review clarified request-level duplicate handling and separated parser success, empty evidence and retry eligibility. Evidence/storage/state details remain proposals. The owner's modularity and code-comprehension preferences were recorded in agent guidance. Documentation checks passed; no application code or tests were introduced. |
-| 2026-11-07 | Researched queue/storage failure semantics and drafted the complete first-ingestion flow, relational schema and structured evidence example | Separate reviews challenged idempotency races, failed-result artifact references, stale-worker promotion and stale-dispatch bookkeeping. Recommendations are explicitly proposed; the user has not yet selected this complete dependency/schema/limit contract. Documentation checks passed. No application implementation, cloud provisioning or live model calls occurred. |
-| 2026-11-07 | Implemented the accepted first ingestion slice with bounded parser work, integration, independent review and a source-based learning guide | The human owner accepted FastAPI, PostgreSQL, RQ/Redis, local artifacts, schema, idempotency/recovery, initial bounds and test interfaces. The combined Docker suite passed 27 checks (12 PostgreSQL/Redis, 15 parser); HTTP smoke checked five PDFs, replay and original bytes. Review tightened dispatch ownership, evidence ordering, status snapshots and failed-result diagnostics. Operational checks covered broker outage, two overlapping workers and SIGKILL recovery using an advanced synthetic lease. A separate native-hang probe passed in 60.639 seconds with shortened timeout/monitor settings; an initial assertion about signal text was corrected to check the parent's kill log and process disappearance. This was a test assertion correction, not an application defect. See status for limits. Retrieval/generation decisions and live model calls remain outside this increment. |
+| Ingestion | Compared Docling/LiteParse, implemented durable upload/evidence/recovery and source inspection | Synthetic parser/API checks and interruption exercises. Docling preserved stronger table relationships in the comparison; both parsers missed a damaged-page signal. |
+| Summaries/indexing | Built bounded complete-input summaries, source-linked chunks, embedding checkpoints and accounting | Persistence/failure tests plus live source review. Completed summaries still show citation and qualification weaknesses. |
+| Conversations | Built saved answers, follow-up resolution, history notes, UI and separate OpenRouter/OpenAI adapters | Real database tests, controlled provider tests and browser checks. Model choice followed limited source-reviewed examples, not a broad benchmark. |
+| Review | Separate agents challenged scope, stale-worker publication, configuration snapshots and billing | Review caught concrete defects, including service/profile inheritance and preflight omissions. Passing checks do not replace ongoing failure analysis. |
+| November 13 evaluation | Selected a public guide, prepared source expectations before seeing outputs, drove one UI upload/chat, inspected logs and independent source support | Twelve real turns and one background compaction. The [report](docs/evaluation.md) records retrieval misses and attribution errors as well as working behavior. |
+| Documentation | Consolidated current behavior, removed superseded walkthroughs and applied a pinned prose-editing skill | Preserved guardrails, provenance, limitations and historical evidence in Git. No claim that AI-assisted prose was human-authored. |
+| Aggregate APIs | Audited requirements, added document/processing aggregates and documented public response contracts in separate bounded tasks | HTTP/PostgreSQL checks cover replay, retries, retained chats, batch counts and missing timing. Independent reviewers checked query semantics and response compatibility. No new model evaluation calls. |
+| Retrieval comparison and notebook | Prepared fresh source expectations independently; built a checkpointed API notebook and a read-only vector/keyword comparison; fixed two source-mapping bugs test-first | Owner accepted questions/test surfaces. Blind chunk labels and separate answer review distinguish retrieval from generation. Real notebook rerun created no duplicate work. The evaluation retains two answer-validation failures; no new retrieval default was selected. |
+| Demo handoff | Reviewed fresh-clone setup, made amd64 targets explicit, included notebook helpers in the verification image and explained the runtime beside notebook cells | Independent review checked the setup and teaching against the code. Temporary artifacts remain outside tracked source. Mac execution still needs its own smoke test; no additional model calls or quality fixes were implied. |
 
-For later slices, record the task, relevant constraints, agent contribution, checks run, defects caught, and the decision retained by the human owner. Keep entries brief and factual; do not publish raw conversations, secrets, or private document contents.
+[AGENTS.md](AGENTS.md) contains collaboration rules; [skills](docs/skills.md)
+records reviewed sources, licenses and invocation boundaries. Prompts and schemas
+live with their feature modules and have explicit versions. Raw conversations,
+credentials, uploaded files and local evaluation traces are not tracked.
+
+The detailed earlier development record remains in
+[Git history](https://github.com/siiddhantt/folio/blob/1c793a9891e4aaf833acce53987eb7ee1beee3e0/AI_USAGE.md).
+Current capability and remaining work belong in [status](docs/status.md).

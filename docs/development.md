@@ -1,97 +1,305 @@
-# Local development and verification
+# Development
 
-The [README](../README.md) starts the application. The initial parser image uses the
-same pinned Docling/CPU/model configuration as the inspected extraction comparison.
-The API image contains no Docling runtime. Docker does not receive the local API key.
+Use Docker Compose for the complete application. Host checks need Python 3.12 and
+[uv](https://docs.astral.sh/uv/); frontend edits need Node 22.12 or newer. The [architecture](architecture.md)
+explains the runtime and source reading order.
 
-## Read the slice
+## Start locally
 
-Follow one upload through `api.py` → `acceptance.py` → `dispatcher.py` → `processing.py`
-→ `publication.py` → `queries.py` under [`src/folio`](../src/folio).
-[`ownership.py`](../src/folio/ownership.py) holds claim rules;
-[`recovery.py`](../src/folio/recovery.py) records failure and authorizes bounded retries.
-The [walkthrough](system-design-walkthrough.md) explains these decisions in plain language.
-
-SQL is explicit here because transaction scope, row locks and ownership conditions are part
-of the behavior being reviewed. `Database.transaction()` owns connection/transaction lifetime;
-it does not hide those conditions. Versioned SQL migrations run once under a database lock.
-Future schema changes get a new migration rather than changing an already-applied file.
-
-## Checks
-
-Install the small development environment with `uv sync --locked`. Start the separate
-verification database/broker; they use localhost ports 55432 and 56379:
+Create an ignored `.env` from [`.env.example`](../.env.example) only if you do not already have one. Preserve
+existing settings and credentials. Ingestion needs no inference key; summaries and indexing default to disabled.
 
 ```sh
-docker compose -p folio-check -f compose.test.yaml up -d --wait
-docker build --target verification -t folio-verification:local -f docker/worker.Dockerfile .
-docker run --rm --network folio-check_default --cpus 4 --memory 6g --memory-swap 6g -e FOLIO_DATABASE_URL=postgresql://folio:folio@postgres:5432/folio_test -e FOLIO_REDIS_URL=redis://redis:6379/15 folio-verification:local python -m pytest -m "not supervision" -q
+docker build --platform linux/amd64 -t folio-docling:2.148.0 docker/docling
+docker compose up --build -d --wait
 ```
 
-Tests reset only the explicitly selected `folio_test` database between persistence tests.
-Do not point them at application data. Parser tests use committed synthetic inputs and bundled
-models; no inference calls or network model downloads are involved. The isolated test network
-still permits PostgreSQL/Redis communication.
+The first parser build downloads model assets. The [base image](../docker/docling/README.md) pins Docling, CPU
+dependencies and model revisions; processing then runs offline. The API image has no Docling runtime. PostgreSQL
+includes pgvector, and Compose applies migrations before starting the API and workers. The image setup targets
+Linux amd64.
 
-For fast tests on the host, set `FOLIO_DATABASE_URL` to
-`postgresql://folio:folio@127.0.0.1:55432/folio_test` and `FOLIO_REDIS_URL` to
-`redis://127.0.0.1:56379/15`, then run `uv run pytest -m "not parser and not supervision" -q`.
-Use process-local variables rather than replacing application configuration in `.env`.
+Open [Folio](http://localhost:3000) or [OpenAPI](http://localhost:8000/docs). `FOLIO_WEB_PORT` and `FOLIO_PORT`
+change those localhost ports. Files and database state live in named Docker volumes. `docker compose down`
+preserves them; removing volumes destroys local data and is not part of normal restart or testing.
+
+## Running on a Mac
+
+Use the same repository and Docker Compose commands above. The images explicitly target
+`linux/amd64`: the parser pins x86-64 PyTorch wheels and PostgreSQL pins an amd64 pgvector package.
+Intel Macs run that architecture directly inside the Linux VM. Apple Silicon uses emulation;
+native ARM images have not been built or validated.
+
+On Apple Silicon, Docker Desktop's Apple Virtualization framework supports optional Rosetta
+acceleration. Docker VMM currently does not support Rosetta and documents slower amd64 emulation.
+See Docker's [VM choices](https://docs.docker.com/desktop/features/vmm/) and
+[settings](https://docs.docker.com/desktop/settings-and-maintenance/settings/).
+The default VM memory allocation is half the Mac's RAM. Leave room for macOS and check the
+allocation before parsing: Folio's document worker can use up to 6 GiB, with other services
+using additional memory. That is a ceiling, not memory reserved at startup.
+
+A fresh clone has source code only. Create `.env` privately from the template or transfer your
+existing `.env` through a private channel. Git does not transfer credentials, Docker volumes,
+uploaded PDFs, saved console settings or notebook checkpoints.
+
+For a fresh database with summaries/indexing enabled and direct OpenAI chat, configure these
+before starting services and uploading. Both provider keys must be present in the private `.env`:
+
+```dotenv
+FOLIO_DEVELOPMENT_MODE=true
+FOLIO_SUMMARY_ENABLED=true
+FOLIO_INDEX_ENABLED=true
+FOLIO_CHAT_GATEWAY=openai
+FOLIO_CHAT_REWRITE_GATEWAY=openai
+FOLIO_MEMORY_GATEWAY=openai
+```
+
+The allowance is shared across the evaluation, not automatically shared between two separate
+databases. For a fresh Mac database, set `FOLIO_SUMMARY_BUDGET_USD` to the agreed **remaining**
+allowance before any paid work, and keep the existing per-document cap. Stop paid testing on the
+old installation while using that remainder. If transferring the full database and artifacts
+instead, preserve its usage ledger and original total; do not deduct spending twice.
+
+On an existing database, the saved summary switch takes precedence over the environment seed.
+Check the development console before uploading. Disabled jobs are not backfilled by changing
+settings afterward. Model IDs/providers remain independent of the gateway switches above.
+
+Start with a small PDF and inspect extraction, summary and index states before recording.
+The Windows/Linux timings in the evaluation are not Mac measurements. Emulation may require
+longer processing; if a timeout occurs, inspect the saved error before changing parser/job/lease
+bounds together. Do not claim that selecting the right architecture proves runtime compatibility.
+
+For the notebook, install its optional kernel as described below and download its public PDF.
+Use a new `RUN_DIR` for a fresh Mac database. Reusing Windows receipts without the corresponding
+server records intentionally stops with a missing-resource error. The notebook does not copy
+the old database or fabricate earlier results.
+
+## Configuration
+
+[`.env.example`](../.env.example) lists supported deployment values without usable credentials. Keep `.env`
+private and commentless. Compose forwards selected values; settings for host processes also load `.env`. The
+[loaders](../src/folio/config.py) validate bounds before work starts.
+
+| Owner | Settings | When changes apply |
+| --- | --- | --- |
+| Saved development controls | Upload/page limits, parser timeout, summary enablement and token/reasoning controls | Environment seeds once. Console saves persist in PostgreSQL and apply to new uploads. |
+| Environment | Connections, keys, supervision, spending, indexing, model/provider and chat/memory controls | Recreate affected services. Accepted work keeps its captured policy. |
+| Versioned source | Prompts, schemas, parser/chunker versions, provider profiles and migrations | Change deliberately with the relevant checks. |
+
+Set `FOLIO_DEVELOPMENT_MODE=true`, recreate services, and open
+[development settings](http://localhost:3000/development/settings) to change saved controls. Activity on a
+document shows processing attempts and safe failure details. Development mode exposes local tooling; it provides
+no authentication. Saved controls still apply when the interface is hidden.
+
+Upload middleware captures one configuration revision before reading multipart content, including processing,
+summary and indexing policies. A console change cannot alter an accepted upload. Enabling summaries or indexing
+does not backfill old work; reads do not generate. Indexing has no console switch. An explicit first index
+request for an older revision uses the current environment policy.
+
+The template's initial limits are 25 MiB and 100 pages. Parser timeout is 240 seconds, RQ job timeout 300,
+monitor interval 10 and lease 420. Keep parser timeout below the job timeout, and lease above job timeout + 60
+seconds + monitor interval. There are three ingestion attempts with persisted retry delays. See
+[Settings](../src/folio/config.py) for the remaining validated bounds; changing parser versions also requires an
+image and code update. Old incompatible work fails explicitly.
+
+### Models and paid work
+
+`OPENROUTER_API_KEY` is required for enabled summaries and embeddings, including question embeddings.
+`OPENAI_API_KEY` is needed only for stages using direct OpenAI. Compose gives the parser/summary/index worker
+only the OpenRouter key; chat and memory workers receive both. Neither key reaches the API, dispatcher or
+browser bundle.
+
+| Stage | Selected model and route | Default input/output tokens |
+| --- | --- | --- |
+| Summary | `deepseek/deepseek-v4.1-flash-1017`, `together` through OpenRouter | 64,000 / 16,384 |
+| Document and question embeddings | `openai/text-embedding-3-small`, OpenAI through OpenRouter; 1,536 dimensions | 512-token chunks; batches of up to 32 |
+| Answer | `openai/gpt-5.2`, provider `openai` | 16,384 / 4,096 |
+| Follow-up interpretation | `openai/gpt-5.2`, provider `openai` | 16,384 / 1,024 |
+| Older-history notes | `openai/gpt-5.2`, provider `openai` | 16,384 / 2,048 |
+
+Generation defaults to reasoning `none`. Summary settings are independent of chat. The current summary route
+uses Together's standard tier; the earlier Fireworks route remains supported without automatic fallback.
+Embedding model, route and dimensions are fixed. Its complete plan defaults to at most 4,096 chunks; oversize
+plans fail instead of truncating. See [summary](../src/folio/summaries/config.py),
+[index](../src/folio/indexing/config.py), [chat](../src/folio/conversations/config.py) and
+[memory](../src/folio/conversations/memory/config.py) settings for exact names and validation.
+
+Answer, rewrite and memory gateways are independent. To use direct OpenAI for all three, keep their
+model/provider values above and set:
+
+```dotenv
+FOLIO_CHAT_GATEWAY=openai
+FOLIO_CHAT_REWRITE_GATEWAY=openai
+FOLIO_MEMORY_GATEWAY=openai
+```
+
+Set any gateway back to `openrouter` to switch that task back. Then recreate:
+
+```sh
+docker compose up -d --no-deps --force-recreate api chat-worker memory-worker
+```
+
+Each accepted question freezes endpoints and profile versions; legacy work without a gateway stays on
+OpenRouter. Keys load at execution and are not saved in policy. Query embeddings retain the pinned index route
+even when generation uses direct OpenAI. The [direct adapter](../src/folio/ai/openai.py) supports the reviewed
+GPT-5.2 snapshot `gpt-5.2-2025-12-11`; arbitrary model strings do not establish compatibility. There is no
+automatic gateway fallback or hidden client retry.
+
+Memory defaults are a 6,000-token trigger, roughly 3,000-token target and 8,000-token hard history limit,
+keeping at least two complete recent exchanges raw. Required preparation waits at most 600 seconds. Require
+target < trigger <= hard limit; history also shares the full request input allowance with the question and
+evidence. Input, schema, margin and output must fit the verified provider limits.
+
+All paid stages share one persistent deployment/document allowance. The template starts at $1 / $0.40 using the
+legacy `FOLIO_SUMMARY_*_BUDGET_USD` names. Restarting or enabling another stage does not reset it. Known costs,
+explicit token estimates and unresolved reservations all count. Without a valid reported cost or trustworthy
+token estimate, the full hold remains; retries need new admission. These are estimate-based controls, not a
+provider-enforced zero-overshoot guarantee. See [accounting](architecture.md#model-calls-and-spending). For
+shared accounting changes, migrate first and recreate API, dispatcher, worker, chat-worker and memory-worker
+together so every process counts the same charge types.
+
+## Aggregate APIs
+
+Open the Monitoring group in [OpenAPI](http://localhost:8000/docs), or request:
+
+```sh
+curl http://localhost:8000/statistics/documents
+curl http://localhost:8000/metrics/processing
+```
+
+Document statistics count current originals and active extraction pages. State
+maps omit zero-count states. `documents_without_extraction` stays separate from
+pages with no recovered content; neither a blank-page diagnosis nor complete
+extraction can be inferred from those counts. `original_bytes` is not disk usage.
+
+Processing metrics cover all retained jobs and attempts, including removed chats.
+An index with four successful embedding batches is one job and four attempts.
+`unfinished` includes queued or interrupted attempts; it is not a worker count.
+`terminal_errors` groups error codes on failed/unavailable jobs, excluding active
+retries. Durations include successful and failed attempts with valid start/end
+times, exclude queue wait, and start at invocation for memory. No samples means
+null mean/max, not zero. Elapsed time may include detecting a lost worker; it
+does not isolate CPU/model time or measure answer accuracy or uptime.
+
+Each request uses one consistent read-only database snapshot. Reads trigger no
+work or paid calls. Public API schemas describe existing payloads, with examples
+for upload, answers and field values; development inspection remains untyped.
+
+## Notebook walkthrough
+
+Install the optional kernel with `uv sync --locked --group notebook`. Open
+[`notebooks/folio_demo.ipynb`](../notebooks/folio_demo.ipynb) in a notebook-capable
+editor and select this repository's `.venv` Python. No notebook server or global
+kernel registration is required. Start the existing Docker stack first.
+
+Download the public PDF linked in the notebook, then set `PDF_PATH` and a stable
+`RUN_DIR` under `output/`. Run cells in order. Requests and responses are visible;
+JSON snapshots persist beside the run manifest. Set `CAPTURE_WORKER_LOGS=True`
+for bounded, filtered local Compose logs, retaining service and process labels.
+Logs can have gaps; persisted attempts are the authoritative history.
+
+Upload automatically schedules extraction, summary and indexing. Inspection
+cells read their progress; they cannot pause workers between stages. A failed
+summary does not block chat on a ready index. The question cells share one
+conversation and show its source passages, usage and referenced history notes.
+A short conversation may not trigger history compression.
+
+After a timeout or kernel restart, rerun with the same directory. The
+[`submit_once` helper](../notebooks/checkpoint.py) preserves request keys and
+the original conversation head; it never refreshes an ambiguously accepted
+request into a new question. Use a new intent name for a genuinely new question.
+Keep one kernel per run, retain checkpoints, and stop if saved server IDs are
+missing. Outputs may contain document content: clear notebook outputs before
+committing, and keep executed copies under ignored `output/`.
+
+The experimental [`retrieval` helper](../notebooks/retrieval.py) combines two
+scoped candidate lists for evaluation. It is not selected by production chat.
+The [evaluation](evaluation.md) distinguishes retrieved evidence, prepared
+input cost and actual generated-answer support.
+
+## Backend checks
+
+Integration tests truncate their selected database. Use only the isolated `folio_test` database:
+[the fixture](../tests/conftest.py) requires that URL suffix and clears documents, saved controls and budget
+state. Never point tests at application data.
+
+```sh
+uv sync --locked
+docker compose -p folio-check -f compose.test.yaml up -d --build --wait
+docker build --platform linux/amd64 --target verification -t folio-verification:local -f docker/worker.Dockerfile .
+docker run --platform linux/amd64 --rm --network folio-check_default --cpus 4 --memory 6g --memory-swap 6g -e FOLIO_DATABASE_URL=postgresql://folio:folio@postgres:5432/folio_test -e FOLIO_REDIS_URL=redis://redis:6379/15 folio-verification:local python -m pytest -m "not supervision" -q
+```
+
+Build the parser base first. The test database build includes pgvector. Parser checks use committed synthetic
+PDFs and bundled models; model boundaries use controlled responses. They make no paid calls and do not measure
+real answer quality.
+
+For faster host checks, use a dedicated shell with process-local test connections:
+
+```sh
+FOLIO_DATABASE_URL=postgresql://folio:folio@127.0.0.1:55432/folio_test FOLIO_REDIS_URL=redis://127.0.0.1:56379/15 uv run pytest -m "not parser and not supervision" -q
+```
+
+PowerShell uses `$env:FOLIO_DATABASE_URL='postgresql://folio:folio@127.0.0.1:55432/folio_test'` and
+`$env:FOLIO_REDIS_URL='redis://127.0.0.1:56379/15'` before the same pytest command. Do not replace application
+`.env` values. Host DeepSeek counting needs its verified assets once:
+`PYTHONPATH=src uv run python -m folio.ai.deepseek` (PowerShell: set `$env:PYTHONPATH='src'` first). This
+downloads tokenizer/license files into ignored `.local/tokenizers` without inference. Docker builds install them
+separately.
 
 ```sh
 uv run ruff check src tests scripts
 uv run ruff format --check src tests scripts
-uv run python scripts/smoke.py
 ```
 
-`smoke.py` exercises the running HTTP application, actual queue/worker/parser and stored
-evidence. It verifies text, table relationships, OCR, damaged-page neighbors, encrypted-input
-failure, upload replay and original-byte retrieval. It adds synthetic documents to local storage.
+## Frontend checks
 
-## Fault exercises
+Run from `web`: `npm ci --ignore-scripts`, then `npm run dev`. Vite uses port 5173 and proxies `/api` to
+`FOLIO_PORT` or 8000; these server settings stay outside the bundle.
 
-Run `uv run python scripts/check_recovery.py` only against this local Compose stack, with no
-other processing in progress. It intentionally stops Redis and kills Folio's worker containers.
-It restores Redis and one worker in `finally`, but interrupted execution may require
-`docker compose up -d --scale worker=1` manually.
-
-The exercise accepts work during a broker outage, restarts transport, observes overlapping
-processing by two workers, kills an active worker, and verifies recovery. It advances only its
-synthetic attempt's lease in PostgreSQL instead of waiting seven minutes; this is controlled
-fault injection, not a measured seven-minute recovery time or a load test.
-
-The optional `supervision` test separately exercises RQ's native-hang hard-stop behavior:
+Full browser checks need the running Compose stack with `FOLIO_DEVELOPMENT_MODE=true`; recreate services after
+changing it. Before unbudgeted uploads, disable saved summaries in the console and set
+`FOLIO_INDEX_ENABLED=false`, then recreate relevant services. A summary environment flag does not overwrite
+saved controls; a mocked browser endpoint does not stop the real worker. Already accepted work keeps its policy.
 
 ```sh
-docker run --rm --init --network folio-check_default --cpus 1 --memory 512m --memory-swap 512m -e FOLIO_RUN_SUPERVISION=1 -e FOLIO_SUPERVISION_REDIS_URL=redis://redis:6379/15 --entrypoint timeout folio-verification:local --signal=TERM --kill-after=5s 100s python tests/test_supervision.py
+npm run check
+npm run format:check
+npm run build
+npx playwright install chromium
+npm test
 ```
 
-It takes roughly a minute, uses a unique queue, and checks that the workhorse and its
-same-group descendant do not survive termination. It does not replace Folio's ownership/retry
-checks or guarantee cleanup of descendants that deliberately detach into another process group.
-The 1-second job timeout exercises RQ's approximately 60-second parent allowance, not a
-promise that jobs always stop at their nominal timeout. Upstream deprecation warnings remain
-visible in the checks; they are not suppressed or represented as test failures.
+Chat/indexing browser suites mostly mock API responses. Document/configuration/runs and several reading/summary
+cases use the running application, add synthetic uploads, and sometimes change then restore saved controls. They
+do not reset its database.
 
-## Boundaries and operations
+Playwright starts/reuses Vite by default. Set `FOLIO_E2E_BASE_URL=http://127.0.0.1:3000` for the built
+interface. On PowerShell, filtered runs can use
+`node node_modules/@playwright/test/cli.js test --grep 'upload a PDF'`. Failure traces/screenshots stay in
+ignored output folders.
 
-- One worker is the default; `docker compose up -d --scale worker=2 worker` runs two on
-  the same host. Each has a 4-CPU/6-GiB ceiling, so check host capacity before increasing count.
-- PostgreSQL is the durable work authority. Redis AOF improves persistence but is not an
-  atomic extension of a database transaction. Queue delivery can repeat; publication is guarded.
-- Health currently checks the API/database path. Pending attempts expose delivery errors;
-  that health route alone does not prove a worker is available.
-- Failure artifacts retain parser diagnostics and version information where export succeeds.
-  If diagnostic storage itself fails, the known error is still recorded; logs identify the lost export.
-- Files and rows have separate commits. Ambiguous acceptance errors retain the original.
-  Abandoned artifacts are not deleted online. Reconcile only with all artifact writers stopped
-  and PostgreSQL recovered, including references from originals, revisions and failed attempts.
-- `docker compose down` preserves named volumes. Removing volumes destroys local data;
-  it is not part of normal restart or verification instructions.
-- Multi-host workers require shared object storage, access control, connection/admission budgets
-  and backup/retention decisions. No claim of production readiness or general OCR accuracy follows
-  from small synthetic documents or two overlapping workers.
+## Smoke and fault exercises
 
-Dependency changes use `uv lock`, followed by `uv export --no-dev --no-emit-project -o requirements.lock`
-and `uv export --no-emit-project -o requirements-dev.lock`. Commit the lock/export files together.
-Parser changes also require an intentional update of its pinned image, assets and source version.
+`uv run python scripts/smoke.py` exercises real HTTP, queue, parser and saved evidence. It adds synthetic
+documents and checks replay, originals, text/tables/OCR, partial results and encrypted-input failure. Use the
+paid-work precautions above.
+
+`uv run python scripts/check_recovery.py` stops Redis and kills workers. Run only on an idle local stack.
+Cleanup restores Redis and one worker; interruption may need `docker compose up -d --scale worker=1`. It
+advances its synthetic lease, so its result is not a measured seven-minute recovery time or a load test.
+
+The optional native-hang probe uses a unique queue and takes roughly a minute:
+
+```sh
+docker run --platform linux/amd64 --rm --init --network folio-check_default --cpus 1 --memory 512m --memory-swap 512m -e FOLIO_RUN_SUPERVISION=1 -e FOLIO_SUPERVISION_REDIS_URL=redis://redis:6379/15 --entrypoint timeout folio-verification:local --signal=TERM --kill-after=5s 100s python tests/test_supervision.py
+```
+
+It checks workhorse/same-group descendant cleanup; detached process groups are outside that guarantee. The
+one-second job timeout includes RQ's longer parent allowance. Ownership/retry checks remain separate. Model
+quality needs a budgeted [evaluation](evaluation.md).
+
+Dependency changes use `uv lock`, then `uv export --no-dev --no-emit-project -o requirements.lock` and
+`uv export --no-emit-project -o requirements-dev.lock`; commit the lock/export files together. Add a new
+numbered migration instead of editing an applied one. Parser changes require deliberate image, asset and
+source-version updates.

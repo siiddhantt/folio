@@ -1,0 +1,114 @@
+.runs-page {
+  max-width: 1080px;
+  margin: auto;
+  padding: 40px var(--page-gutter);
+}
+.runs-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.runs-heading h1 {
+  font-size: 22px;
+  letter-spacing: -0.5px;
+}
+.runs-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.runs-table th {
+  text-align: left;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--muted);
+}
+.runs-table th,
+.runs-table td {
+  padding: 16px 12px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+.runs-table th:first-child,
+.runs-table td:first-child {
+  padding-left: 0;
+  width: 40%;
+}
+.runs-table th:last-child,
+.runs-table td:last-child {
+  padding-right: 0;
+}
+.runs-table td {
+  overflow-wrap: anywhere;
+}
+.run-document a {
+  font-weight: 500;
+}
+.run-document a:hover {
+  text-decoration: underline;
+}
+.runs-table time {
+  color: var(--muted);
+  font-size: 12px;
+}
+.run-failed {
+  color: var(--danger);
+}
+.runs-pagination {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 24px;
+}
+.runs-empty {
+  color: var(--muted);
+  padding: 32px 0;
+}
+.runs-empty a {
+  color: var(--foreground);
+  text-decoration: underline;
+}
+.header-actions [aria-current='page'] {
+  background: var(--secondary);
+}
+@media (max-width: 640px) {
+  .runs-page {
+    padding-top: 28px;
+  }
+  .runs-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    clip-path: inset(50%);
+    overflow: hidden;
+  }
+  .runs-table,
+  .runs-table tbody,
+  .runs-table tr {
+    display: block;
+    width: 100%;
+  }
+  .runs-table tr {
+    padding: 18px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .runs-table td {
+    display: grid;
+    grid-template-columns: 90px minmax(0, 1fr);
+    gap: 12px;
+    border: 0;
+    padding: 5px 0;
+  }
+  .runs-table td:first-child {
+    display: block;
+    width: 100%;
+    padding: 0 0 12px;
+  }
+  .runs-table td[data-label]::before {
+    content: attr(data-label);
+    color: var(--muted);
+    font-size: 12px;
+  }
+}

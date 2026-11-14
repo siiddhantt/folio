@@ -8,8 +8,8 @@ from fastapi.testclient import TestClient
 
 from folio.api import create_app
 from folio.config import Settings
-from folio.parsing.evidence import Element, Extraction, Location, Page
-from folio.processing import process_attempt
+from folio.ingestion.parsing.evidence import Element, Extraction, Location, Page
+from folio.ingestion.processing import process_attempt
 
 
 def recovered_text(path, config):
@@ -26,7 +26,12 @@ def recovered_text(path, config):
 
 @pytest.fixture
 def accepted(tmp_path):
-    settings = Settings(artifact_root=tmp_path, retry_delays_seconds=(0,), retry_jitter_seconds=0)
+    settings = Settings(
+        artifact_root=tmp_path,
+        development_mode=True,
+        retry_delays_seconds=(0,),
+        retry_jitter_seconds=0,
+    )
     with TestClient(create_app(settings)) as client:
         receipt = client.post(
             "/documents",
@@ -34,6 +39,29 @@ def accepted(tmp_path):
             files={"file": ("report.pdf", b"%PDF-1.4\ncontrolled failure input")},
         ).json()
         yield settings, client, receipt
+
+
+@pytest.mark.integration
+def test_storage_setup_failure_is_recorded_without_waiting_for_recovery(accepted):
+    settings, client, receipt = accepted
+    unavailable = settings.artifact_root / "unavailable-storage"
+    unavailable.write_text("A file cannot be used as the artifact directory.")
+    attempt = client.get(receipt["status_url"]).json()["authorized_attempt_id"]
+
+    process_attempt(
+        receipt["request_id"],
+        attempt,
+        settings=settings.model_copy(update={"artifact_root": unavailable}),
+        parser=recovered_text,
+    )
+
+    status = client.get(receipt["status_url"]).json()
+    assert status["state"] == "open"
+    assert [item["state"] for item in status["attempts"]] == ["failed", "pending"]
+    assert status["attempts"][0]["error_code"] == "IO_INTERRUPTED"
+    assert status["attempts"][0]["retryable"] is True
+    assert status["authorized_attempt_id"] == status["attempts"][1]["id"]
+    assert client.get(f"/documents/{receipt['document_id']}/original").status_code == 200
 
 
 @pytest.mark.integration
@@ -66,7 +94,7 @@ def test_transient_failure_retries_then_publishes_once(accepted):
 @pytest.mark.integration
 @pytest.mark.parametrize("late_failure", [False, True])
 def test_expired_worker_cannot_overwrite_recovered_result(accepted, late_failure):
-    from folio.dispatcher import dispatch_once
+    from folio.ingestion.dispatcher import dispatch_once
 
     settings, client, receipt = accepted
     started, release = Event(), Event()
@@ -106,11 +134,14 @@ def test_expired_worker_cannot_overwrite_recovered_result(accepted, late_failure
     assert final["state"] == "succeeded"
     assert final["revision_id"] == result["revision_id"]
     assert [a["state"] for a in final["attempts"]] == ["failed", "succeeded"]
+    inspected = client.get(f"/development/ingestion-requests/{receipt['request_id']}").json()
+    assert inspected["attempts"][0]["error_code"] == "WORKER_LOST"
+    assert all(attempt["failure_diagnostics"] is None for attempt in inspected["attempts"])
 
 
 @pytest.mark.integration
 def test_diagnostic_export_failure_preserves_the_known_terminal_outcome(accepted):
-    from folio.parsing.evidence import ExtractionError
+    from folio.ingestion.parsing.evidence import ExtractionError
 
     settings, client, receipt = accepted
     attempt = client.get(receipt["status_url"]).json()["attempts"][0]["id"]

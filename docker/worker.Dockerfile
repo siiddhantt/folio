@@ -1,9 +1,11 @@
 FROM folio-docling:2.148.0 AS worker
-ENV PYTHONPATH=/app/src
+ENV PYTHONPATH=/app/src TIKTOKEN_CACHE_DIR=/opt/tokenizers FOLIO_TOKENIZER_DIRECTORY=/opt/tokenizers
 WORKDIR /app
 COPY requirements.lock ./
 RUN pip install --no-cache-dir --require-hashes -r requirements.lock && pip check
+RUN python -c "import tiktoken; tiktoken.get_encoding('o200k_base'); tiktoken.get_encoding('cl100k_base')"
 COPY src ./src
+RUN python -c "from folio.ai.deepseek import install; install()"
 ENTRYPOINT []
 CMD ["python", "-m", "folio", "worker"]
 
@@ -12,4 +14,5 @@ COPY requirements-dev.lock ./
 RUN pip install --no-cache-dir --require-hashes -r requirements-dev.lock && pip check
 COPY pyproject.toml ./
 COPY tests ./tests
+COPY notebooks/*.py ./notebooks/
 CMD ["python", "-m", "pytest", "-q"]

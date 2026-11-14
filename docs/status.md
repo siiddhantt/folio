@@ -1,42 +1,124 @@
 # Folio status
 
-Updated: 2026-11-07
+Updated 2026-11-14. Working upload-to-conversation flow; quality and delivery
+gaps remain. See [requirements](requirements.md), [decisions](decisions.md) and
+the latest [evaluation](evaluation.md) before changing behavior.
 
-## Accepted direction
+## Working behavior
 
-Folio is a general-purpose document assistant developed as public source, with a separate decision required for hosting a public service. Siddhant owns scope and design decisions; implementation uses small behavior-first vertical slices, independent review, and source walkthroughs. Reviewed, pinned skills and short durable guidance support that workflow.
+- PDF native text/English OCR, immutable originals and evidence, known-gap
+  disclosure, asynchronous work, idempotency and bounded recovery.
+- Automatic complete-input summaries with explicit size/failure outcomes.
+- Docling chunks with headings/source links, checkpointed embeddings and scoped
+  exact pgvector retrieval. Only complete indexes are ready for chat.
+- Saved conversations, generated/renamed titles, retained-record removal,
+  ordered follow-ups and background history notes with a bounded waiting path.
+- Minimal document/chat UI, original-page navigation, cited passages, separate
+  Runs history, Activity inspection and saved controls for new uploads.
+- Independent direct OpenAI/OpenRouter generation settings; frozen profiles and
+  shared persistent accounting with known, estimated and uncertain usage.
+- Document statistics and aggregate processing metrics, with typed public
+  success-response OpenAPI schemas and examples.
 
-The complete first ingestion slice was accepted on November 7: FastAPI, PostgreSQL, RQ/Redis, local Docker Compose and a shared artifact volume; immutable files and extraction revisions; request idempotency; durable processing intent, ownership checks and bounded retries; the schema, initial operating bounds and three test interfaces in the [system design](ingestion-system.md).
+## Latest verification
 
-Docling processes PDF native text and English OCR. Usable partial evidence remains available with known coverage warnings. Encrypted PDFs receive a terminal unsupported-input result. DOCX and other formats are deferred. One selected PDF per conversation remains the later conversation boundary.
+The release pass fixed standalone pytest imports, packaged notebook helpers in
+the verification image and excluded runtime outputs from build contexts. That
+image built successfully after a package-download timeout; all 45 affected
+checks passed inside it without mounting the workspace. The 21 host checks are
+an overlapping subset, not extra coverage. Compose platforms, notebook syntax,
+cleared outputs, documentation links and secret-sensitive paths passed. An
+independent review checked Mac setup and the notebook's explanations against
+the implementation. No paid model calls were made in this release pass.
 
-OpenRouter is the selected initial model gateway; GPT-6 Luna is an evaluation candidate. Exact generation/embedding models, retrieval strategy, vector storage and live-call budgets remain open. Configuration uses a commentless ignored `.env` and a safe template.
+The API notebook completed a real upload-to-answer run and a complete rerun.
+All 14 code cells finished; rerun made no POSTs and left document/job counts and
+spending unchanged. Its saved receipts, source links, attempts, usage and worker
+logs are under ignored `output/demo/folio/`. The earlier interrupted/failed run
+remains under `output/demo/epa-radon/`; no history was overwritten.
 
-## Implemented and checked
+The fresh EPA guide exposed two source-mapping bugs: attached figure footnotes
+and structured contents tables. Both were reproduced test-first and fixed with
+versioned preparation/normalization. New uploads capture normalization 2;
+accepted version-1 work retains its behavior. All 24 parser/chunking checks and
+19 configuration/retrieval/checkpoint checks passed, plus the earlier two chat
+workflow checks. Independent reviews found no blocking code defects. Ruff,
+formatting, cleared notebook outputs, Docker builds and secret-path checks passed.
 
-- Requirements, staged decisions, pinned skill provenance and AI-use history are recorded. The source repository is [siiddhantt/folio](https://github.com/siiddhantt/folio).
-- The offline Docling/LiteParse comparison ran six synthetic fixtures three times per engine. Both preserved expected text/OCR facts; Docling preserved stronger table structure. Both missed corruption as a structured error. See [measured results and limitations](ingestion.md#results).
-- The application now accepts PDFs, persists originals and work, dispatches and claims attempts, publishes page/table evidence, and exposes status, original bytes and paginated evidence. Recovery, retry and stale-owner checks exist in [src/folio](../src/folio).
-- The combined Docker suite passed 27 checks: 12 against real PostgreSQL/Redis and 15 offline parser checks, including real text, tables, OCR, damaged/empty/encrypted PDFs and controlled export failures. The opt-in supervision probe was separate. These are bounded contract checks, not general parser-accuracy claims.
-- The full Docker HTTP smoke passed for five PDFs: text, table, mixed text/OCR, damaged and encrypted. It also checked idempotent replay and original-byte retrieval. The encrypted case ended in the expected terminal error; a no-content page retained an unknown-cause warning.
-- OpenRouter authentication was checked using read-only metadata. No inference call, model-quality result or application spending budget is implied.
+The source produced 788 elements and 78 indexed chunks. On 24 independently
+labeled required facts, vector6 supplied 19, vector12 supplied 21 and hybrid6
+supplied 17. No method recovered the complete two-test table. Production remains
+vector6; the experimental hybrid selector is not a routing option. See the
+[evaluation](evaluation.md#november-14-retrieval-comparison) for exact methods,
+held-out results, timing and input-cost limits.
 
-## Operational verification
+Ten questions stayed in one conversation: eight answers with supported claims,
+including three incomplete responses, and two explicit output-validation
+failures. The latter rejected citations on non-answer outcomes; one rewrite also
+changed a personal-values question toward generic guidance. No hidden retry or
+alternative answer replaced these results. New-run cost was $0.10113222; the
+shared allowance has $0.406827606 remaining with no holds. Normal history limits
+were unchanged, and this run did not trigger compression.
 
-[The recovery exercise](../scripts/check_recovery.py) passed acceptance while Redis was stopped and processing after restart. Two actual workers overlapped, confirmed by persisted attempt timestamps. Killing an active worker with SIGKILL produced one `WORKER_LOST` attempt followed by one successful retry. The exercise advanced only its synthetic attempt's lease deadline; it did not wait through the default seven-minute lease. The normal one-worker setup was restored.
+Required document statistics, processing metrics and public OpenAPI schemas
+remain implemented. The prior API slice passed 121 affected checks and real
+HTTP/payload inspection; its details remain in Git. Folio is running locally,
+with persistent Docker volumes and the two real EPA runs.
 
-[The native-hang probe](../tests/test_supervision.py) passed in 60.639 seconds with a one-second job timeout and one-second monitor interval. It verified the parent's kill path and disappearance of the workhorse and its same-process-group child. This tests supervision behavior with shortened settings, not the default 300-second timeout or every possible native failure.
+### Previous live evaluation
 
-The accepted ingestion path and these verification exercises are implemented. Final review and the owner walkthrough still close the increment; the full document-chat product is not complete.
+One new 56-page DOE guide was uploaded through the frontend after an authorized
+data reset. Prior spending was carried forward. All twelve questions stayed in
+one chat. Extraction, summary, all 120 indexed chunks and all terminal turns
+persisted; reload retained the transcript and sources.
 
-The [reading guide](system-design-walkthrough.md) connects the current modules to transactions, indexes, ownership and scaling. Reproduction commands belong in the [README](../README.md); parser and queue test boundaries are described in the [ingestion design](ingestion-design.md#reviewable-slices-and-agent-use).
+One real background compression used temporary 2,000/1,000/3,000 thresholds.
+The final turn used notes, retained five early facts and the heat-pump correction,
+and used 1,454 history tokens instead of 2,185. Normal 6,000/3,000/8,000 defaults
+were restored; original turns and test-policy snapshots were preserved at that
+checkpoint. Their local evaluation exports survive the later Docker data loss.
 
-## Next decisions and remaining scope
+Accounted usage for that run was $0.15188424, including direct token estimates,
+with no unknown billing or outstanding holds. Median server completion time was
+8.86 seconds. This sequential development run is not a load/accuracy benchmark.
 
-After the first slice's verification and owner walkthrough, agree summary/insight behavior and grounded-answer policy, then chunking, retrieval, indexing and model budgets. Summaries, chat/history, global statistics, the final document-chat demonstration/video and selected optional capabilities remain unfinished; see the [requirements ledger](requirements.md).
+Earlier checkpoints passed 171 affected backend checks and 40 controlled browser
+checks. The November 13 cleanup consolidated documentation into one README and
+seven guides, preserving agent guardrails and historical evidence in Git.
+Current software checks and live model quality remain separate evidence.
 
-Noisy/rotated/handwritten OCR needs representative quality evidence. Hosting, authentication, admission backpressure, storage quotas, deletion and online artifact cleanup remain separate work. Local container persistence is not a backup or production-readiness claim.
+## Demo handoff
 
-## Handoff discipline
+Feature work is frozen for the current demonstration. Run the Mac smoke test,
+record the working workflow and disclose the measured limits. Further retrieval
+and answer-quality work can follow review; it is no longer a prerequisite for
+recording this version. Production retrieval remains vector6.
 
-Record accepted decisions, checks actually run and the next unresolved question after each meaningful increment. Preserve historical evidence and distinguish implemented behavior, completed verification and proposals.
+The root temporary folder was moved intact into ignored `output/archived-tmp/`.
+Runtime records, current evaluation artifacts and private settings remain intact.
+Compose explicitly targets Linux amd64; Apple Silicon uses emulation, which
+still needs validation on the actual Mac. Fresh databases use the remaining
+agreed allowance and new notebook checkpoints; Git does not transfer runtime data.
+The notebook explains the background work beside its existing executable cells.
+
+Follow-up defects remain: non-answer citation validation, personal-question
+rewriting, the two-test-table retrieval miss and omitted supplied qualifications.
+The wider retrieval comparison is evidence for a future decision, not a default
+change or a claim of improved generated answers.
+
+The owner accepted the notebook, source questions and test surfaces. It exposes
+real requests and stored work; existing routes do not manually execute every
+processing stage. Runtime outputs, exact comparison inputs, independent labels
+and review notes remain ignored. Optional notebook dependencies do not change
+application image dependencies.
+
+Mixed history/PDF attribution remains a known defect: document-answer citations
+can be attached to recalled user facts. Expanded old-transcript recall is
+deferred. Memory-note attribution, repeated compaction and hard-limit waiting
+remain limitations. Summary citation quality improved on this source but earlier
+failures are not erased. No general quality claim follows from one PDF.
+
+Current extraction diagnostics can duplicate no-content pages; bundle-size
+warnings remain unsuppressed. Broader OCR/held-out quality, concurrent capacity,
+authentication, retention and hosted operation remain unproven or deferred.
+This release is prepared for demonstration and review. No public deployment is implied.

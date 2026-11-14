@@ -1,0 +1,18 @@
+{
+  "repository": "https://github.com/jakubkrehel/skills",
+  "commit": "8b254eb75dadf3615a6abce87aed28e1b6e4d77c",
+  "path": "skills/better-typography",
+  "license": "MIT",
+  "reviewed_on": "2026-11-12",
+  "modifications": "Added UPSTREAM.json and UPSTREAM-LICENSE.txt only; workflow content unchanged.",
+  "upstream_files": {
+    "agents/openai.yaml": "01d8b8f835112e97ba0e4d97a07775e919407ebb5aab0cce9b4fa280e66b19b8",
+    "choosing-fonts.md": "abd2c084ce7f9c3908dbfa09636ab87a2db731204c1e804b081e4fbd7e4d612d",
+    "css-cheat-sheet.md": "9aac06b524a25a780b950ab046735aab6f45c551fcab2ebf90a8faf7f12db3c9",
+    "details-and-accessibility.md": "705176db1784beed8b85086dd92dcfad6658e61fa8f9d017e648005029b7ab23",
+    "SKILL.md": "8f00a576f6c8d2f8d72dfbffe765ce569982509d01533ea5881de6e1918d3a68",
+    "spacing-and-sizing.md": "db91919a92c1b7de16761e8d8a5addffabcde3dce97ff579f7cbbb585f42cb0f",
+    "variable-fonts-and-opentype.md": "3b8bfa85c483d1bd08490203f232c2002b838f89059d341e6b69cde040bf6556",
+    "wrapping-and-punctuation.md": "44ef7be30b3342c0a81f7b07c2f7138c9743b8df8c8edab518907e8ec0abd68a"
+  }
+}

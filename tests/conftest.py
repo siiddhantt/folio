@@ -21,3 +21,5 @@ def integration_schema(request):
         schema()
         with psycopg.connect(os.environ["FOLIO_DATABASE_URL"]) as connection:
             connection.execute("TRUNCATE documents CASCADE")
+            connection.execute("TRUNCATE runtime_configuration")
+            connection.execute("TRUNCATE summary_budget_account")

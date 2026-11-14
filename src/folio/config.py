@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     redis_url: str = Field(default="redis://redis:6379/0", repr=False)
     artifact_root: Path = Path("/data")
     models_path: str = "/models"
+    development_mode: bool = False
     max_upload_bytes: int = Field(default=25 * 1024 * 1024, gt=0)
     max_pages: int = Field(default=100, gt=0)
     parser_timeout_seconds: int = Field(default=240, gt=0)
@@ -39,7 +40,7 @@ class Settings(BaseSettings):
         return {
             "parser": "docling",
             "parser_version": "2.148.0",
-            "normalization_version": 1,
+            "normalization_version": 2,
             "max_pages": self.max_pages,
             "timeout_seconds": self.parser_timeout_seconds,
             "models_path": self.models_path,

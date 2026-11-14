@@ -1,58 +1,87 @@
 # Folio
 
-Understand your documents. Check the evidence.
+Upload a PDF, ask questions about it, and check the passages behind each answer.
 
-Folio turns uploaded PDFs into inspectable evidence: text, tables, physical-page references,
-and visible extraction limitations. Summaries and grounded conversations will build on that evidence.
+Folio reads native PDF text and English scans, saves a cited summary, and supports
+follow-up questions in a saved conversation. The reader puts extracted content
+beside the original page. Chat sources open the supporting passage and its page.
+Known extraction gaps stay visible.
 
-## Current state
+## Run it
 
-The first ingestion slice runs locally in Docker. FastAPI accepts a PDF, PostgreSQL records
-durable work, RQ/Redis delivers it, and a Docling worker publishes evidence. Native text and
-English OCR are supported; encrypted inputs receive a clear error. Recoverable partial
-content remains available. Summaries, chat, embeddings and a visual interface are not implemented.
-
-## Run locally
-
-With Docker Compose installed, build the pinned parser/model image, then start Folio:
+Install Docker Compose. Copy `.env.example` to `.env` if you do not already have
+one, then build the parser image and start the services:
 
 ```sh
-docker build -t folio-docling:2.148.0 experiments/ingestion/docling
+docker build --platform linux/amd64 -t folio-docling:2.148.0 docker/docling
 docker compose up --build -d --wait
 ```
 
-The first parser build downloads model assets and can take several minutes. Processing uses
-those bundled assets locally; no inference API key is needed for ingestion.
+The first build downloads local parsing/OCR models and can take several minutes.
+Images target Linux amd64. Apple Silicon Macs use Docker Desktop's emulation;
+see [Mac setup](docs/development.md#running-on-a-mac) before building.
+Open [Folio](http://localhost:3000) or the [API docs](http://localhost:8000/docs).
+Upload a PDF; **Runs** reopens its processing history. Conversations have their
+own sidebar, generated titles, rename and remove controls.
 
-Open [interactive API documentation](http://localhost:8000/docs). Upload one PDF using
-`POST /documents`, a fresh `Idempotency-Key` header and the `file` field. Follow the returned
-`status_url`, then inspect `/revisions/{revision_id}/evidence` when processing succeeds.
-The same key and same input replay the original IDs; changed input with that key returns `409`.
+Parsing needs no inference API key. Paid processing is disabled in the template.
+To enable summaries, indexing and chat, follow the
+[configuration guide](docs/development.md#configuration). Keep credentials in the
+ignored `.env`; never put them in frontend configuration.
 
-```sh
-uv sync --locked
-uv run python scripts/smoke.py
-```
+With `FOLIO_DEVELOPMENT_MODE=true`, **Activity** shows attempts, timing, failures
+and model usage. The header settings control edits saved document/summary limits
+for new uploads. Changes do not rewrite queued work or existing results.
+The [aggregate APIs](docs/development.md#aggregate-apis) report document totals
+and processing outcomes from the same saved records.
 
-The smoke check uses only committed synthetic PDFs. [Development and verification](docs/development.md)
-explains the tests, fault exercises and limitations. Copy `.env.example` to `.env` only when
-creating a new configuration; preserve an existing local file. `.env` is ignored by Git.
+For a step-by-step API walkthrough, open the [Folio notebook](notebooks/folio_demo.ipynb).
+Its cells show upload, worker attempts, evidence, summaries, chunks and a saved
+conversation. [Notebook setup](docs/development.md#notebook-walkthrough) explains
+the optional kernel and how to resume without submitting duplicate work.
 
-## Design and development
+## How it works
 
-- [Requirements](docs/requirements.md): user outcomes, acceptance criteria, constraints, and deferred capabilities.
-- [Decisions](docs/decisions.md): options, tradeoffs, recommendations, and acceptance status.
-- [Current status](docs/status.md): what is complete and what comes next.
-- [Agent instructions](AGENTS.md): collaboration, verification, and development boundaries.
-- [Skills](docs/skills.md): selected workflows, pinned upstream sources, and licenses.
-- [Configuration](docs/configuration.md): supported environment values and their meaning.
-- [Ingestion investigation](docs/ingestion.md): parser research, local comparison, and source-preservation findings.
-- [Ingestion system design](docs/ingestion-system.md): upload flow, queue/storage choices, schema, retries, and the first implementation slice.
-- [Code and system-design walkthrough](docs/system-design-walkthrough.md): transactions, indexes, worker coordination and scaling through actual source files.
-- [AI use](AI_USAGE.md): how agents contribute and how their work is checked.
+FastAPI saves processing intent in PostgreSQL. RQ/Redis delivers work to separate
+document, chat and history workers. Docling preserves text, tables and physical
+page references; its chunker prepares source-linked passages. Embeddings live in
+pgvector alongside the document metadata. Each chat searches one pinned index.
 
-Development proceeds through small vertical slices. Each slice should deliver a complete observable behavior, meaningful verification, and an explanation of its design.
+Answers, follow-up interpretation and history notes can independently use
+OpenRouter or direct OpenAI through the supported GPT-5.2 profile. Summaries use
+DeepSeek through OpenRouter; embeddings use `text-embedding-3-small` through
+OpenRouter. These routes have separate configuration. Long chats keep their full
+transcript and use shorter notes for older exchanges when needed.
 
-Only the API is exposed, on localhost. Runtime files and database state live in Docker volumes.
-This is a single-host setup with local development credentials; it does not provide authentication,
-off-machine backup, online artifact cleanup or a measured production capacity guarantee.
+The React/TypeScript interface uses Vite, shadcn/Radix controls and a local PDF
+renderer. The composer stays below a scrolling transcript; Enter sends and
+Shift+Enter adds a line. There are no seeded runtime documents or canned answers.
+
+## What to expect
+
+The latest [evaluation](docs/evaluation.md#november-14-retrieval-comparison) used
+a 39-page guide and ten questions: eight answers with supported claims, including
+three omissions, and two answer-validation failures. Wider retrieval improved
+evidence coverage; the default remains six passages. An earlier run exercised
+history compaction and found citation-attribution errors. These limitations are
+recorded with the results.
+
+PDFs are the supported input; chats cover one document. Oversized summaries report
+their limit instead of silently using only the beginning. Streaming, other file
+formats and multi-document chat are deferred. Retrieval and citation quality need
+further evaluation. The working flow is ready for a recorded walkthrough, with
+these limits disclosed.
+
+Compose exposes the interface and API on localhost. It has no authentication or
+tenant isolation, and uses local credentials and named volumes. Public hosting
+needs access controls, backups and measured capacity. Removing volumes deletes
+documents, history and the usage ledger.
+
+## Work on Folio
+
+See [development](docs/development.md) for configuration, isolated tests and
+debugging, and [architecture](docs/architecture.md) for the data flow, recovery and
+source reading order. [Requirements](docs/requirements.md),
+[decisions](docs/decisions.md) and [status](docs/status.md) track scope and remaining
+work. [AGENTS.md](AGENTS.md), [AI use](AI_USAGE.md) and
+[pinned skills](docs/skills.md) describe how changes are made and reviewed.

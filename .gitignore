@@ -17,6 +17,7 @@ output/
 # Python
 .venv/
 __pycache__/
+.ipynb_checkpoints/
 *.py[cod]
 .pytest_cache/
 .mypy_cache/
@@ -26,6 +27,8 @@ htmlcov/
 
 # Frontend and editors
 node_modules/
+test-results/
+playwright-report/
 dist/
 .next/
 .DS_Store

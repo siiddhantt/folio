@@ -1,0 +1,96 @@
+.markdown {
+  overflow-wrap: anywhere;
+  line-height: 1.7;
+}
+.markdown > :first-child {
+  margin-block-start: 0;
+}
+.markdown > :last-child {
+  margin-block-end: 0;
+}
+.markdown p,
+.markdown ul,
+.markdown ol,
+.markdown blockquote,
+.markdown pre,
+.markdown-table {
+  margin-block: 12px;
+}
+.markdown p {
+  white-space: normal;
+}
+.markdown > p:has(+ .markdown-trailing) {
+  display: inline;
+}
+.markdown ul,
+.markdown ol {
+  padding-inline-start: 24px;
+}
+.markdown ul {
+  list-style: disc;
+}
+.markdown ol {
+  list-style: decimal;
+}
+.markdown li + li {
+  margin-block-start: 4px;
+}
+.markdown h1,
+.markdown h2,
+.markdown h3,
+.markdown h4,
+.markdown h5,
+.markdown h6 {
+  font-size: 1em;
+  font-weight: 600;
+  line-height: 1.5;
+  margin-block: 20px 8px;
+}
+.markdown a {
+  text-decoration: underline;
+}
+.markdown blockquote {
+  border-inline-start: 2px solid var(--line);
+  padding-inline-start: 16px;
+  color: var(--muted);
+}
+.markdown pre,
+.markdown-table {
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior: contain;
+}
+.markdown code {
+  font-size: 0.875em;
+  background: var(--secondary);
+  border-radius: 4px;
+  padding: 2px 4px;
+}
+.markdown pre {
+  padding: 12px;
+  background: var(--secondary);
+  border-radius: 8px;
+}
+.markdown pre code {
+  padding: 0;
+  background: transparent;
+}
+.markdown table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875em;
+}
+.markdown th,
+.markdown td {
+  text-align: start;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  min-width: 100px;
+}
+.markdown th {
+  font-weight: 600;
+}
+.markdown hr {
+  margin-block: 20px;
+  border-color: var(--line);
+}
