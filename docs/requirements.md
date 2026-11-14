@@ -1,6 +1,6 @@
 # Folio requirements
 
-Updated 2026-11-13. Accepted scope is a general-purpose document assistant:
+Updated 2026-11-14. Accepted scope is a general-purpose document assistant:
 upload a PDF, understand its contents, ask follow-ups and verify source evidence.
 Reports, policies and household guides are examples, not domain restrictions.
 
@@ -16,12 +16,12 @@ Reports, policies and household guides are examples, not domain restrictions.
 | R06 | Grounded answers | Exact scoped vector search supplies up to six chunks. Return cited statements, clarification or insufficient evidence. IDs are validated; semantic support remains a separate evaluation. |
 | R07 | Chat history | Persist ordered questions, answers/failures and citations. Reload, cursor pagination and request replay are supported. |
 | R08 | Multi-turn context | Resolve follow-ups, retrieve fresh evidence and preserve the transcript. Background older-history notes plus a bounded before-answer fallback are implemented. One live compaction retained tested facts; attribution errors remain. |
-| R09 | Document statistics API | Aggregate persisted counts/status totals remain to be implemented. |
-| R10 | Processing metrics API | Individual attempts, durations, failures and usage are inspectable. Aggregate processing metrics remain to be implemented. |
+| R09 | Document statistics API | `GET /statistics/documents` counts current documents, original bytes, stage states and active extraction pages, including unknown extraction separately. |
+| R10 | Processing metrics API | `GET /metrics/processing` aggregates retained jobs, attempts, measured durations and terminal error codes across five stages. Individual history and usage remain inspectable. |
 | R11 | Durable data structures | Metadata, evidence, summaries, indexes, conversations, context, processing history and usage persist in PostgreSQL/artifact storage. |
-| R12 | Usable APIs and errors | Validated inputs, coherent routes and OpenAPI exist. Several success responses still need typed schemas and useful examples. |
+| R12 | Usable APIs and errors | Public success responses have typed OpenAPI schemas, workflow descriptions and examples; PDF downloads declare their binary media type. Existing serializers are preserved. Development inspection payloads remain outside the typed public contract. |
 | R13 | Reproducible operation | Docker setup, configuration, development checks and architecture are documented. Production capacity is not established. |
-| R14 | Demonstration | Real upload-to-chat walkthrough is measured in the evaluation. A recorded video remains unfinished. |
+| R14 | Demonstration | Real upload-to-chat walkthrough is measured in the evaluation. Record the video after the planned retrieval improvements. |
 | R15 | Transparent AI development | Keep accepted rationale, versioned prompts, focused verification and a concise AI-use record. |
 
 ## Boundaries

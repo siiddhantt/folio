@@ -24,6 +24,7 @@ executable checks and human judgment; it does not establish universal correctnes
 | Review | Separate agents challenged scope, stale-worker publication, configuration snapshots and billing | Review caught concrete defects, including service/profile inheritance and preflight omissions. Passing checks do not replace ongoing failure analysis. |
 | November 13 evaluation | Selected a public guide, prepared source expectations before seeing outputs, drove one UI upload/chat, inspected logs and independent source support | Twelve real turns and one background compaction. The [report](docs/evaluation.md) records retrieval misses and attribution errors as well as working behavior. |
 | Documentation | Consolidated current behavior, removed superseded walkthroughs and applied a pinned prose-editing skill | Preserved guardrails, provenance, limitations and historical evidence in Git. No claim that AI-assisted prose was human-authored. |
+| Aggregate APIs | Audited requirements, added document/processing aggregates and documented public response contracts in separate bounded tasks | HTTP/PostgreSQL checks cover replay, retries, retained chats, batch counts and missing timing. Independent reviewers checked query semantics and response compatibility. No new model evaluation calls. |
 
 [AGENTS.md](AGENTS.md) contains collaboration rules; [skills](docs/skills.md)
 records reviewed sources, licenses and invocation boundaries. Prompts and schemas

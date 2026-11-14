@@ -3,6 +3,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, HTTPException
 
+from folio.summaries.models import DocumentSummary
 from folio.summaries.preparation import coverage
 
 ERRORS = {
@@ -127,7 +128,17 @@ def read_summary(database, revision_id):
 def create_router(database):
     router = APIRouter()
 
-    @router.get("/revisions/{revision_id}/summary")
+    @router.get(
+        "/revisions/{revision_id}/summary",
+        summary="Read the saved document summary",
+        description=(
+            "Read the automatic summary and its source evidence without starting generation. "
+            "not_scheduled means no run exists. Pending, unavailable and failed results retain "
+            "coverage and usage metadata; overview is null until a result is saved. Cost fields "
+            "are decimal USD strings, and unknown cost remains separate from known cost."
+        ),
+        responses={200: {"model": DocumentSummary}},
+    )
     def summary(revision_id: UUID):
         value = read_summary(database, revision_id)
         if value is None:

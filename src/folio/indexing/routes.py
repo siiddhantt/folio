@@ -5,19 +5,38 @@ from fastapi import APIRouter, HTTPException, Query
 from .config import capture_policy
 from .inspection import read_index
 from .lifecycle import insert_intent
+from .models import ChunkPage, IndexStatus
 
 
 def create_router(database, settings):
     router = APIRouter()
 
-    @router.get("/revisions/{revision_id}/index")
+    @router.get(
+        "/revisions/{revision_id}/index",
+        summary="Read document index progress",
+        description=(
+            "Read persisted index state without starting work. not_started means no index exists; "
+            "ready means all planned chunk embeddings are saved. Coverage gaps remain disclosed."
+        ),
+        responses={200: {"model": IndexStatus}},
+    )
     def index(revision_id: UUID):
         value = read_index(database, revision_id)
         if value is None:
             raise HTTPException(404, "Extraction revision not found")
         return value
 
-    @router.post("/revisions/{revision_id}/index", status_code=202)
+    @router.post(
+        "/revisions/{revision_id}/index",
+        status_code=202,
+        summary="Request the revision's first index",
+        description=(
+            "Persist index work using current settings if this revision has no index. Repeated "
+            "requests return the existing index, including terminal states; this does not rebuild "
+            "or retry an existing index. Acceptance is separate from readiness for conversation."
+        ),
+        responses={202: {"model": IndexStatus}},
+    )
     def start_index(revision_id: UUID):
         with database.transaction() as conn:
             revision = conn.execute(
@@ -28,7 +47,16 @@ def create_router(database, settings):
             insert_intent(conn, revision_id, revision["document_id"], capture_policy(settings))
         return read_index(database, revision_id)
 
-    @router.get("/revisions/{revision_id}/index/chunks")
+    @router.get(
+        "/revisions/{revision_id}/index/chunks",
+        summary="Read ready index chunks",
+        description=(
+            "Read source-linked chunks in ascending ordinal order; pass next_after as after. "
+            "Returns 409 until the complete index is ready. Source links identify whole elements, "
+            "not verified text highlights; embedding vectors are not returned."
+        ),
+        responses={200: {"model": ChunkPage}},
+    )
     def chunks(
         revision_id: UUID, after: int = Query(0, ge=0), limit: int = Query(50, ge=1, le=100)
     ):

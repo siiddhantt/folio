@@ -28,6 +28,8 @@ PostgreSQL owns durable intent, evidence, chat state and accounting. Redis trans
 worker consumes the shared ingestion queue; chat and memory have separate queues and lightweight images. The
 dispatcher visits ingestion, summary, indexing, chat and memory work in one recovery loop. Model calls run in
 workers. API and parser worker share original/result artifacts; chat and memory use persisted text.
+PostgreSQL readiness checks TCP before migrations start. Its temporary initialization server accepts only
+socket connections, so a socket-only health check could start migrations too early on an empty volume.
 
 ## Upload, evidence and indexing
 
@@ -134,6 +136,21 @@ and online artifact cleanup remain separate work. Reconcile abandoned files only
 and PostgreSQL recovered. `/health` checks API/database access; it does not certify worker availability, parser
 accuracy or answer quality.
 
+## Aggregate reads
+
+`/statistics/documents` joins each document to its current request/original and
+active evidence. It does not multiply file totals by pages or attempts.
+`/metrics/processing` groups retained jobs and executions across all five stages,
+including removed chats. A retry adds an attempt; a successful embedding batch
+also adds an attempt. Neither creates another job.
+
+Both routes use a read-only repeatable-read transaction: a worker finishing
+between queries cannot make one response mix two database states. Ordinary
+worker writes continue without waiting for row locks from these reads. Exact
+all-history totals still scan records; indexes for finding pending work do not
+make that scan constant-time. Measure latency and buffers as data grows before
+adding cached totals or a reporting store.
+
 ## Source reading order
 
 | Behavior | Start here, then follow the data |
@@ -143,6 +160,7 @@ accuracy or answer quality.
 | Question and follow-up | Conversation [routes](../src/folio/conversations/routes.py), [context](../src/folio/conversations/context.py), [resolver](../src/folio/conversations/resolver.py), [processing](../src/folio/conversations/processing.py), [retrieval](../src/folio/conversations/retrieval.py), [preparation](../src/folio/conversations/preparation.py), [queries](../src/folio/conversations/queries.py); ownership in [lifecycle](../src/folio/conversations/lifecycle.py), charges in [invocations](../src/folio/conversations/invocations.py). |
 | Memory | [Context](../src/folio/conversations/memory/context.py), [planning](../src/folio/conversations/memory/planning.py), [processing](../src/folio/conversations/memory/processing.py), [lifecycle](../src/folio/conversations/memory/lifecycle.py), [dispatcher](../src/folio/conversations/memory/dispatcher.py). |
 | Shared boundaries | [Generation routing](../src/folio/ai/routing.py), [provider-neutral results](../src/folio/ai/generation.py), [token admission](../src/folio/ai/tokens.py), [accounting](../src/folio/ai/budget.py), [transactions/migrations](../src/folio/database.py), [schema](../src/folio/migrations). |
+| Aggregate APIs | Monitoring [routes](../src/folio/monitoring/routes.py), [response models](../src/folio/monitoring/models.py) and [queries](../src/folio/monitoring/queries.py); HTTP/database [checks](../tests/test_monitoring.py). |
 
 Keep related behavior in its feature module. Preserve `folio.processing.process_attempt`, the compatibility
 entrypoint used by persisted RQ messages. New schema changes get new migrations. As a reading exercise, trace

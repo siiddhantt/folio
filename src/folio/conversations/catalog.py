@@ -2,11 +2,21 @@ from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query
 
+from .models import ConversationDocumentPage
+
 
 def create_router(database):
     router = APIRouter()
 
-    @router.get("/conversation-documents")
+    @router.get(
+        "/conversation-documents",
+        summary="List documents ready for conversation",
+        description=(
+            "List documents whose active revision has a complete ready index, newest first. "
+            "Filter by index_id or pass next_cursor as before for older documents."
+        ),
+        responses={200: {"model": ConversationDocumentPage}},
+    )
     def listing(
         before: UUID | None = None,
         index_id: UUID | None = None,

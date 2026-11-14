@@ -107,6 +107,33 @@ provider-enforced zero-overshoot guarantee. See [accounting](architecture.md#mod
 shared accounting changes, migrate first and recreate API, dispatcher, worker, chat-worker and memory-worker
 together so every process counts the same charge types.
 
+## Aggregate APIs
+
+Open the Monitoring group in [OpenAPI](http://localhost:8000/docs), or request:
+
+```sh
+curl http://localhost:8000/statistics/documents
+curl http://localhost:8000/metrics/processing
+```
+
+Document statistics count current originals and active extraction pages. State
+maps omit zero-count states. `documents_without_extraction` stays separate from
+pages with no recovered content; neither a blank-page diagnosis nor complete
+extraction can be inferred from those counts. `original_bytes` is not disk usage.
+
+Processing metrics cover all retained jobs and attempts, including removed chats.
+An index with four successful embedding batches is one job and four attempts.
+`unfinished` includes queued or interrupted attempts; it is not a worker count.
+`terminal_errors` groups error codes on failed/unavailable jobs, excluding active
+retries. Durations include successful and failed attempts with valid start/end
+times, exclude queue wait, and start at invocation for memory. No samples means
+null mean/max, not zero. Elapsed time may include detecting a lost worker; it
+does not isolate CPU/model time or measure answer accuracy or uptime.
+
+Each request uses one consistent read-only database snapshot. Reads trigger no
+work or paid calls. Public API schemas describe existing payloads, with examples
+for upload, answers and field values; development inspection remains untyped.
+
 ## Backend checks
 
 Integration tests truncate their selected database. Use only the isolated `folio_test` database:

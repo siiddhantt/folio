@@ -30,6 +30,8 @@ ignored `.env`; never put them in frontend configuration.
 With `FOLIO_DEVELOPMENT_MODE=true`, **Activity** shows attempts, timing, failures
 and model usage. The header settings control edits saved document/summary limits
 for new uploads. Changes do not rewrite queued work or existing results.
+The [aggregate APIs](docs/development.md#aggregate-apis) report document totals
+and processing outcomes from the same saved records.
 
 ## How it works
 
@@ -58,8 +60,8 @@ proof that its answer is supported.
 
 PDFs are the supported input; chats cover one document. Oversized summaries report
 their limit instead of silently using only the beginning. Streaming, other file
-formats and multi-document chat are deferred. Aggregate statistics/metrics APIs,
-some OpenAPI response schemas and the recorded walkthrough remain unfinished.
+formats and multi-document chat are deferred. Retrieval and citation quality need
+further evaluation; the recorded walkthrough follows that work.
 
 Compose exposes the interface and API on localhost. It has no authentication or
 tenant isolation, and uses local credentials and named volumes. Public hosting

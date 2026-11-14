@@ -1,6 +1,6 @@
 # Folio decisions
 
-Updated 2026-11-13. The choices below are accepted unless explicitly deferred.
+Updated 2026-11-14. The choices below are accepted unless explicitly deferred.
 Current implementation and remaining defects are in [status](status.md).
 The earlier comparisons and detailed rationale remain in
 [Git history](https://github.com/siiddhantt/folio/tree/1c793a9891e4aaf833acce53987eb7ee1beee3e0/docs).
@@ -107,7 +107,7 @@ Structured logs and persisted attempts/events explain real work. Safe failures
 include error type and bounded Folio code locations, excluding arbitrary
 exception text, source content, secrets and local variables. Stored state is
 authoritative when best-effort events have gaps. Full tracing infrastructure is
-deferred. Aggregate statistics/metrics APIs remain unfinished requirements.
+deferred. Aggregate statistics/metrics use the persisted records described below.
 
 ## D16–D18: Configuration, document reader and Runs
 
@@ -167,3 +167,20 @@ Consolidate documentation around current behavior and keep historical experiment
 in Git. Preserve agent guardrails, source/license pins, synthetic fixture
 generation and the live Docling build context. The Humanizer skill edits prose
 only; it cannot invent evidence, imply human authorship or remove real limits.
+
+## November 14 aggregate APIs and delivery order
+
+Finish required APIs and documentation before retrieval changes; record the video
+after those improvements. Expanded recall of old conversation references is
+deferred. Preserve the latest evaluation's failures rather than tuning them away.
+
+Document statistics count current originals and active evidence. Processing
+metrics cover all retained work, including removed conversations. Jobs and
+attempts are separate counts: successful embedding batches are not retries.
+Report measured attempt durations with sample counts; missing or reversed timing
+does not become zero. Terminal error counts exclude jobs still retrying.
+
+Use short read-only PostgreSQL snapshots, with no new state or monitoring service.
+Exact totals scan retained rows; measure their cost before adding caching or
+precomputed aggregates. Public OpenAPI response descriptions preserve existing
+wire formats; documentation models do not add runtime validation to old routes.
