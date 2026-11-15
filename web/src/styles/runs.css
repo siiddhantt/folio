@@ -5,10 +5,17 @@
 }
 .runs-heading {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 24px;
+}
+.runs-heading > .page-title {
+  flex: 1 1 224px;
+}
+.runs-heading > button {
+  margin-inline-start: auto;
 }
 .runs-heading h1 {
   font-size: 22px;

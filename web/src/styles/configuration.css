@@ -11,6 +11,8 @@
 .settings-heading h1 {
   font-size: 24px;
   letter-spacing: -0.6px;
+}
+.settings-heading .page-title {
   margin-bottom: 12px;
 }
 .settings-heading p + p {

@@ -1,5 +1,30 @@
 import { expect, test } from '@playwright/test';
 
+test('automatic history retries preserve the focused recovery control on failure', async ({
+  page,
+}) => {
+  await page.clock.install();
+  await page.route('**/api/**', async (route) => {
+    const path = new URL(route.request().url()).pathname.replace('/api', '');
+    if (path === '/capabilities') {
+      await route.fulfill({
+        json: { development_mode: false, max_pages: 100, max_upload_bytes: 26214400 },
+      });
+    } else {
+      expect(path).toBe('/conversations');
+      await route.fulfill({ status: 503, json: { detail: 'History temporarily unavailable.' } });
+    }
+  });
+  await page.goto('/');
+  const retry = page.getByRole('button', { name: 'Retry history' });
+  await expect(retry).toBeVisible();
+  await retry.focus();
+  const refresh = page.waitForResponse((response) => response.url().includes('/conversations?'));
+  await page.clock.fastForward(16000);
+  await refresh;
+  await expect(retry).toBeFocused({ timeout: 2000 });
+});
+
 test('history stays available, recovers a failed load and supports mobile keyboard navigation', async ({
   page,
 }) => {
@@ -111,7 +136,7 @@ test('history stays available, recovers a failed load and supports mobile keyboa
   await expect(drawer).not.toBeVisible();
   await expect(page.getByRole('main')).toBeFocused();
   historyAvailable = false;
-  await sidebar.getByRole('button', { name: 'Refresh conversations' }).click();
+  await page.evaluate(() => window.dispatchEvent(new Event('focus')));
   await expect(sidebar.getByRole('button', { name: 'Retry history' })).toBeVisible();
   await expect(sidebar.getByRole('link', { name: /Where does cover apply/ })).toBeVisible();
   const newConversation = sidebar.getByRole('link', { name: 'New conversation', exact: true });
@@ -219,7 +244,10 @@ test('switching chats keeps drafts and a new chat returns history to the latest 
   await sidebar.getByRole('link', { name: /What is covered/ }).click();
   await page.getByRole('link', { name: 'New chat', exact: true }).click();
   await expect(page).toHaveURL(/\/new-chat\?document=index-1$/);
-  await page.getByRole('textbox', { name: 'Your question' }).fill('What is covered?');
+  await page
+    .getByRole('region', { name: 'New chat', exact: true })
+    .getByRole('textbox', { name: 'Your question' })
+    .fill('What is covered?');
   await page.getByRole('button', { name: 'Send question', exact: true }).click();
   await expect(page).toHaveURL(/\/conversations\/new$/);
   await expect(sidebar.getByRole('link', { name: /new.pdf/ })).toHaveAttribute(

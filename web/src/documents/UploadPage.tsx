@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowRight, FileText, LoaderCircle } from 'lucide-react';
 import { errorMessage, request } from '../api';
 import { Button, formatBytes, Notice } from '../components/ui';
+import { BackButton } from '../components/BackButton';
 import type { Capabilities } from '../types';
 
 export function UploadPage({ capabilities }: { capabilities: Capabilities }) {
@@ -47,7 +48,10 @@ export function UploadPage({ capabilities }: { capabilities: Capabilities }) {
   return (
     <div className="upload-page">
       <section className="upload-section" aria-labelledby="upload-title">
-        <h1 id="upload-title">Open a document</h1>
+        <div className="page-title">
+          <BackButton />
+          <h1 id="upload-title">Open a document</h1>
+        </div>
         <form
           onSubmit={(event) => {
             event.preventDefault();

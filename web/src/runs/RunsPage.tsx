@@ -1,6 +1,7 @@
 import { Link, useSearchParams } from 'react-router-dom';
 import { RefreshCw } from 'lucide-react';
 import { Button, Notice } from '../components/ui';
+import { BackButton } from '../components/BackButton';
 import type { ProcessingRun } from './types';
 import { useRuns } from './useRuns';
 
@@ -29,7 +30,10 @@ export function RunsPage() {
   return (
     <section className="runs-page" aria-labelledby="runs-heading">
       <div className="runs-heading">
-        <h1 id="runs-heading">Processing runs</h1>
+        <div className="page-title">
+          <BackButton />
+          <h1 id="runs-heading">Processing runs</h1>
+        </div>
         <Button variant="outline" size="sm" onClick={reload} disabled={loading}>
           <RefreshCw aria-hidden="true" /> Refresh
         </Button>

@@ -21,12 +21,19 @@ export function useConversationList(revision: number) {
   }, [state?.createdConversation]);
   useEffect(() => {
     const onFocus = () => setRefresh((value) => value + 1);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') onFocus();
+    };
     window.addEventListener('focus', onFocus);
-    return () => window.removeEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, []);
   useEffect(() => {
     const controller = new AbortController();
-    setError('');
+    let timer: ReturnType<typeof setTimeout> | undefined;
     setLoading(true);
     request<ConversationList>(
       `/conversations?limit=20${before ? `&before=${encodeURIComponent(before)}` : ''}`,
@@ -37,6 +44,7 @@ export function useConversationList(revision: number) {
       .then((value) => {
         if (!controller.signal.aborted) {
           setData({ ...value, items: value.items.filter((item) => !removed.current.has(item.id)) });
+          setError('');
           setLoading(false);
         }
       })
@@ -45,8 +53,19 @@ export function useConversationList(revision: number) {
           setError(errorMessage(error));
           setLoading(false);
         }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          // Wait for each read to finish so slow responses are not repeatedly cancelled.
+          timer = setTimeout(() => {
+            if (document.visibilityState === 'visible') setRefresh((value) => value + 1);
+          }, 15000);
+        }
       });
-    return () => controller.abort();
+    return () => {
+      controller.abort();
+      clearTimeout(timer);
+    };
   }, [pathname, before, revision, refresh]);
   return {
     data,

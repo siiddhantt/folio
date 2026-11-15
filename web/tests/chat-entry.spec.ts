@@ -57,6 +57,8 @@ test('a creation acknowledged after navigation preserves the question without su
   await page.getByRole('button', { name: 'Send question' }).click();
   await expect.poll(() => !!releaseCreation).toBeTruthy();
   await page.getByRole('link', { name: 'Folio home' }).click();
+  const sidebar = page.getByRole('complementary', { name: 'Conversation history' });
+  await expect(sidebar.getByText('Your conversations will appear here.')).toBeVisible();
   const creationResponse = page.waitForResponse(
     (response) =>
       response.url().endsWith('/conversations') && response.request().method() === 'POST',
@@ -64,8 +66,9 @@ test('a creation acknowledged after navigation preserves the question without su
   releaseCreation!();
   await (await creationResponse).finished();
   await expect(page).toHaveURL(/\/$/);
-  const sidebar = page.getByRole('complementary', { name: 'Conversation history' });
-  await sidebar.getByRole('button', { name: 'Refresh conversations' }).click();
+  await expect(sidebar.getByRole('link', { name: /Coverage.pdf/ })).toBeVisible({
+    timeout: 20000,
+  });
   await sidebar.getByRole('link', { name: /Coverage.pdf/ }).click();
   await expect(page.getByRole('textbox', { name: 'Your question' })).toHaveValue(
     'Keep this question with its chat.',
@@ -418,8 +421,7 @@ test('empty choices keep a draft usable and a linked document can be selected be
   });
   await page.setViewportSize({ width: 320, height: 700 });
   await page.goto('/new-chat');
-  await expect(page.getByText('No documents are ready for chat.', { exact: false })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Upload a PDF' })).toHaveAttribute('href', '/upload');
+  await expect(page.getByRole('combobox', { name: 'Document', exact: true })).toBeDisabled();
   const question = page.getByRole('textbox', { name: 'Your question' });
   await question.fill('A long question\n'.repeat(30));
   expect(

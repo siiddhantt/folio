@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { errorMessage, request } from '../api';
 import { Button, Notice } from '../components/ui';
+import { BackButton } from '../components/BackButton';
 import { Input } from '../components/ui/input';
 import {
   Select,
@@ -88,7 +89,10 @@ export function SettingsPage({ onSaved }: { onSaved: () => void }) {
   return (
     <div className="settings-page">
       <header className="settings-heading">
-        <h1>Development</h1>
+        <div className="page-title">
+          <BackButton />
+          <h1>Development</h1>
+        </div>
         <p className="subtle">
           Changes apply to new uploads. Accepted documents keep their settings.
         </p>
