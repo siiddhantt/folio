@@ -1,6 +1,6 @@
 # Folio requirements
 
-Updated 2026-11-14. Accepted scope is a general-purpose document assistant:
+Updated 2026-11-15. Accepted scope is a general-purpose document assistant:
 upload a PDF, understand its contents, ask follow-ups and verify source evidence.
 Reports, policies and household guides are examples, not domain restrictions.
 
@@ -13,7 +13,7 @@ Reports, policies and household guides are examples, not domain restrictions.
 | R03 | Retrieve documents | Metadata, status, original bytes, paginated evidence and a separate Runs list are implemented. Search/filtering is deferred. |
 | R04 | Summaries and insights | Automatic saved overview plus normally 3–5 cited points, allowing 1–2 for short sources. One call uses all prepared evidence; oversized input has an explicit unavailable reason. Citation quality needs further work. |
 | R05 | Start a chat | One ready PDF index per saved conversation; document selector, title from first answer, rename and retained-record removal. |
-| R06 | Grounded answers | Exact scoped vector search supplies up to six chunks. Return cited statements, clarification or insufficient evidence. IDs are validated; semantic support remains a separate evaluation. |
+| R06 | Grounded answers | Exact scoped vector search supplies up to six chunks. Return cited statements, clarification or insufficient evidence. Partial answers may cite supported details and explain missing evidence. Every supplied citation ID is validated; semantic support remains a separate evaluation. |
 | R07 | Chat history | Persist ordered questions, answers/failures and citations. Reload, cursor pagination and request replay are supported. |
 | R08 | Multi-turn context | Resolve follow-ups, retrieve fresh evidence and preserve the transcript. Background older-history notes plus a bounded before-answer fallback are implemented. One live compaction retained tested facts; attribution errors remain. |
 | R09 | Document statistics API | `GET /statistics/documents` counts current documents, original bytes, stage states and active extraction pages, including unknown extraction separately. |
@@ -21,7 +21,7 @@ Reports, policies and household guides are examples, not domain restrictions.
 | R11 | Durable data structures | Metadata, evidence, summaries, indexes, conversations, context, processing history and usage persist in PostgreSQL/artifact storage. |
 | R12 | Usable APIs and errors | Public success responses have typed OpenAPI schemas, workflow descriptions and examples; PDF downloads declare their binary media type. Existing serializers are preserved. Development inspection payloads remain outside the typed public contract. |
 | R13 | Reproducible operation | Docker setup, configuration, development checks and architecture are documented. Production capacity is not established. |
-| R14 | Demonstration | Real upload-to-chat and notebook walkthroughs are measured. Record the current version after a Mac smoke test; disclose known quality limits. Further retrieval work is deferred. |
+| R14 | Demonstration | Real upload-to-chat and notebook walkthroughs are measured. Mac smoke checks and a three-question browser rehearsal passed; record the current version and disclose known quality limits. Further retrieval defaults remain undecided. |
 | R15 | Transparent AI development | Keep accepted rationale, versioned prompts, focused verification and a concise AI-use record. |
 
 ## Boundaries
