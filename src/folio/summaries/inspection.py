@@ -8,6 +8,10 @@ SAFE_USAGE = (
     "response_characters",
     "model",
     "provider",
+    "cost_basis",
+    "cached_tokens",
+    "pricing_version",
+    "service_tier",
 )
 
 

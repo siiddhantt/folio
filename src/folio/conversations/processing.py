@@ -12,9 +12,8 @@ from folio.ai.routing import generation_client
 from folio.ai.tokens import count_tokens
 from folio.config import Settings
 from folio.database import Database
-from folio.indexing.provider import OpenRouterEmbeddings
+from folio.indexing.provider import EmbeddingError, embedding_client
 from folio.observability import configure_logging, log_event
-from folio.summaries.config import SummaryCredentials
 from folio.summaries.preparation import coverage
 
 from .config import rewrite_policy
@@ -67,7 +66,6 @@ def process_turn(turn_id, *, settings=None, embedder=None, generator=None, resol
         context = ensure_context(database, claim) if contextual else None
         if contextual and context is None:
             return {"outcome": "superseded"}
-        key = SummaryCredentials().api_key.get_secret_value()
         resolution = claim["resolution"]
         if needs_resolution and resolution is None:
             resolving_policy = rewrite_policy(policy)
@@ -126,9 +124,12 @@ def process_turn(turn_id, *, settings=None, embedder=None, generator=None, resol
         profile = generator.profile()
         if claim["query_vector"] is None:
             if embedder is None:
-                if not key:
-                    raise AdmissionError("CHAT_PROVIDER_NOT_CONFIGURED")
-                embedder = OpenRouterEmbeddings(index["policy"], key)
+                try:
+                    embedder = embedding_client(index["policy"])
+                except EmbeddingError as error:
+                    if error.code == "EMBEDDING_PROVIDER_NOT_CONFIGURED":
+                        raise AdmissionError("CHAT_PROVIDER_NOT_CONFIGURED") from None
+                    raise
             embedding_profile = embedder.profile()
             if any(
                 embedding_profile[k] != index["policy"][k]
@@ -171,6 +172,7 @@ def process_turn(turn_id, *, settings=None, embedder=None, generator=None, resol
                 history=context["history"] if context else None,
                 resolved_question=query,
                 memory=context.get("memory") if context else None,
+                prompt_version=policy.get("prompt_version", 1),
             )
             try:
                 budget = check_budget(messages, schema, policy, profile)
@@ -216,7 +218,9 @@ def process_turn(turn_id, *, settings=None, embedder=None, generator=None, resol
         )
         stage = "answer"
         result = generator.generate(messages, schema, schema_name="folio_answer")
-        answer = validate(result, passages, include_title=include_title)
+        answer = validate(
+            result, passages, include_title=include_title, schema_version=policy["schema_version"]
+        )
         published = settle(
             database,
             claim,

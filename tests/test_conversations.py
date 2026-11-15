@@ -130,6 +130,43 @@ def test_first_answer_is_scoped_cited_and_readable_after_reload(chat_document):
 
 
 @pytest.mark.integration
+def test_partial_answer_keeps_supported_citations_and_is_readable_after_reload(chat_document):
+    settings, client, indexes = chat_document
+    chat = start_chat(client, indexes[0])
+    url = f"/conversations/{chat['id']}/turns"
+    turn = client.post(
+        url,
+        json={"question": "When does the project begin and end?"},
+        headers={"Idempotency-Key": str(uuid4())},
+    ).json()
+    partial = {
+        "outcome": "insufficient_evidence",
+        "statements": [
+            {"text": "It begins in May.", "source_ids": ["S1"]},
+            {"text": "The supplied passages do not give the end date.", "source_ids": []},
+        ],
+    }
+
+    class PartialAnswer(AnswerModel):
+        def generate(self, *args, **kwargs):
+            result = super().generate(*args, **kwargs)
+            result.content = json.dumps(partial)
+            return result
+
+    from folio.conversations.processing import process_turn
+
+    assert process_turn(
+        turn["id"], settings=settings, embedder=QueryEmbedding(), generator=PartialAnswer()
+    ) == {"outcome": "ready"}
+    saved = client.get(f"{url}/{turn['id']}").json()
+    assert saved["answer"]["outcome"] == "insufficient_evidence"
+    assert saved["answer"]["statements"] == partial["statements"]
+    assert saved["citations"][0]["text"] == "The project begins in May."
+    assert saved["citations"][0]["pages"] == [1]
+    assert client.get(url).json()["items"] == [saved]
+
+
+@pytest.mark.integration
 @pytest.mark.parametrize("bad_question", ["When\x00does it begin?", "When\ud800does it begin?"])
 def test_unstorable_question_is_rejected_without_consuming_submission(chat_document, bad_question):
     _, client, indexes = chat_document
@@ -177,7 +214,7 @@ def test_submission_replay_and_stale_head_are_explicit(chat_document):
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("failure", ["citation", "truncated"])
+@pytest.mark.parametrize("failure", ["citation", "partial_citation", "truncated"])
 def test_invalid_answer_stays_failed_with_bill_and_question_preserved(chat_document, failure):
     settings, client, indexes = chat_document
     chat = start_chat(client, indexes[0])
@@ -189,8 +226,10 @@ def test_invalid_answer_stays_failed_with_bill_and_question_preserved(chat_docum
     class Invalid(AnswerModel):
         def generate(self, *args, **kwargs):
             result = super().generate(*args, **kwargs)
-            if failure == "citation":
+            if failure in {"citation", "partial_citation"}:
                 result.content = result.content.replace('"S1"', '"OTHER"')
+                if failure == "partial_citation":
+                    result.content = result.content.replace('"answer"', '"insufficient_evidence"')
             else:
                 result.finish_reason = "length"
             return result
@@ -214,6 +253,28 @@ def test_invalid_answer_stays_failed_with_bill_and_question_preserved(chat_docum
     assert Decimal(client.get("/development/settings").json()["runtime"]["spent_usd"]) == Decimal(
         "0.0000421"
     )
+
+
+@pytest.mark.parametrize("outcome", ["clarification", "insufficient_evidence"])
+def test_nonanswer_citations_remain_scoped_and_legacy_contract_is_reproducible(outcome):
+    from folio.conversations.preparation import validate
+
+    passages = [{"source_id": "S1"}]
+    result = SimpleNamespace(
+        finish_reason="stop",
+        content=json.dumps(
+            {
+                "outcome": outcome,
+                "statements": [{"text": "It starts in May.", "source_ids": ["S1"]}],
+            }
+        ),
+    )
+    assert validate(result, passages)["statements"][0]["source_ids"] == ["S1"]
+    with pytest.raises(ValueError, match="CHAT_OUTPUT_INVALID"):
+        validate(result, passages, schema_version=3)
+    result.content = result.content.replace('"S1"', '"S2"')
+    with pytest.raises(ValueError, match="CHAT_OUTPUT_INVALID"):
+        validate(result, passages)
 
 
 @pytest.mark.integration

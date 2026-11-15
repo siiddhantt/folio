@@ -89,6 +89,7 @@ class Model:
 def summary_document(tmp_path, monkeypatch):
     # The fake model and budget expectations must not inherit the application's live policy.
     for name, value in {
+        "GATEWAY": "openrouter",
         "ENABLED": "true",
         "MODEL_ID": "openai/gpt-5-nano",
         "PROVIDER": "openai",
@@ -834,3 +835,102 @@ def test_reading_disabled_or_existing_documents_never_schedules_work(summary_doc
     assert client.get(url).json()["state"] == "not_scheduled"
     assert client.get(url).json()["run_id"] is None
     assert client.post(url).status_code == 405
+
+
+def test_summary_policy_captures_direct_endpoint_without_credentials():
+    from folio.summaries.config import SummarySettings
+
+    runtime = SimpleNamespace(
+        job_timeout_seconds=300,
+        lease_seconds=420,
+        retry_delays_seconds=[15],
+        retry_jitter_seconds=5,
+    )
+    policy = SummarySettings(
+        _env_file=None,
+        gateway="openai",
+        model_id="openai/gpt-5.2",
+        provider="openai",
+        api_key="not-a-real-key",
+    ).policy(runtime)
+    assert policy["gateway"] == "openai"
+    assert policy["base_url"] == "https://api.openai.com/v1"
+    assert policy["provider_profile_version"] == "openai-gpt-5.2-2026-11-13"
+    assert "api_key" not in policy
+
+
+@pytest.mark.integration
+def test_direct_summary_uses_frozen_route_and_records_estimated_billing(
+    summary_document, monkeypatch
+):
+    from folio.ai.openai import NATIVE_MODEL_ID
+    from folio.ai.routing import generation_client
+    from folio.summaries import processing
+
+    settings, client, publish = summary_document
+    monkeypatch.setenv("FOLIO_SUMMARY_GATEWAY", "openai")
+    monkeypatch.setenv("FOLIO_SUMMARY_MODEL_ID", "openai/gpt-5.2")
+    monkeypatch.setenv("FOLIO_SUMMARY_REASONING_EFFORT", "none")
+    monkeypatch.setenv("FOLIO_SUMMARY_DOCUMENT_BUDGET_USD", "0.40")
+    monkeypatch.setenv("OPENAI_API_KEY", "direct-fixture")
+    _, revision_id = publish()
+    url = f"/revisions/{revision_id}/summary"
+    run_id = client.get(url).json()["run_id"]
+    # Later defaults must not reroute already accepted work.
+    monkeypatch.setenv("FOLIO_SUMMARY_GATEWAY", "openrouter")
+    calls = []
+
+    def respond(request):
+        assert request.url.host == "api.openai.com"
+        assert request.headers["Authorization"] == "Bearer direct-fixture"
+        calls.append(json.loads(request.content))
+        return httpx.Response(
+            200,
+            json={
+                "id": "direct-summary-fixture",
+                "model": NATIVE_MODEL_ID,
+                "service_tier": "default",
+                "choices": [
+                    {"finish_reason": "stop", "message": {"content": json.dumps(Model().content)}}
+                ],
+                "usage": {
+                    "prompt_tokens": 100,
+                    "completion_tokens": 100,
+                    "prompt_tokens_details": {"cached_tokens": 0},
+                    "completion_tokens_details": {"reasoning_tokens": 0},
+                },
+            },
+        )
+
+    monkeypatch.setattr(
+        processing,
+        "generation_client",
+        lambda policy: generation_client(policy, transport=httpx.MockTransport(respond)),
+    )
+    assert processing.process_summary(run_id, settings=settings)["outcome"] == "ready"
+    saved = client.get(url).json()
+    assert saved["overview"] == Model().content["overview"]
+    assert saved["usage"]["cost_basis"] == "token_estimate"
+    assert saved["usage"]["cost_usd"] == "0.001575"
+    assert calls[0]["model"] == NATIVE_MODEL_ID
+    with psycopg.connect(settings.database_url) as connection:
+        state, usage = connection.execute(
+            "SELECT billing_state,usage FROM summary_attempts WHERE run_id=%s", (run_id,)
+        ).fetchone()
+        assert state == "estimated"
+        assert usage["cost_basis"] == "token_estimate"
+        assert usage["pricing_version"] == "openai-gpt-5.2-2026-11-13"
+    assert processing.process_summary(run_id, settings=settings)["outcome"] == "ignored"
+    assert len(calls) == 1
+
+
+def test_direct_summary_controls_only_offer_supported_reasoning():
+    from folio.configuration.models import reasoning_options
+
+    assert reasoning_options({"gateway": "openai", "model_id": "openai/gpt-5.2"}) == [
+        "none",
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+    ]

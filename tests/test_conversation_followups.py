@@ -337,7 +337,7 @@ def test_saved_rewrite_prompt_survives_retry_after_new_prompt_default(completed_
     ).json()
     policy = client.get(f"/development/conversation-turns/{third['id']}").json()["policy"]
     assert policy["rewrite_prompt_version"] == 2
-    assert policy["prompt_version"] == policy["schema_version"] == 3
+    assert policy["prompt_version"] == policy["schema_version"] == 4
     current = Resolver()
     assert process_turn(
         third["id"],

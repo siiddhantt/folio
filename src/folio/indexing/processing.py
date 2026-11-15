@@ -5,12 +5,11 @@ import psycopg
 from folio.config import Settings
 from folio.database import Database
 from folio.observability import configure_logging, log_event
-from folio.summaries.config import SummaryCredentials
 
 from .chunking import ChunkingError
 from .lifecycle import claim_index, finish, next_batch, reserve_batch, save_plan
 from .preparation import prepare
-from .provider import EmbeddingError, OpenRouterEmbeddings
+from .provider import EmbeddingError, embedding_client
 
 
 def process_index(index_id, *, settings=None, client=None):
@@ -40,10 +39,7 @@ def process_index(index_id, *, settings=None, client=None):
             if not batch:
                 raise EmbeddingError("INDEX_PLAN_INVALID")
             if client is None:
-                key = SummaryCredentials().api_key.get_secret_value()
-                if not key:
-                    raise EmbeddingError("EMBEDDING_PROVIDER_NOT_CONFIGURED")
-                client = OpenRouterEmbeddings(policy, key)
+                client = embedding_client(policy)
             profile = client.profile()
             if (
                 profile["model_id"] != policy["model_id"]

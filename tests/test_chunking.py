@@ -36,6 +36,98 @@ def passage(doc, text, page, element_id, *, heading=False):
 
 
 class ChunkPreparation(unittest.TestCase):
+    def test_picture_child_text_keeps_its_source_without_indexing_page_furniture(self):
+        from docling_core.types.doc import (
+            BoundingBox,
+            ContentLayer,
+            DocItemLabel,
+            ProvenanceItem,
+        )
+
+        doc = document()
+        sources = [passage(doc, "Equipment tests", 2, "heading", heading=True)]
+        picture = doc.add_picture()
+        caption = doc.add_text(
+            label=DocItemLabel.TEXT,
+            text="Pump qualification testing: Westfield facility.",
+            parent=picture,
+            prov=ProvenanceItem(
+                page_no=2,
+                bbox=BoundingBox(l=10, t=50, r=200, b=70, coord_origin="TOPLEFT"),
+                charspan=(0, 46),
+            ),
+        )
+        footer = doc.add_text(
+            label=DocItemLabel.PAGE_FOOTER,
+            text="Example publication footer",
+            content_layer=ContentLayer.FURNITURE,
+        )
+        sources.extend(
+            {"element_id": name, "provider_ref": item.self_ref, "locations": [{"page_no": 2}]}
+            for name, item in (("caption", caption), ("footer", footer))
+        )
+
+        result = prepare_chunks(doc.export_to_dict(), sources, token_limit=128)
+
+        self.assertEqual(len(result["chunks"]), 1)
+        self.assertEqual(
+            result["chunks"][0]["text"],
+            "Equipment tests\nPump qualification testing: Westfield facility.",
+        )
+        self.assertEqual(
+            result["chunks"][0]["sources"],
+            [
+                {"element_id": "heading", "role": "context"},
+                {"element_id": "caption", "role": "body"},
+            ],
+        )
+        self.assertEqual(result["exclusions"], [{"element_id": "footer", "reason": "outside_body"}])
+        legacy = prepare_chunks(
+            doc.export_to_dict(), sources, token_limit=128, preparation_version=2
+        )
+        self.assertNotIn("Westfield", "\n".join(c["text"] for c in legacy["chunks"]))
+        self.assertEqual(
+            {s["element_id"] for c in legacy["chunks"] for s in c["sources"]}, {"heading"}
+        )
+
+    def test_attached_picture_caption_keeps_one_source_reference(self):
+        from docling_core.types.doc import BoundingBox, DocItemLabel, ProvenanceItem
+
+        doc = document()
+        sources = [passage(doc, "Equipment tests", 2, "heading", heading=True)]
+        picture = doc.add_picture()
+        caption = doc.add_text(
+            label=DocItemLabel.CAPTION,
+            text="Pressure testing at the Westfield facility.",
+            parent=picture,
+            prov=ProvenanceItem(
+                page_no=2,
+                bbox=BoundingBox(l=10, t=50, r=200, b=70, coord_origin="TOPLEFT"),
+                charspan=(0, 42),
+            ),
+        )
+        picture.captions.append(caption.get_ref())
+        sources.append(
+            {
+                "element_id": "caption",
+                "provider_ref": caption.self_ref,
+                "locations": [{"page_no": 2}],
+            }
+        )
+
+        result = prepare_chunks(doc.export_to_dict(), sources, token_limit=128)
+
+        self.assertEqual(len(result["chunks"]), 1)
+        self.assertEqual(result["chunks"][0]["text"].count("Pressure testing"), 1)
+        self.assertEqual(
+            result["chunks"][0]["sources"],
+            [
+                {"element_id": "heading", "role": "context"},
+                {"element_id": "caption", "role": "body"},
+            ],
+        )
+        self.assertEqual(result["exclusions"], [])
+
     def test_figure_footnote_keeps_its_source_and_surrounding_heading(self):
         from docling_core.types.doc import BoundingBox, DocItemLabel, ProvenanceItem
 

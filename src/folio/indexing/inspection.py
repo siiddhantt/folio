@@ -68,7 +68,7 @@ def _read(connection, revision_id, details):
             if type(metadata.get(key)) is int and metadata[key] >= 0
         } | {
             key: metadata[key]
-            for key in ("model", "requested_provider")
+            for key in ("model", "requested_provider", "gateway", "cost_basis", "pricing_version")
             if isinstance(metadata.get(key), str)
         }
         for key in ("response_id", "input_hash"):

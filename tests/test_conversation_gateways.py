@@ -10,6 +10,12 @@ from test_summaries import summary_document as summary_document
 from folio.conversations.processing import process_turn
 
 
+@pytest.fixture(autouse=True)
+def legacy_index_route(monkeypatch):
+    # This module exercises direct generation against an existing router index.
+    monkeypatch.setenv("FOLIO_INDEX_GATEWAY", "openrouter")
+
+
 @pytest.fixture
 def direct_chat(chat_document, monkeypatch):
     for key, value in {

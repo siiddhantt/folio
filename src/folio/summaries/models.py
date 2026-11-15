@@ -29,9 +29,13 @@ class SummaryUsage(BaseModel):
     response_characters: int | None
     last_finish_reason: str | None
     cost_usd: str | None = Field(
-        description="Decimal USD string; null if no known cost or any reservation is unresolved.",
+        description=(
+            "Decimal USD string including token estimates; "
+            "null if no cost or any reservation is unresolved."
+        ),
         examples=["0.00012000"],
     )
+    cost_basis: Literal["provider_reported", "token_estimate", "mixed", "unknown"] = "unknown"
     uncertain_cost_usd: str = Field(
         description="Decimal USD string for outstanding reserved or unknown charges.",
         examples=["0"],

@@ -36,7 +36,7 @@ def extracted_document(path, config):
     pages = {str(p): {"size": {"width": 612, "height": 792}} for p in (1, 2)}
     return Extraction(
         [Page(p, 612, 792, "content_recovered") for p in (1, 2)],
-        _elements(raw, pages, []),
+        _elements(raw, pages, [], config.get("normalization_version", 2)),
         [],
         "success",
         {"fixture": True},
@@ -73,7 +73,8 @@ class Embeddings:
 
 
 @pytest.fixture
-def indexed_document(tmp_path, monkeypatch):
+def indexed_document(tmp_path, monkeypatch, request):
+    monkeypatch.setenv("FOLIO_INDEX_GATEWAY", getattr(request, "param", "openrouter"))
     monkeypatch.setenv("FOLIO_SUMMARY_ENABLED", "false")
     monkeypatch.setenv("FOLIO_INDEX_ENABLED", "true")
     monkeypatch.setenv("FOLIO_INDEX_BATCH_SIZE", "1")
@@ -238,3 +239,43 @@ def test_timeouts_hold_unknown_charges_and_stop_after_bounded_retries(indexed_do
     assert all(a["billing_state"] == "unknown" and a["reserved_usd"] > 0 for a in attempts)
     assert client.get(url).json()["embedded_chunks"] == 0
     assert client.get(url + "/chunks").status_code == 409
+
+
+@pytest.mark.integration
+@pytest.mark.parser
+@pytest.mark.parametrize("indexed_document", ["openai"], indirect=True)
+def test_direct_embedding_billing_is_estimated_and_replay_keeps_settlement(indexed_document):
+    import httpx
+
+    from folio.indexing.processing import process_index
+    from folio.indexing.provider import OpenAIEmbeddings
+
+    settings, client, revision = indexed_document
+    index_id = client.get(f"/revisions/{revision}/index").json()["index_id"]
+    with psycopg.connect(settings.database_url) as conn:
+        policy = conn.execute(
+            "SELECT policy FROM document_indexes WHERE id=%s", (index_id,)
+        ).fetchone()[0]
+    model = OpenAIEmbeddings(
+        {**policy, "gateway": "openai"},
+        "synthetic",
+        transport=httpx.MockTransport(
+            lambda r: httpx.Response(
+                200,
+                json={
+                    "model": "text-embedding-3-small",
+                    "data": [{"index": 0, "embedding": [1.0] + [0.0] * 1535}],
+                    "usage": {"prompt_tokens": 12, "total_tokens": 12},
+                },
+            )
+        ),
+    )
+    assert process_index(index_id, settings=settings, client=model)["outcome"] == "pending"
+    assert process_index(index_id, settings=settings, client=model)["outcome"] == "ready"
+    assert process_index(index_id, settings=settings, client=model)["outcome"] == "ignored"
+    with psycopg.connect(settings.database_url) as conn:
+        records = conn.execute(
+            "SELECT billing_state,cost_usd FROM embedding_invocations WHERE index_id=%s",
+            (index_id,),
+        ).fetchall()
+    assert records == [("estimated", Decimal("0.00000024")), ("estimated", Decimal("0.00000024"))]
