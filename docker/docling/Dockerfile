@@ -1,5 +1,9 @@
-# This experiment targets the same Linux amd64 CPU environment for both parsers.
+# CPU-only builds for Linux amd64 and arm64, using the same parser and models.
+# An optional named build context can supply already verified wheel downloads.
+FROM scratch AS wheels
+
 FROM python:3.12.12-slim-bookworm@sha256:593bd06efe90efa80dc4eee3948be7c0fde4134606dd40d8dd8dbcade98e669c
+ARG TARGETARCH
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
@@ -16,17 +20,22 @@ ENV PYTHONUNBUFFERED=1 \
 
 # Use the base image's Debian mirrors; record resolved system packages below.
 # The dated snapshot mirror repeatedly stalled during the initial build.
-RUN apt-get update \
+ARG DEBIAN_MIRROR=https://deb.debian.org/debian
+RUN sed -i "s|http://deb.debian.org/debian$|${DEBIAN_MIRROR}|; s|http://deb.debian.org/debian-security|https://deb.debian.org/debian-security|" /etc/apt/sources.list.d/debian.sources \
+    && printf 'Acquire::Retries "3";\nAcquire::http::Timeout "30";\nAcquire::https::Timeout "30";\n' > /etc/apt/apt.conf.d/80-download-bounds \
+    && apt-get update \
     && apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-eng libglib2.0-0 libgl1 libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /opt/experiment
 COPY constraints.txt run.py test_normalization.py ./
+COPY torch-${TARGETARCH}.txt ./torch-cpu.txt
+ARG PIP_NO_INDEX=0
 
 # Direct, hash-pinned CPU wheels prevent the resolver from pulling CUDA packages.
-RUN python -m pip install --no-cache-dir -c constraints.txt \
-      'torch @ https://download.pytorch.org/whl/cpu/torch-2.11.0%2Bcpu-cp312-cp312-manylinux_2_28_x86_64.whl#sha256=f82e2ae20c1545bb03997d1cc3143d94e14b800038669ee1aca45808a9acc338' \
-      'torchvision @ https://download.pytorch.org/whl/cpu/torchvision-0.26.0%2Bcpu-cp312-cp312-manylinux_2_28_x86_64.whl#sha256=cf547dc0975eb40bc3249be4ccbeb736597d2c3ece305b1c4e5b7a5dd7363567' \
+RUN --mount=type=bind,from=wheels,target=/wheels \
+    python -m pip install --no-cache-dir --find-links=/wheels -c constraints.txt \
+      -r torch-cpu.txt \
       'docling==2.148.0' 'transformers==5.20.2' \
     && python -m pip check \
     && python -c "import importlib.metadata as m, torch; assert torch.version.cuda is None; assert not any(d.metadata['Name'].lower().startswith('nvidia-') for d in m.distributions())" \

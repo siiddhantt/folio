@@ -1,0 +1,9 @@
+# Native document worker for Apple Silicon and Linux ARM64 hosts.
+# Merge with compose.yaml; the other services retain their existing platforms.
+services:
+  worker:
+    platform: linux/arm64
+    image: folio-worker:arm64
+    build:
+      args:
+        DOCLING_IMAGE: folio-docling:2.148.0-arm64

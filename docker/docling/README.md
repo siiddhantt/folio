@@ -1,20 +1,51 @@
 # Docling base image
 
-Folio's production worker extends `folio-docling:2.148.0`. This image supplies
+Folio's production worker extends `folio-docling:2.148.0` on amd64 or
+`folio-docling:2.148.0-arm64` on ARM64. These images supply
 Docling, CPU PyTorch, English Tesseract OCR, and the layout and table models.
 Folio's extraction implementation lives in
 [`src/folio/ingestion/parsing`](../../src/folio/ingestion/parsing), outside this
 build context.
 
-Build from the repository root with a Docker Linux daemon supporting amd64:
+Build from the repository root for the worker's selected architecture:
 
 ```sh
 docker build --platform linux/amd64 -t folio-docling:2.148.0 docker/docling
 ```
 
+For Apple Silicon or Linux ARM64:
+
+```sh
+docker build --platform linux/arm64 -t folio-docling:2.148.0-arm64 docker/docling
+```
+
+Docker's `TARGETARCH` selects `torch-amd64.txt` or `torch-arm64.txt`, both pinned
+to official CPU wheels and hashes for the same PyTorch/Torchvision versions.
+Other architectures deliberately have no wheel file. The pinned Python base
+digest contains both platforms. The [ARM64 Compose overlay](../../compose.arm64.yaml)
+selects this base through the worker's `DOCLING_IMAGE` build argument and uses a
+separate worker tag. This is native Linux CPU execution, not macOS Metal/GPU use.
+
 The build needs network access to download packages and model assets. It requires
 no inference API key. The worker image adds Folio's application dependencies;
 follow the [repository setup](../../README.md) after building this base.
+
+If the default Debian mirror is slow, pass
+`--build-arg DEBIAN_MIRROR=https://mirrors.edge.kernel.org/debian` to the base
+build. Debian signature verification stays enabled; package versions still
+depend on the mirror's current archive. APT downloads have bounded inactivity
+timeouts and retries. This mirror was used for the November 15 ARM64 build.
+
+An optional BuildKit context, `--build-context wheels=/absolute/path/to/wheels`,
+lets the build use a local wheel cache. Supply only files whose complete size and
+SHA-256 match the upstream PyPI release metadata (or the official CPU wheel pins).
+The cache is mounted during installation and does not enter an image layer;
+normal builds use an empty context and download directly. Constraints and the
+architecture-specific PyTorch URLs still apply. Keep caches outside tracked source.
+This context is also supported by `docker/worker.Dockerfile`. When the cache
+contains every required dependency version, `--build-arg PIP_NO_INDEX=1` skips
+index lookups and fails on missing packages. Direct PyTorch URLs and model
+prefetch still need network access. Omit that argument for normal online builds.
 
 ## Models and offline operation
 
@@ -30,7 +61,7 @@ parser configuration and its recorded evidence.
 
 ## Dependencies and licenses
 
-The Dockerfile pins the Python base digest, CPU wheel hashes, Docling 2.148.0,
+The Dockerfile pins the Python base digest, architecture-specific CPU wheel hashes, Docling 2.148.0,
 Transformers 5.20.2, and model revisions. `constraints.txt` comes from Docling's
 upstream `v2.148.0` lock; it constrains dependencies without installing the whole
 list. Debian packages can change between builds, and Python wheels are not all
