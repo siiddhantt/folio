@@ -158,6 +158,8 @@
 .upload-section h1 {
   font-size: 22px;
   letter-spacing: -0.65px;
+}
+.upload-section .page-title {
   margin-bottom: 24px;
 }
 .file-picker {
@@ -242,6 +244,12 @@
 @media (max-width: 760px) {
   :root {
     --page-gutter: 20px;
+  }
+}
+@media (max-width: 520px) {
+  .site-header {
+    padding-inline: 12px;
+    column-gap: 8px;
   }
 }
 @media (prefers-reduced-motion: reduce) {

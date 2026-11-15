@@ -3,6 +3,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic_settings.exceptions import SettingsError
 
 from folio.ai.budget import BudgetSettings
+from folio.ai.routing import Gateway, gateway_policy
 from folio.summaries.preparation import PREPARATION_VERSION, PROMPT_VERSION, SCHEMA_VERSION
 
 
@@ -16,6 +17,7 @@ class SummarySettings(SummaryCredentials, BudgetSettings):
         env_prefix="FOLIO_SUMMARY_", env_file=".env", extra="ignore", populate_by_name=True
     )
 
+    gateway: Gateway = "openrouter"
     enabled: bool = False
     model_id: str = "deepseek/deepseek-v4.1-flash-1017"
     provider: str = "together"
@@ -31,6 +33,8 @@ class SummarySettings(SummaryCredentials, BudgetSettings):
 
     def policy(self, runtime):
         policy = self.model_dump(mode="json", exclude={"api_key"})
+        if self.gateway == "openai":
+            policy.update(gateway_policy(self.gateway))
         policy.update(
             reservation_version=2,
             prompt_version=PROMPT_VERSION,

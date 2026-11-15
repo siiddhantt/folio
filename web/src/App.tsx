@@ -6,6 +6,7 @@ import { request, errorMessage } from './api';
 import type { Capabilities } from './types';
 import { ThemeToggle } from './components/ThemeToggle';
 import { Button, Notice } from './components/ui';
+import { BackButton } from './components/BackButton';
 import { HomePage } from './conversations/HomePage';
 import { NewConversationPage } from './conversations/NewConversationPage';
 import { ConversationPage } from './conversations/ConversationPage';
@@ -39,6 +40,7 @@ export function App() {
       '/runs': 'Processing runs',
       '/new-chat': 'New chat',
       '/upload': 'Upload',
+      '/development/settings': 'Development settings',
     };
     document.title = titles[location.pathname] ? `${titles[location.pathname]} · Folio` : 'Folio';
     if (window.matchMedia('(min-width: 1100px)').matches) {
@@ -154,7 +156,10 @@ export function App() {
                 path="*"
                 element={
                   <div className="page-message">
-                    <h1>Page not found</h1>
+                    <div className="page-title">
+                      <BackButton />
+                      <h1>Page not found</h1>
+                    </div>
                     <Link to="/">Go home</Link>
                   </div>
                 }

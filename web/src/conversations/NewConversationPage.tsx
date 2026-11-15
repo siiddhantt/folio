@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ApiError, errorMessage, request } from '../api';
 import { Button, Notice } from '../components/ui';
+import { BackButton } from '../components/BackButton';
 import {
   Select,
   SelectContent,
@@ -117,7 +118,6 @@ export function NewConversationPage() {
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [refresh, setRefresh] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [loaded, setLoaded] = useState(false);
   const [listError, setListError] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -185,7 +185,6 @@ export function NewConversationPage() {
             : result.items,
         );
         setNextCursor(result.next_cursor);
-        setLoaded(true);
       })
       .catch((reason) => {
         if (!controller.signal.aborted) setListError(errorMessage(reason));
@@ -291,7 +290,10 @@ export function NewConversationPage() {
       : documents;
   return (
     <section className="new-conversation-page" aria-labelledby="new-chat-title">
-      <h1 id="new-chat-title">New chat</h1>
+      <div className="page-title">
+        <BackButton />
+        <h1 id="new-chat-title">New chat</h1>
+      </div>
       <QuestionInput
         question={draft.question}
         onChange={(question) => changeDraft({ ...draft, question })}
@@ -343,12 +345,6 @@ export function NewConversationPage() {
             Retry documents
           </button>
         </Notice>
-      )}
-      {loaded && !choices.length && !listError && !selectionLoading && (
-        <p className="subtle">
-          No documents are ready for chat. <Link to="/upload">Upload a PDF</Link> or{' '}
-          <Link to="/runs">check processing runs</Link>.
-        </p>
       )}
       {nextCursor && (
         <Button variant="ghost" size="sm" disabled={loading} onClick={() => setBefore(nextCursor)}>

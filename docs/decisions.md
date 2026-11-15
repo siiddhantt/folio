@@ -155,6 +155,97 @@ Direct usage times pinned rates is an estimate, distinct from provider-reported
 cost. Preserve usage, cache/tier/model identity and pricing version. No external
 billing reconciliation or subscription feature is included.
 
+## November 15 direct OpenAI document stages
+
+Direct OpenAI is accepted for summaries and document/query embeddings as well
+as answers, rewriting and memory. Reuse the existing generation boundary for
+GPT-5.2 summaries; retain text-embedding-3-small and 1,536 dimensions for direct
+embeddings. Freeze gateway/profile metadata with new work. Older accepted runs
+and indexes keep their original route, including query vectors for those indexes;
+there is no automatic credential fallback or rewrite of stored index policies.
+Token-priced costs remain estimates and preserve unknown usage reservations.
+
+The local setup selects direct OpenAI for new work and limits summary output to
+4,096 tokens within the existing shared spending allowance. Grouped env comments
+are accepted for readability. This provider change is not a retrieval-quality
+fix: repeated page furniture can dominate nearest-neighbor results, and non-answer
+citation validation remains a separate known defect.
+
+## November 15 controlled retrieval experiments
+
+Compare better chunk grouping and reranking independently before changing the
+default. Use one reproducible script with frozen source expectations, original
+query vectors where available, and the same answer prompt/model across evidence
+arms. The first chunking candidate merges adjacent whole chunks on the same
+physical page within 512 tokens, preserving text and provenance. The separate
+reranking candidate scores every original chunk with a pinned local MiniLM
+cross-encoder, then supplies six. Sliding windows preserve long passages during
+scoring. Correct-source generation separately tests whether the answer model can
+use the missing evidence. Neither method is accepted as a production default.
+
+Record preparation, model loading, warmed scoring and generation timings
+separately. Start with independently source-checked development and held-out
+questions from the same document, plus an unanswerable control; these do not
+establish cross-document quality. Keep private sources, labels and answers ignored.
+The first run has a $0.12 envelope within the existing shared/document allowances.
+A separate durable evaluation ledger reserves that envelope against the live
+allowance and carries actual or uncertain charges forward without fabricating
+application turns. Interrupted accounting and uncertain calls fail closed;
+completed paid calls are replayed from saved responses.
+
+The follow-up accepts a separate Jev reranking experiment using the same frozen
+questions and original chunks. Use `jev-1.14.0` through TypeSafe, with one batched
+request per query: the shared state contains only the query, and each independent
+Score question contains its own candidate passage. Rank by the common relevance
+rubric, retain six original passages, and use the existing GPT-5.2 answer prompt.
+The trial's envelope is $0.08 within the remaining allowance. A TypeSafe key is
+optional local configuration; the public template contains no value. This is
+an evaluation path, not an accepted production provider or retrieval default.
+
+The next accepted trial compares original vector-six, grouped vector-six, Jev on
+all original chunks, and Jev on all grouped chunks across two fresh public PDFs.
+Freeze independently source-checked questions before inspecting retrieval, keep
+extraction misses in the denominator, and use the same first-turn answer prompt
+and pinned generation policy across all four arms. Generate an answer for every
+question/arm, including each document's unanswerable control. Three alternating
+Jev samples measure latency and ranking variability; the first sample determines
+answer evidence. Query embeddings are measured once per question and shared by
+both vector arms. Record final input tokens as well as retrieval and answer
+quality, since a six-passage limit does not equalize evidence volume.
+
+Use the same single-file runner and separate ignored ledgers, with at most $0.18
+reserved per new document within the remaining shared/document allowance. Normal
+upload summaries and original index embeddings retain application accounting.
+Cache exact completed responses, fingerprint imported prompt/provider code, and
+preserve incomplete outcomes without replacement calls. This mode is restricted
+to fresh documents or an exact replay of their existing experiment directory.
+It does not change the production retrieval default.
+
+## November 15 evidence coverage and partial-answer fixes
+
+The owner accepted two narrow fixes before selecting a retrieval default.
+New chunk preparation includes extracted BODY text nested within figures in
+both serialization and provenance traversal. Actual page furniture stays
+excluded; no OCR or generated caption service is added. New indexing policies
+capture preparation version 3. Existing accepted policies without that field
+retain version 2, and ready indexes remain immutable.
+
+New answer prompt/contract version 4 permits source-scoped citations on
+`insufficient_evidence` and clarification responses. Supported partial facts
+should stay visible alongside a clear statement of what the supplied evidence
+cannot establish. Every nonempty citation must still identify a supplied
+passage; ordinary factual answers still require citations. Existing accepted
+turns retain their captured prompt/validation behavior. This relaxes an outcome
+restriction without treating a valid ID as proof of semantic support.
+
+Rerun the frozen two-PDF questions against fresh uploads with the corrected
+index policy, preserving old traces and expected facts. The four comparison
+arms and generation model/output limit remain fixed; the current prompt and
+validation versions are recorded explicitly. Use at most $0.15 per experiment
+within the remaining allowance, plus normal ingestion and a short live demo
+rehearsal. Check the actual user flow before proposing recording steps. Neither
+fix selects grouping or Jev as the production default.
+
 ## November 13 verification and cleanup
 
 The owner authorized fresh runtime data and one UI-driven conversation, with
@@ -222,8 +313,43 @@ Further retrieval changes and the recorded answer-quality defects are follow-up
 work, not prerequisites for recording this version. Keep those limits visible;
 do not present selected successful examples as a general accuracy claim.
 
-Keep the supported image architecture explicit as Linux amd64, including on
+At this checkpoint, keep the supported image architecture explicit as Linux amd64, including on
 Apple Silicon through Docker Desktop emulation. Native ARM dependency work is
-deferred. Verify the actual Mac before recording; Windows/Linux results do not
+deferred (superseded for the document worker by the November 15 decision below).
+Verify the actual Mac before recording; Windows/Linux results do not
 establish Mac performance. Fresh installations preserve the agreed cumulative
 spending boundary rather than silently receiving a new allowance.
+
+## November 15 native document worker
+
+Native ARM64 document processing is accepted after the emulated Mac worker hit
+its parser time limit. Rebuild Folio's existing worker with ARM64 CPU wheels,
+keeping the pinned Docling/PyTorch versions, model revisions, parser settings,
+queue contract and persisted data. Use an optional Compose overlay and a separate
+image tag; other services retain their existing architecture. The original amd64
+build remains available.
+
+[Upstream Docling](https://docling-project.github.io/docling/getting_started/installation/)
+supports ARM64, and [PyTorch](https://download.pytorch.org/whl/cpu/torch/)
+publishes matching CPU wheels.
+Continuing emulation with longer timeouts would retain its performance cost;
+adopting Docling Serve would add a service/API boundary that this workflow does
+not need. Native CPU execution is selected; host Metal/GPU execution and a full
+stack architecture migration remain outside this change. Validate extraction,
+OCR, table/source mapping and failure handling before switching the running
+worker. Architecture support alone is not a speed or extraction-quality result.
+
+## November 15 navigation polish
+
+Keep the neutral interface and existing New chat/Upload actions, with a larger
+home headline and short explanation of the document workflow. Remove the repeated
+sidebar heading, manual history refresh and the empty-document sentence beneath
+the new-chat composer. Keep loading, failure and retry feedback.
+
+Refresh conversation history after local changes, on focus/visibility return,
+and 15 seconds after each completed read while the tab is visible. Preserve the
+current list and error recovery control through failed background reads. Back sits
+beside each page's content heading, outside the global navbar. Its shared behavior
+returns to the previous in-app history entry, including after a reload; a direct
+visit falls back to Home. Keep it available during document loading/failures, with
+page actions wrapping where needed on narrow screens.

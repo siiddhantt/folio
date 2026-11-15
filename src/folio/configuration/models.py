@@ -32,6 +32,8 @@ class Update(BaseModel):
 
 
 def reasoning_options(policy):
+    if policy.get("gateway") == "openai":
+        return ["none", "low", "medium", "high", "xhigh"]
     if policy.get("model_id") == "deepseek/deepseek-v4.1-flash-1017":
         return ["none", "low", "high", "max"]
     return ["none", "minimal", "low", "medium", "high", "xhigh", "max"]

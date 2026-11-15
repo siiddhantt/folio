@@ -94,9 +94,7 @@ test('a saved chat reloads its answer, keeps its composer and opens the cited PD
     await route.fulfill({ json: responses[path] });
   });
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'Conversations', exact: true })).toBeVisible({
-    timeout: 5000,
-  });
+  await expect(page.getByRole('navigation', { name: 'Conversations', exact: true })).toBeVisible();
   await page.getByRole('link', { name: /Coverage.pdf/ }).click();
   await page
     .getByRole('textbox', { name: 'Your question' })

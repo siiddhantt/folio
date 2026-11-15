@@ -1,38 +1,47 @@
 # AI use in Folio
 
-AI agents assist research, design comparisons, implementation, testing and review.
-Siddhant owns scope, architectural choices and acceptance. Agents do not turn
-research recommendations into product decisions without that acceptance.
+AI agents assist research, design, implementation, testing and review. Siddhant
+owns scope and architectural decisions. Research recommendations do not become
+product decisions without acceptance.
 
-Work proceeds through small vertical slices: define observable behavior, agree
-the boundary, write a meaningful failing test, implement, verify and obtain an
-independent review. Delegated work has owned files and exclusions. The integrator
-checks contracts and explains the data flow and failure paths to the owner.
+Work proceeds through small behaviors: agree the outcome, write a meaningful
+failing test, implement, verify and obtain an independent review. Delegated tasks
+have owned files and exclusions; one integrator checks contracts and scope.
+Controlled model responses test software behavior. Live evaluations separately
+compare retrieved passages and generated claims with the original documents.
 
-Deterministic tests use controlled model responses to check persistence,
-recovery, scope and accounting. Live evaluations use actual providers and compare
-retrieved and cited passages with the original source. Agent review supplements
-executable checks and human judgment; it does not establish universal correctness.
-
-## Contributions and checks
+## Contributions and verification
 
 | Area | Agent contribution | Evidence and limits |
 | --- | --- | --- |
-| Ingestion | Compared Docling/LiteParse, implemented durable upload/evidence/recovery and source inspection | Synthetic parser/API checks and interruption exercises. Docling preserved stronger table relationships in the comparison; both parsers missed a damaged-page signal. |
-| Summaries/indexing | Built bounded complete-input summaries, source-linked chunks, embedding checkpoints and accounting | Persistence/failure tests plus live source review. Completed summaries still show citation and qualification weaknesses. |
-| Conversations | Built saved answers, follow-up resolution, history notes, UI and separate OpenRouter/OpenAI adapters | Real database tests, controlled provider tests and browser checks. Model choice followed limited source-reviewed examples, not a broad benchmark. |
-| Review | Separate agents challenged scope, stale-worker publication, configuration snapshots and billing | Review caught concrete defects, including service/profile inheritance and preflight omissions. Passing checks do not replace ongoing failure analysis. |
-| November 13 evaluation | Selected a public guide, prepared source expectations before seeing outputs, drove one UI upload/chat, inspected logs and independent source support | Twelve real turns and one background compaction. The [report](docs/evaluation.md) records retrieval misses and attribution errors as well as working behavior. |
-| Documentation | Consolidated current behavior, removed superseded walkthroughs and applied a pinned prose-editing skill | Preserved guardrails, provenance, limitations and historical evidence in Git. No claim that AI-assisted prose was human-authored. |
-| Aggregate APIs | Audited requirements, added document/processing aggregates and documented public response contracts in separate bounded tasks | HTTP/PostgreSQL checks cover replay, retries, retained chats, batch counts and missing timing. Independent reviewers checked query semantics and response compatibility. No new model evaluation calls. |
-| Retrieval comparison and notebook | Prepared fresh source expectations independently; built a checkpointed API notebook and a read-only vector/keyword comparison; fixed two source-mapping bugs test-first | Owner accepted questions/test surfaces. Blind chunk labels and separate answer review distinguish retrieval from generation. Real notebook rerun created no duplicate work. The evaluation retains two answer-validation failures; no new retrieval default was selected. |
-| Demo handoff | Reviewed fresh-clone setup, made amd64 targets explicit, included notebook helpers in the verification image and explained the runtime beside notebook cells | Independent review checked the setup and teaching against the code. Temporary artifacts remain outside tracked source. Mac execution still needs its own smoke test; no additional model calls or quality fixes were implied. |
+| Ingestion and persistence | Compared Docling/LiteParse and built upload, evidence, recovery, summaries and checkpointed indexing. | Parser/API tests and interruption exercises passed. Docling preserved stronger table relationships in the comparison, but both parsers missed a damaged-page signal. Summary citation weaknesses remain. |
+| Conversations | Built saved answers, follow-up interpretation, history notes, citations and provider adapters. | Database, controlled-provider and browser checks cover the workflow. A twelve-turn live evaluation exercised one background compression and exposed retrieval misses and mixed history/PDF attribution errors. |
+| Monitoring APIs | Added document statistics, processing aggregates and typed public response schemas. | HTTP/PostgreSQL checks cover retries, removed chats, batch counts and missing timing. Independent review checked query semantics and compatibility. |
+| Direct OpenAI routes | Added direct summaries/embeddings, estimated billing and grouped environment documentation. | 29 summary checks, 22 embedding/query checks and two billing browser checks passed. Review found and fixed SQL typing, settled-metadata and billing-display defects. Older policies and recorded spending were preserved. |
+| Retrieval diagnosis and experiments | Reconstructed saved prompts, inspected vector/source association and built one runner for grouping, MiniLM, Jev and correct-source generation. | Grouping and Jev each recovered 7/7 facts on one source; baseline and MiniLM recovered 5/7. On two further PDFs, all four arms initially retrieved 17/18 facts. A missing caption and seven rejected cited responses exposed separate indexing/validation defects. No production default changed. |
+| Caption and partial-answer fixes | Added failing regressions, preserved older policies and reran the frozen questions with independent source review. | 64 targeted checks passed. Each of four methods retrieved 18/18 facts and gave 8/8 complete positive answers; both negative controls abstained. All 40 outputs validated and 114 paid responses replayed unchanged. A browser rehearsal verified follow-ups, citations and reload. This small regression set does not establish general accuracy. |
+| Interface | Refined the home screen, automatic history refresh and Back controls in page headings. | 23 affected browser checks and 12 navigation/composer checks passed. Review caught focus loss during history retry, fixed with a regression. Responsive, keyboard, theme and zoom checks passed; screen-reader testing was not performed. |
+| Docker and notebook | Prepared reproducible setup, a checkpointed API walkthrough and an optional native ARM64 document worker. | Five Mac PDF smoke checks passed. The native worker matched 116 package versions and nine model files, with 58 offline checks and five HTTP smoke checks. A full notebook rerun created no duplicate work or charges. No capacity claim follows. |
+| Documentation and release review | Condensed setup/current status, added a small README mark, applied the pinned Humanizer skill and independently reviewed the publication diff. | Ruff lint/format, frontend typecheck/build/format and document links passed. The README was previewed at desktop/mobile widths. Notebook metadata was restored to Python 3.12, with outputs clear; the credential scan found no matches in public files. Known failures, skill provenance and AI attribution remain documented. |
 
-[AGENTS.md](AGENTS.md) contains collaboration rules; [skills](docs/skills.md)
-records reviewed sources, licenses and invocation boundaries. Prompts and schemas
-live with their feature modules and have explicit versions. Raw conversations,
-credentials, uploaded files and local evaluation traces are not tracked.
+Independent review found concrete defects in stale-worker publication,
+configuration inheritance, preflight checks and billing. It complements tests and
+human judgment; neither passing tests nor valid citation IDs prove answer support.
 
-The detailed earlier development record remains in
-[Git history](https://github.com/siiddhantt/folio/blob/1c793a9891e4aaf833acce53987eb7ee1beee3e0/AI_USAGE.md).
-Current capability and remaining work belong in [status](docs/status.md).
+## Records and boundaries
+
+[Evaluation](docs/evaluation.md) records methods, source expectations, versions,
+latency, actual outcomes and cost estimates, including failed examples. The latest
+fix/ingestion/rehearsal increment cost $0.215439914 in estimates. Completed paid
+responses replay from local receipts; no mocked answer is reported as AI quality.
+Source labels are agent-curated unless explicitly described otherwise.
+
+Prompts and schemas live with their feature modules and carry explicit versions.
+Credentials, uploaded documents, private conversations and raw evaluation traces
+remain outside tracked source. [AGENTS.md](AGENTS.md) defines collaboration rules;
+[pinned skills](docs/skills.md) records sources, licenses and invocation boundaries.
+
+Current capabilities and unresolved work are in [status](docs/status.md).
+[Decisions](docs/decisions.md), [evaluation](docs/evaluation.md) and the
+[earlier AI-use record](https://github.com/siiddhantt/folio/blob/1c793a9891e4aaf833acce53987eb7ee1beee3e0/AI_USAGE.md)
+preserve the detailed development history.

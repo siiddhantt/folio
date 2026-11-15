@@ -25,10 +25,14 @@ class EmbeddingResult:
 
 
 class OpenRouterEmbeddings:
+    gateway = "openrouter"
+    base_url = "https://openrouter.ai/api/v1/"
+
     def __init__(self, policy, api_key, *, transport=None):
         self.policy, self._api_key, self._transport = dict(policy), api_key, transport
         if (
-            policy["model_id"] != MODEL
+            policy.get("gateway", "openrouter") != self.gateway
+            or policy["model_id"] != MODEL
             or policy["provider"] != "openai"
             or policy["dimensions"] != DIMENSIONS
         ):
@@ -37,7 +41,7 @@ class OpenRouterEmbeddings:
     def _request(self, method, path, **kwargs):
         try:
             with httpx.Client(
-                base_url="https://openrouter.ai/api/v1/",
+                base_url=self.base_url,
                 timeout=self.policy["timeout_seconds"],
                 transport=self._transport,
                 trust_env=False,
@@ -87,6 +91,19 @@ class OpenRouterEmbeddings:
             "input_price_per_million": str(price * 1_000_000),
         }
 
+    def _payload(self, texts):
+        return {
+            "model": MODEL,
+            "input": texts,
+            "encoding_format": "float",
+            "provider": {
+                "only": ["openai"],
+                "allow_fallbacks": False,
+                "data_collection": "deny",
+                "max_price": {"prompt": self.policy["input_price_per_million"]},
+            },
+        }
+
     def embed(self, texts):
         if not self._api_key:
             raise EmbeddingError("EMBEDDING_PROVIDER_NOT_CONFIGURED")
@@ -94,17 +111,7 @@ class OpenRouterEmbeddings:
             "POST",
             "embeddings",
             headers={"Authorization": f"Bearer {self._api_key}"},
-            json={
-                "model": MODEL,
-                "input": texts,
-                "encoding_format": "float",
-                "provider": {
-                    "only": ["openai"],
-                    "allow_fallbacks": False,
-                    "data_collection": "deny",
-                    "max_price": {"prompt": self.policy["input_price_per_million"]},
-                },
-            },
+            json=self._payload(texts),
         )
         usage = body.get("usage") if isinstance(body.get("usage"), dict) else {}
         cost = None
@@ -121,6 +128,23 @@ class OpenRouterEmbeddings:
             "prompt_tokens": usage.get("prompt_tokens"),
             "requested_provider": "openai",
         }
+        if self.gateway == "openai":
+            prompt, total = usage.get("prompt_tokens"), usage.get("total_tokens")
+            valid_usage = (
+                body.get("model") == "text-embedding-3-small"
+                and type(prompt) is int
+                and prompt >= 0
+                and type(total) is int
+                and total == prompt
+            )
+            cost = Decimal(prompt) * Decimal("0.02") / 1_000_000 if valid_usage else None
+            metadata.update(
+                {
+                    "gateway": "openai",
+                    "cost_basis": "token_estimate" if cost is not None else "unknown",
+                    "pricing_version": "openai-text-embedding-3-small-2026-11-15",
+                }
+            )
         try:
             if body["model"] not in {MODEL, "text-embedding-3-small"}:
                 raise ValueError
@@ -153,3 +177,43 @@ class OpenRouterEmbeddings:
                 "EMBEDDING_RESPONSE_INVALID", metadata=metadata, cost_usd=cost
             ) from None
         return EmbeddingResult(vectors, metadata, cost)
+
+
+class OpenAIEmbeddings(OpenRouterEmbeddings):
+    gateway = "openai"
+    base_url = "https://api.openai.com/v1/"
+
+    def profile(self):
+        # Reviewed against OpenAI model and embeddings reference, November 15, 2026.
+        if Decimal(self.policy["input_price_per_million"]) < Decimal("0.02"):
+            raise EmbeddingError("EMBEDDING_MODEL_UNAVAILABLE")
+        return {
+            "model_id": MODEL,
+            "provider": "openai",
+            "gateway": "openai",
+            "dimensions": DIMENSIONS,
+            "max_input_tokens": 8192,
+            "input_price_per_million": "0.02",
+            "pricing_version": "openai-text-embedding-3-small-2026-11-15",
+        }
+
+    def _payload(self, texts):
+        return {
+            "model": "text-embedding-3-small",
+            "input": texts,
+            "encoding_format": "float",
+            "dimensions": DIMENSIONS,
+        }
+
+
+def embedding_client(policy, *, transport=None):
+    from folio.ai.routing import GenerationCredentials
+
+    gateway = policy.get("gateway", "openrouter")
+    if gateway not in ("openrouter", "openai"):
+        raise EmbeddingError("EMBEDDING_MODEL_UNAVAILABLE")
+    key = getattr(GenerationCredentials(), gateway).get_secret_value()
+    if not key:
+        raise EmbeddingError("EMBEDDING_PROVIDER_NOT_CONFIGURED")
+    adapter = OpenAIEmbeddings if gateway == "openai" else OpenRouterEmbeddings
+    return adapter(policy, key, transport=transport)

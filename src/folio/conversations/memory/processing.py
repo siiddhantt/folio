@@ -9,9 +9,8 @@ from folio.config import Settings
 from folio.conversations.config import rewrite_policy
 from folio.conversations.invocations import AdmissionError
 from folio.database import Database
-from folio.indexing.provider import OpenRouterEmbeddings
+from folio.indexing.provider import EmbeddingError, embedding_client
 from folio.observability import configure_logging, log_event
-from folio.summaries.config import SummaryCredentials
 
 from .lifecycle import claim, fail_preflight, finish
 from .preparation import prepare, validate
@@ -47,9 +46,13 @@ def process_memory(
             <= policy["job_timeout_seconds"] + 60 + settings.worker_monitor_seconds
         ):
             raise AdmissionError("MEMORY_EXECUTION_CONFIG_MISMATCH")
-        key = SummaryCredentials().api_key.get_secret_value()
-        if embedder is None and not key:
-            raise AdmissionError("MEMORY_PROVIDER_NOT_CONFIGURED")
+        if embedder is None:
+            try:
+                embedder = embedding_client(index["policy"])
+            except EmbeddingError as error:
+                if error.code == "EMBEDDING_PROVIDER_NOT_CONFIGURED":
+                    raise AdmissionError("MEMORY_PROVIDER_NOT_CONFIGURED") from None
+                raise
         generator = generator or generation_client(policy)
         messages, schema = prepare(memory["input"], policy["notes_target_tokens"])
         profile = generator.profile()
@@ -84,7 +87,7 @@ def process_memory(
                 [{"role": "user", "content": "Question"}], {}, stage_policy, stage_profile
             )
             amount += Decimal(reservation["reservation_usd"])
-        embedding_profile = (embedder or OpenRouterEmbeddings(index["policy"], key)).profile()
+        embedding_profile = embedder.profile()
         amount += (
             Decimal(embedding_profile["max_input_tokens"])
             * Decimal(embedding_profile["input_price_per_million"])

@@ -2,12 +2,12 @@ import logging
 
 import psycopg
 
-from folio.ai.openrouter import OpenRouter, ProviderError
+from folio.ai.generation import ProviderError
+from folio.ai.routing import generation_client
 from folio.ai.tokens import BudgetError, check_budget
 from folio.config import Settings
 from folio.database import Database
 from folio.observability import configure_logging, log_event
-from folio.summaries.config import SummaryCredentials
 from folio.summaries.lifecycle import claim_run, finish, reserve_invocation
 from folio.summaries.preparation import InvalidOutput, OutputLimit, prepare, validate_output
 
@@ -30,10 +30,7 @@ def process_summary(run_id, *, settings=None, client=None):
             ):
                 raise ProviderError("SUMMARY_EXECUTION_CONFIG_MISMATCH")
             if client is None:
-                credential = SummaryCredentials().api_key.get_secret_value()
-                if not credential:
-                    raise ProviderError("SUMMARY_PROVIDER_NOT_CONFIGURED")
-                client = OpenRouter(claim.policy, credential)
+                client = generation_client(claim.policy)
             messages, schema, manifest = prepare(database, claim.revision_id)
             profile = client.profile()
             manifest.update(check_budget(messages, schema, claim.policy, profile))

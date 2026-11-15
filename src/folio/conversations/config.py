@@ -33,8 +33,8 @@ class ChatSettings(BaseSettings):
             | BudgetSettings().model_dump(mode="json")
             | {
                 "reservation_version": 2,
-                "prompt_version": 3,
-                "schema_version": 3,
+                "prompt_version": 4,
+                "schema_version": 4,
                 "rewrite_prompt_version": 2,
                 "retrieval_version": 2,
                 "memory": MemorySettings().policy(self.history_limit_tokens),

@@ -24,7 +24,12 @@ def prepare(database, claim, artifact_root):
     raw = Artifacts(artifact_root).path(revision["raw_storage_key"]).read_bytes()
     if hashlib.sha256(raw).hexdigest() != revision["raw_sha256"]:
         raise ChunkingError("INDEX_SOURCE_CHANGED", "Saved extraction failed its integrity check.")
-    plan = prepare_chunks(json.loads(raw), sources, token_limit=claim["policy"]["chunk_tokens"])
+    plan = prepare_chunks(
+        json.loads(raw),
+        sources,
+        token_limit=claim["policy"]["chunk_tokens"],
+        preparation_version=claim["policy"].get("preparation_version", 2),
+    )
     if not plan["chunks"] or len(plan["chunks"]) > claim["policy"]["max_chunks"]:
         raise ChunkingError("INDEX_CHUNK_LIMIT", "The chunk plan exceeds the configured limit.")
     plan["extraction_diagnostics"] = revision["diagnostics"]

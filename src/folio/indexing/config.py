@@ -10,6 +10,7 @@ from folio.ai.budget import BudgetSettings
 class IndexSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="FOLIO_INDEX_", env_file=".env", extra="ignore")
 
+    gateway: Literal["openrouter", "openai"] = "openrouter"
     enabled: bool = False
     model_id: Literal["openai/text-embedding-3-small"] = "openai/text-embedding-3-small"
     provider: Literal["openai"] = "openai"
@@ -24,6 +25,7 @@ class IndexSettings(BaseSettings):
     def policy(self, runtime):
         budget = BudgetSettings()
         return self.model_dump(mode="json") | {
+            "preparation_version": 3,
             "budget_usd": str(budget.budget_usd),
             "document_budget_usd": str(budget.document_budget_usd),
             "job_timeout_seconds": runtime.job_timeout_seconds,

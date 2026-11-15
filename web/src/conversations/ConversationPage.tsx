@@ -1,7 +1,8 @@
 import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowDown, FileText } from 'lucide-react';
+import { ArrowDown } from 'lucide-react';
 import { Button, Notice } from '../components/ui';
+import { BackButton } from '../components/BackButton';
 import { Answer } from './Answer';
 import { NewChatButton } from './NewChatButton';
 import { QuestionComposer } from './QuestionComposer';
@@ -125,7 +126,7 @@ function ConversationWorkspace({
     <div className="chat-page">
       <div className="chat-heading">
         <div className="chat-heading-title">
-          <FileText aria-hidden="true" />
+          <BackButton />
           <div>
             <h1>{conversation?.title || conversation?.document_name || 'Conversation'}</h1>
             {conversation && <p className="chat-document-name">{conversation.document_name}</p>}

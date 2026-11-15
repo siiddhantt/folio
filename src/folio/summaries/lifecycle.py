@@ -6,6 +6,7 @@ from uuid import uuid4
 from psycopg.types.json import Jsonb
 
 from folio.ai.budget import admission_error, check_settlement, lock_account
+from folio.ai.generation import generation_usage
 from folio.observability import exception_details
 
 
@@ -129,15 +130,7 @@ def finish(
         usage = (
             {}
             if generation is None
-            else {
-                "prompt_tokens": generation.prompt_tokens,
-                "completion_tokens": generation.completion_tokens,
-                "reasoning_tokens": getattr(generation, "reasoning_tokens", None),
-                "finish_reason": generation.finish_reason,
-                "response_characters": len(generation.content),
-                "model": generation.model,
-                "provider": generation.provider,
-            }
+            else generation_usage(generation) | {"response_characters": len(generation.content)}
         )
         # Billing belongs to the invocation even after its permission to publish expires.
         settled = connection.execute(
@@ -145,8 +138,9 @@ def finish(
             SET usage=CASE WHEN cost_usd IS NULL THEN usage || jsonb_strip_nulls(%s)
                 ELSE usage END,
             response_id=COALESCE(response_id,%s),cost_usd=COALESCE(cost_usd,%s),
-            billing_state=CASE WHEN COALESCE(cost_usd,%s) IS NOT NULL THEN 'known'
-                ELSE 'unknown' END
+            billing_state=CASE WHEN cost_usd IS NOT NULL THEN billing_state
+                WHEN %s::numeric IS NOT NULL THEN CASE WHEN %s='token_estimate'
+                    THEN 'estimated' ELSE 'known' END ELSE 'unknown' END
             FROM summary_runs r WHERE a.id=%s AND a.run_id=%s AND a.claim_token=%s
             AND a.invoked_at IS NOT NULL AND r.id=a.run_id
             RETURNING a.reserved_usd,a.cost_usd,a.usage,r.input_manifest""",
@@ -155,6 +149,7 @@ def finish(
                 generation.response_id if generation else None,
                 generation.cost_usd if generation else None,
                 generation.cost_usd if generation else None,
+                usage.get("cost_basis", "provider_reported"),
                 claim.attempt_id,
                 claim.run_id,
                 claim.token,

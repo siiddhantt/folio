@@ -113,7 +113,7 @@ export interface IndexInspection extends IndexStatus {
     invoked_at: string | null;
     error_code: string | null;
     failure_diagnostics: FailureDiagnostics | null;
-    billing_state: 'none' | 'reserved' | 'known' | 'unknown';
+    billing_state: 'none' | 'reserved' | 'known' | 'estimated' | 'unknown';
     reserved_usd: number | null;
     cost_usd: number | null;
     response_id: string | null;

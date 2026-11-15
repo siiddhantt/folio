@@ -12,9 +12,10 @@ class ChunkingError(ValueError):
         self.detail = detail
 
 
-def prepare_chunks(raw, sources, *, token_limit=512):
+def prepare_chunks(raw, sources, *, token_limit=512, preparation_version=3):
     import tiktoken
     from docling_core.transforms.chunker import HybridChunker
+    from docling_core.transforms.chunker.hierarchical_chunker import ChunkingSerializerProvider
     from docling_core.transforms.chunker.tokenizer.openai import OpenAITokenizer
     from docling_core.types.doc import ContentLayer, DoclingDocument, SectionHeaderItem, TitleItem
 
@@ -25,6 +26,13 @@ def prepare_chunks(raw, sources, *, token_limit=512):
         def get_tokenizer(self):
             # Docling's text splitter accepts this counter as well as encodings.
             return self.count_tokens
+
+    class SourceSerializerProvider(ChunkingSerializerProvider):
+        def get_serializer(self, doc):
+            serializer = super().get_serializer(doc)
+            # Keep extracted figure text in both serialization and the source walk below.
+            serializer.params.traverse_pictures = preparation_version >= 3
+            return serializer
 
     if type(token_limit) is not int or not 32 <= token_limit <= 8192:
         raise ChunkingError(
@@ -52,7 +60,8 @@ def prepare_chunks(raw, sources, *, token_limit=512):
     items = [
         item
         for item, _ in document.iterate_items(
-            included_content_layers={ContentLayer.BODY}, traverse_pictures=False
+            included_content_layers={ContentLayer.BODY},
+            traverse_pictures=preparation_version >= 3,
         )
     ]
     by_item_ref = {item.self_ref: item for item in items}
@@ -71,6 +80,7 @@ def prepare_chunks(raw, sources, *, token_limit=512):
         tokenizer=DocumentTokenizer(tokenizer=encoding, max_tokens=token_limit),
         merge_peers=True,
         always_emit_headings=True,
+        serializer_provider=SourceSerializerProvider(),
     )
     with warnings.catch_warnings(record=True) as observed:
         warnings.simplefilter("always")
@@ -157,6 +167,6 @@ def prepare_chunks(raw, sources, *, token_limit=512):
             "token_limit": token_limit,
             "merge_peers": True,
             "always_emit_headings": True,
-            "preparation_version": 2,
+            "preparation_version": preparation_version,
         },
     }

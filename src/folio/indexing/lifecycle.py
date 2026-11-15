@@ -189,11 +189,22 @@ def finish(
         metadata = getattr(result or error, "metadata", {})
         settled = conn.execute(
             """UPDATE embedding_invocations
-            SET cost_usd=COALESCE(cost_usd,%s),metadata=metadata || %s,
-            finished_at=clock_timestamp(),billing_state=CASE WHEN COALESCE(cost_usd,%s) IS NULL
-            THEN 'unknown' ELSE 'known' END WHERE attempt_id=%s AND index_id=%s
+            SET cost_usd=COALESCE(cost_usd,%s),
+            metadata=CASE WHEN cost_usd IS NOT NULL THEN metadata ELSE metadata || %s END,
+            finished_at=clock_timestamp(),billing_state=CASE
+            WHEN cost_usd IS NOT NULL THEN billing_state
+            WHEN %s::numeric IS NULL THEN 'unknown'
+            WHEN %s='token_estimate' THEN 'estimated' ELSE 'known' END
+            WHERE attempt_id=%s AND index_id=%s
             RETURNING reserved_usd,cost_usd,metadata""",
-            (cost, Jsonb(metadata), cost, claim["attempt_id"], claim["id"]),
+            (
+                cost,
+                Jsonb(metadata),
+                cost,
+                metadata.get("cost_basis", "provider_reported"),
+                claim["attempt_id"],
+                claim["id"],
+            ),
         ).fetchall()
         for invocation in settled:
             check_settlement(

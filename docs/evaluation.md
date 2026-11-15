@@ -1,6 +1,6 @@
 # Document-to-conversation evaluation
 
-Latest: [November 14 retrieval comparison](#november-14-retrieval-comparison).
+Latest: [November 15 caption and partial-answer fix verification](#november-15-caption-and-partial-answer-fix-verification).
 The earlier run below remains unchanged as historical evidence.
 
 November 13, 2026; application baseline `1c793a9`. One fresh frontend upload,
@@ -151,6 +151,315 @@ Earlier parser, chunking and model comparisons remain available in the
 [historical docs](https://github.com/siiddhantt/folio/tree/1c793a9891e4aaf833acce53987eb7ee1beee3e0/docs)
 and [parser comparison](https://github.com/siiddhantt/folio/tree/1c793a9891e4aaf833acce53987eb7ee1beee3e0/experiments/ingestion).
 Those records include failed examples; this run does not erase them.
+
+## November 15 four-arm comparison on two new PDFs
+
+This is the pre-fix comparison. The subsequent regression run is recorded below.
+
+The owner accepted a comparison of grouping and Jev together, each separately,
+and the current vector-six baseline before selecting a default. The same single
+runner used two fresh official PDFs:
+
+- NASA's four-page [Orion fact sheet](https://www.nasa.gov/wp-content/uploads/2023/03/orion-factsheet.pdf),
+  SHA-256 `2206b1140c1d20bd28d2ebcf098f2f203471f5c62b72abb5e88493bd6004ec6a`.
+  Questions concern this historical document, not current mission status.
+- EPA's nine-page [SepticSmart homeowner guide](https://www.epa.gov/sites/default/files/2015-06/documents/septicsmart_longhomeownerguide_english508_0.pdf),
+  SHA-256 `b7657f278271a4218592c9bbf2de2081a1aeed0fdaf79b73265378a07874e21c`.
+
+Separate agents inspected the original pages and froze five questions per PDF
+before seeing rankings: four positive questions and one plausible unanswerable
+control. The positives contain 18 required facts across entity lookups, units,
+conditions, complete lists and paired locations. These are source-checked agent
+labels, not human gold. No question or method was tuned after results appeared.
+
+The unchanged grouping rule packs adjacent whole chunks on the same physical
+page within 512 tokens, preserving every original chunk and source link. NASA's
+nine chunks became four; EPA's 34 became 11. Jev `jev-1.14.0` independently scored
+every candidate with the frozen four-level rubric, using three alternating
+requests per query and arm. Repeat zero supplied answer evidence. Both vector
+arms shared one measured query-embedding call. Grouped embeddings were generated
+once per document. Each question/arm received one GPT-5.2 answer with the same
+production first-turn prompt, empty history and 1,024-token output limit.
+
+| Method | Required facts retrieved | Complete positive answers | Outputs accepted by v3 validator | Median retrieval components | Median GPT input tokens |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Original vector-six | 17/18 | 7/8 | 8/10 | 0.757 s | 1,045 |
+| Grouping + vector-six | 17/18 | 7/8 | 9/10 | 0.751 s | 1,483 |
+| Jev on all original chunks | 17/18 | 7/8 | 8/10 | 0.378 s | 1,084 |
+| Grouping + Jev | 17/18 | 7/8 | 8/10 | 0.357 s | 1,542 |
+
+For EPA, every method retrieved 10/10 facts and produced four complete, supported
+positive answers. For NASA, every method retrieved 7/8 facts and produced three
+complete positive answers. The missing fact was visibly present in a photo
+caption and in extraction, but the chunk plan excluded it as `outside_body`.
+It remained in the evaluation denominator. Neither grouping nor reranking can
+recover a passage absent from their candidate set.
+
+Independent reviews inspected all 40 answers and actual cited passages. All 28
+complete positive answers had supported claims and citations. NASA's four
+location replies gave the supported part and acknowledged the missing part,
+but selected `insufficient_evidence` while retaining a citation. EPA's negative
+control did the same in three arms. Folio's v3 validator rejected citations on that outcome, so
+these seven responses were unusable under that contract despite grounded
+raw text. All eight negative-control texts avoided inventing the absent fact;
+five passed validation. EPA responses also phrased absence at document scope
+rather than limiting it to supplied passages, and the passing grouped response
+included an awkward literal outcome prefix. One successful negative sample does
+not establish that grouping fixes output compliance.
+
+Jev placed complete evidence first for all seven questions whose full answers
+survived indexing, versus five for either vector arm. All three Jev repeats
+preserved the measured fact coverage. The exact selected ordering agreed across
+repeats for only 3/10 original-chunk queries and 5/10 grouped queries; this is not
+a claim of deterministic scoring. Grouping did not add quality on these sources:
+EPA facts were already co-located, and NASA's four groups supply the entire
+searchable text. Six groups also mean more text than six original chunks.
+
+Retrieval timing includes each vector query's embedding call plus local cosine,
+or the Jev HTTP/decode/validation call. Jev needs no query embedding when all
+passages are scored. Its table values are medians of the ten per-query medians;
+each per-query median has three samples. All 30 original-chunk samples ranged
+from 0.306 to 0.575 seconds, while grouped samples ranged from 0.299 to 1.127.
+A persistent HTTP client followed a separately recorded synthetic probe. These
+are prototype components, excluding database, queue and UI time. They do not
+establish production latency percentiles or throughput.
+
+Median generation times were 1.94, 2.13, 2.14 and 2.03 seconds in table order.
+Median sums of retrieval, prompt preparation and generation were 2.77, 2.91,
+2.60 and 2.39 seconds. Generation was sampled once per question/arm; latency
+variation and differing prompt volumes prevent attributing every difference
+to the retrieval method. Grouped embedding preparation took 1.20 seconds for
+NASA and 2.50 for EPA, once at index preparation rather than per question.
+
+At TypeSafe's [published rate](https://docs.typesafe.ai/models), median ranking
+costs were $0.000264 on original chunks and $0.000155 on grouped chunks. These are
+token-priced estimates, not invoices. The 114 paid calls, including 40 answers,
+60 ranking samples, probes and embeddings, cost $0.153356644. Normal ingestion's
+summaries and original embeddings added $0.03026877, for $0.183625414 total new
+spending. Both $0.18 experiment envelopes closed with no uncertain holds; the
+shared remaining allowance was $0.282480974. Existing usage was not reset.
+
+All 114 responses replayed from cache with byte-identical ledgers and unchanged
+answers/rankings. Original live results and timing are retained separately from
+the replay outputs. The new grouped-ranking check failed before implementation,
+then passed; existing response, provenance, replay and isolated PostgreSQL budget
+checks also passed. Independent code review checked the four-arm runner and
+fresh-document admission guard. Sources, labels, snapshots, full paid payloads,
+reviews and exact runner source remain under ignored evaluation directories.
+
+This trial supports Jev's practicality for these small candidate sets, and finds
+no extra answer-correctness gain from combining it with grouping on these two
+PDFs. It does not invalidate the earlier report's grouping/Jev improvements.
+The caption exclusion and partial-answer/output-contract failures led to the
+subsequent focused fixes below. Production remains vector-six; no default was selected.
+
+## November 15 caption and partial-answer fix verification
+
+The owner accepted two focused fixes before choosing a retrieval default. Index
+preparation 3 traverses body text nested inside pictures in both serialization
+and source mapping. The missing NASA caption was a nested body-text element,
+not a page footer or an attached-caption reference. Furniture remains excluded,
+attached captions are not duplicated, and physical-page/source links survive.
+Existing indexes keep their captured preparation policy; version 2 is still
+reproducible. Newly prepared NASA chunks grew from 9 to 11 and grouped passages
+from 4 to 5. EPA retained 34 chunks, with 12 groups instead of 11. Two EPA chunks
+gained picture text, including some OCR noise, without changing the required
+answer-bearing passages. This does not establish complete extraction fidelity.
+
+New answer prompt/schema 4 allows partial answers and insufficient-evidence
+responses to cite supported details while explaining the missing information.
+Pure questions and limitations need no source citation. Every supplied source
+ID must still belong to the retrieved evidence; normal factual answers still
+require citations. Malformed or truncated model output is still rejected. Old
+accepted turns retain their original prompt and validator policy. Reconstructing
+all 40 earlier prompts under version 3 produced identical bytes. Applying only
+the new validator to the saved responses reduced seven rejections to zero,
+without paid calls. A real-database regression also verifies that a cited partial
+answer is saved and reloads successfully after the previously observed failure.
+
+Fresh uploads of the identical NASA and EPA PDF bytes exercised normal workers,
+summaries and indexing. Independent remapping retained every frozen question and
+expected source fact. All 165 NASA and 155 EPA normalized elements matched the
+earlier extraction, including IDs, text and locations. Thus the recovered caption
+was an indexing change, not a lucky parser rerun. Model, gateway, reasoning
+setting, 1,024-token answer cap, grouping rule and Jev rubric were unchanged;
+index preparation and answer prompt/schema were the intended differences.
+
+| Method | Required facts retrieved | Complete positive answers | Valid outputs | Median retrieval components | Median generation | Median GPT input tokens |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Original vector-six | 18/18 | 8/8 | 10/10 | 0.748 s | 2.272 s | 1,061 |
+| Grouping + vector-six | 18/18 | 8/8 | 10/10 | 0.743 s | 2.247 s | 1,834 |
+| Jev on all original chunks | 18/18 | 8/8 | 10/10 | 0.405 s | 2.297 s | 1,418 |
+| Grouping + Jev | 18/18 | 8/8 | 10/10 | 0.362 s | 2.317 s | 1,817 |
+
+Independent reviews inspected the actual generated claims and cited passages in
+all 40 responses. Every positive answer was complete and supported; all eight
+negative responses abstained without inventing the absent fact. The formerly
+missing NASA propulsion-testing caption was retrieved and actually cited by all
+four methods. All 60 repeated Jev selections preserved required-fact coverage.
+EPA negative wording still sometimes claims document-wide absence rather than
+absence from the supplied passages; full-source review confirms absence here,
+but that wording remains a generalization risk. This regression set has already
+informed the fixes, so it is not a fresh held-out benchmark or human gold.
+
+Timing definitions match the previous run: query embedding plus cosine for vector
+arms, and HTTP/decode/validation for Jev, with persistent connections after a
+probe. Three samples per query/arm measure Jev; generation has one sample per
+question/arm. These exclude application queue, database and UI time. All methods
+tie on answer quality here, and grouping supplies NASA's entire five-passage
+index. There is no evidence from this small rerun to select a new default.
+
+The 114 paid responses cost $0.173453764: $0.159604600 in direct OpenAI estimates
+and $0.013849164 in TypeSafe estimates. Fresh ingestion added $0.029664770,
+totalling $0.203118534. Both $0.15 experiment envelopes closed within their limits.
+All 114 responses replayed with byte-identical ledgers, answers and rankings;
+original live timings and source hashes are preserved separately. Sixty-four
+targeted software checks passed, including real database persistence and Docling
+worker checks; lint and independent code/source reviews also passed.
+
+A separate live browser rehearsal used the newly indexed EPA guide and the
+unchanged vector-six default. Three questions covered tank-pumping measurements,
+a contextual follow-up asking for all four pumping-frequency factors, and an
+unavailable exact tree-planting distance. Answers cited the expected physical
+pages 3, 4 and 7 respectively; the last response preserved its supported citation
+while reporting insufficient evidence. Opening the original page and reloading
+the complete conversation worked. These calls used direct OpenAI and cost
+$0.012321380, bringing this increment to $0.215439914. The remaining shared
+allowance is $0.067041060 with no holds. No allowance was reset or increased.
+
+New work uses direct OpenAI; old indexes retain their frozen embedding route,
+including OpenRouter. Grouping and Jev remain experiments. Ignored artifacts
+under `.local/retrieval-evaluation/after-fixes/` retain sources, source labels,
+captured policies, live/replay results, ledgers and independent reviews. The
+browser receipt and screenshots remain outside tracked source as well.
+
+## November 15 controlled retrieval comparison
+
+The owner accepted separate chunk-grouping and all-chunk reranking experiments,
+plus correct-evidence generation, before changing the default. The single
+[`evaluate_retrieval.py`](../scripts/evaluate_retrieval.py) runner preserves the
+live index and conversations. Private source material, labels, exact answers and
+receipts remain in ignored local artifacts.
+
+An independent agent froze seven questions against extracted evidence and
+rendered original pages before results: three development questions, three
+held-out positive lookups and one unanswerable control. Six answerable questions
+require seven facts. Labels combine source-ID alternatives with text/value
+anchors because a table ID can appear in chunks that omit the required row.
+These are agent-curated labels from one document; no human-gold or cross-document
+generalization claim follows.
+
+The baseline uses the original 45 chunks. The grouping candidate joins adjacent
+whole chunks on the same physical page within the existing 512-token limit,
+yielding 27 groups while preserving every original text and source link. It adds
+no generated semantic labels and excludes no content. Original vectors are
+reused; new vectors use the same 1,536-dimensional text-embedding-3-small model
+through direct OpenAI. The original primary query vector is reused; six new
+question vectors are embedded once and shared by both vector arms.
+
+The separate reranker is
+[`cross-encoder/ms-marco-MiniLM-L6-v2`](https://huggingface.co/cross-encoder/ms-marco-MiniLM-L6-v2/tree/233902d25c440f23af6f7d6e94d2946bac0bee0a),
+revision `233902d25c440f23af6f7d6e94d2946bac0bee0a`, Apache-2.0. It scores all 45
+original chunks. Query-preserving 512-token windows with stride 64 produce 48
+pairs per question; maximum window score ranks each complete original chunk.
+Six passages then reach the answer model. No model dependency or production
+selector was added.
+
+| Method | Required facts within six | Fully covered questions | Held-out positive questions |
+| --- | --- | --- | --- |
+| Original vectors | 5/7 | 4/6 | 3/3 |
+| Same-page groups, vectors | 7/7 | 6/6 | 3/3 |
+| MiniLM reranking of all originals | 5/7 | 4/6 | 3/3 |
+
+The original failing question's first answer-bearing evidence moved from rank
+eight to rank one with grouping. MiniLM moved it to rank thirty and continued
+to favor generic repeated headings. This is evidence for the grouping candidate
+on these cases; it does not establish that reranking generally fails.
+
+Four fresh answers compared original-six, grouped-six, reranked-six and one
+known-correct original passage for the same question. The original prompt hash
+was reproduced before swapping evidence. All arms used GPT-5.2 snapshot
+`gpt-5.2-2025-12-11`, reasoning none, the same prompt/schema/history arguments,
+and a common experimental 1,024 output-token cap instead of the live 4,096 cap.
+All outputs finished normally, using 51–98 output tokens across the five calls.
+Grouped and correct-source answers were correct with supported citations;
+original and reranked evidence produced grounded insufficient-evidence outcomes.
+Successful answers also supplied unnecessary but supported contact details.
+The reranked unanswerable control correctly abstained; its mostly generic
+retrieval makes it a weak hallucination challenge. Other positive questions
+were retrieval-only, so their generated-answer quality is unmeasured.
+
+Three repeated warmed reranks per question had medians of 11.01–13.60 seconds
+on four native ARM Docker CPU threads, batch eight. Initial model download/load
+took 25.24 seconds separately. Global 512-token padding wastes work on short
+passages, and no GPU/Metal path was used. These are measurements of an
+unoptimized experiment, not intrinsic reranking latency or a service percentile.
+The five generation calls took 1.67–2.38 seconds. Grouping increased the primary
+answer's actual prompt from 1,005 to 2,557 tokens; the one-passage oracle used
+517. Retaining six larger groups is not a free input-cost improvement.
+
+Seven paid calls cost $0.01502742 in token-priced estimates, within the $0.12
+envelope. The separate ignored ledger carries costs forward through the shared
+allowance; ordinary application-turn metrics do not contain these experiment
+calls. All charges settled, and all seven responses replayed from cache without
+network calls or ledger changes. Source/packing checks passed after an observed
+initial failure. A failing uncertain-usage replay check led to a fail-closed
+fix. Session-local PostgreSQL account tests verified reservation/refund behavior
+without touching the live account. Independent code and source-support reviews
+found no blocking issue. Production remains vector-six; broader sources and
+answer minimality need evaluation before adopting the candidate.
+
+### Jev follow-up
+
+The owner requested a Jev trial. The same runner reused the frozen labels,
+45 original chunks and saved baseline results. The documented version
+`jev-1.14.0` passed a synthetic contract probe and was reported in every scoring
+response. One HTTP request per query carried 45 independent Score questions:
+shared state contained only the query, and each question contained only its own
+candidate passage. The common four-level rubric distinguishes unrelated text,
+topic overlap, partial evidence and complete direct evidence. Code sorts the
+score, not confidence. The request shape follows TypeSafe's
+[structured-question](https://docs.typesafe.ai/primitives/advanced) and
+[Score](https://docs.typesafe.ai/primitives/score) contracts; its
+[reranking cookbook](https://docs.typesafe.ai/cookbooks/rerank_typesafe) provides
+related upstream evidence, not Folio measurements.
+
+Jev supplied all seven required facts across the six positive questions. The
+first passage fully supported each question in all six cases, including the
+three previously held-out lookups. Independent review checked actual text and
+table-row associations, not just source IDs. The original identity question
+then produced a correct GPT-5.2 answer with supported citations. The negative
+control abstained despite receiving demographic evidence. The positive answer
+still included unnecessary supported contact/address details, and duplicate
+passages remained in the selected six.
+
+The seven 45-passage requests took 0.476–0.605 seconds, median 0.495, measured
+around HTTP, decoding and response validation. There was one sample per query,
+with a reused connection after the synthetic probe; no stability or service
+percentile claim follows. GPT-5.2 took 3.51 seconds for the positive answer and
+2.09 for the control, separately. Comparing this hosted service with the earlier
+unoptimized CPU MiniLM runner establishes the observed alternatives here, not
+an intrinsic model-speed ratio.
+
+TypeSafe's [published rate](https://docs.typesafe.ai/models) is $0.042 per million
+input tokens, with output free. Each full ranking request used about 19,000 input
+tokens and cost about $0.0008 by that rate. The probe, seven rankings and two
+GPT-5.2 answers totalled $0.012529818 in estimates, within the $0.08 envelope.
+All ten paid responses replayed without network calls or changed receipts.
+Both comparison runs together cost $0.027557238. Charges carry forward globally;
+linked experiment admission now includes prior document evaluation charges and
+respects lower current configuration caps. Normal application per-document
+metrics still exclude external experiment charges.
+
+Six controlled Jev contract tests covered candidate isolation, response order,
+duplicate IDs, malformed-answer billing, invalid score distributions and usage
+overruns. Runner checks additionally exercised the HTTP failure/billing boundary
+and session-local PostgreSQL admission/refund behavior. Independent code and
+answer reviews passed. The credential remains in ignored `.env`; the template
+is blank. Original results and the exact earlier runner source are preserved.
+No production provider or retrieval default changed. Jev and same-page grouping
+both merit broader-source comparison; this run does not select between them or
+measure their combination.
 
 ## November 14 retrieval comparison
 

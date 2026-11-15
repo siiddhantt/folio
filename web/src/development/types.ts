@@ -20,7 +20,7 @@ export interface SummaryInspection {
     invoked_at: string | null;
     error_code: string | null;
     response_id: string | null;
-    billing_state: 'not_invoked' | 'reserved' | 'known' | 'unknown';
+    billing_state: 'not_invoked' | 'reserved' | 'known' | 'estimated' | 'unknown';
     reserved_usd: number | null;
     cost_usd: number | null;
     usage: {

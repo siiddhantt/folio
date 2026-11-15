@@ -87,16 +87,18 @@ export function IndexingAttempts({ indexing }: { indexing?: IndexInspection | nu
                   none: 'Not invoked',
                   reserved: 'Awaiting result',
                   known: 'Known',
+                  estimated: 'Estimated',
                   unknown: 'Unknown',
                 }[attempt.billing_state]
               }
             </dd>
-            {attempt.billing_state === 'known' && attempt.cost_usd != null && (
-              <>
-                <dt>Cost</dt>
-                <dd>{money(attempt.cost_usd)}</dd>
-              </>
-            )}
+            {(attempt.billing_state === 'known' || attempt.billing_state === 'estimated') &&
+              attempt.cost_usd != null && (
+                <>
+                  <dt>{attempt.billing_state === 'estimated' ? 'Estimated cost' : 'Cost'}</dt>
+                  <dd>{money(attempt.cost_usd)}</dd>
+                </>
+              )}
             {(attempt.billing_state === 'reserved' || attempt.billing_state === 'unknown') &&
               attempt.reserved_usd != null && (
                 <>

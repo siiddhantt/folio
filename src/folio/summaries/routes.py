@@ -70,6 +70,11 @@ def read_summary(database, revision_id):
         known_costs = [
             attempt["cost_usd"] for attempt in attempts if attempt["cost_usd"] is not None
         ]
+        bases = {
+            attempt["usage"].get("cost_basis", "provider_reported")
+            for attempt in attempts
+            if attempt["cost_usd"] is not None
+        }
         uncertain = sum(
             (
                 attempt["reserved_usd"]
@@ -119,6 +124,11 @@ def read_summary(database, revision_id):
                 if known_costs and not uncertain
                 else None,
                 "uncertain_cost_usd": str(uncertain),
+                "cost_basis": "unknown"
+                if uncertain or not known_costs
+                else next(iter(bases))
+                if len(bases) == 1
+                else "mixed",
             },
             "created_at": run["created_at"] if run else None,
             "finished_at": run["finished_at"] if run else None,

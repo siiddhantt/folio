@@ -1,87 +1,115 @@
-# Folio
+<p align="center">
+  <img src="docs/assets/folio-mark.svg" alt="Folio document mark" width="72" height="72">
+</p>
 
-Upload a PDF, ask questions about it, and check the passages behind each answer.
+<h1 align="center">Folio</h1>
 
-Folio reads native PDF text and English scans, saves a cited summary, and supports
-follow-up questions in a saved conversation. The reader puts extracted content
-beside the original page. Chat sources open the supporting passage and its page.
-Known extraction gaps stay visible.
+<p align="center">
+  Understand your documents. Check the evidence.
+</p>
 
-## Run it
+<p align="center">
+  <a href="#run-locally">Get started</a> ·
+  <a href="docs/architecture.md">Architecture</a> ·
+  <a href="notebooks/folio_demo.ipynb">Notebook</a> ·
+  <a href="AI_USAGE.md">AI use</a>
+</p>
 
-Install Docker Compose. Copy `.env.example` to `.env` if you do not already have
-one, then build the parser image and start the services:
+Upload a PDF, read its summary, and ask follow-up questions in a saved conversation.
+Every cited answer opens the supporting passage and its original page.
+
+## What you can do
+
+- Read native PDFs and English scans, including extracted tables and figure text.
+- Explore a cited summary beside the original document, with known extraction gaps visible.
+- Ask questions, follow up, and reopen conversations with their source references intact.
+- Inspect background processing, timing, failures and model usage in Activity.
+- Query document statistics and processing metrics through the API.
+
+## Run locally
+
+Install Docker with Compose, clone the repository, and create `.env` from
+[`.env.example`](.env.example) if you do not already have one.
+
+**Linux amd64 or Intel Mac**
 
 ```sh
 docker build --platform linux/amd64 -t folio-docling:2.148.0 docker/docling
 docker compose up --build -d --wait
 ```
 
-The first build downloads local parsing/OCR models and can take several minutes.
-Images target Linux amd64. Apple Silicon Macs use Docker Desktop's emulation;
-see [Mac setup](docs/development.md#running-on-a-mac) before building.
-Open [Folio](http://localhost:3000) or the [API docs](http://localhost:8000/docs).
-Upload a PDF; **Runs** reopens its processing history. Conversations have their
-own sidebar, generated titles, rename and remove controls.
+<details>
+<summary>Apple Silicon</summary>
 
-Parsing needs no inference API key. Paid processing is disabled in the template.
-To enable summaries, indexing and chat, follow the
-[configuration guide](docs/development.md#configuration). Keep credentials in the
-ignored `.env`; never put them in frontend configuration.
+Set `COMPOSE_FILE=compose.yaml:compose.arm64.yaml` in `.env`, then run:
 
-With `FOLIO_DEVELOPMENT_MODE=true`, **Activity** shows attempts, timing, failures
-and model usage. The header settings control edits saved document/summary limits
-for new uploads. Changes do not rewrite queued work or existing results.
-The [aggregate APIs](docs/development.md#aggregate-apis) report document totals
-and processing outcomes from the same saved records.
+```sh
+docker build --platform linux/arm64 -t folio-docling:2.148.0-arm64 docker/docling
+docker compose up --build -d --wait
+```
 
-For a step-by-step API walkthrough, open the [Folio notebook](notebooks/folio_demo.ipynb).
-Its cells show upload, worker attempts, evidence, summaries, chunks and a saved
-conversation. [Notebook setup](docs/development.md#notebook-walkthrough) explains
-the optional kernel and how to resume without submitting duplicate work.
+The document worker runs natively on ARM64; other services retain amd64.
+See [Mac setup](docs/development.md#running-on-a-mac) for details.
+
+</details>
+
+The first build downloads local parsing and OCR models and can take several minutes.
+Open **[Folio](http://localhost:3000)** or the **[API docs](http://localhost:8000/docs)**.
+
+Parsing works without an inference key. Summaries, indexing and chat are disabled
+until configured. For the complete flow, add `OPENAI_API_KEY`, enable
+`FOLIO_SUMMARY_ENABLED` and `FOLIO_INDEX_ENABLED`, and set a spending allowance in
+`.env` before the first start. The [configuration guide](docs/development.md#configuration)
+explains saved settings, provider routes and limits. Keep credentials in the ignored
+`.env`; new work defaults to direct OpenAI.
+
+Set `FOLIO_DEVELOPMENT_MODE=true` to inspect Activity and saved controls.
+**Runs** shows processing history. The [notebook](notebooks/folio_demo.ipynb)
+walks through the same APIs, from upload to chunks and a saved conversation;
+[notebook setup](docs/development.md#notebook-walkthrough) covers its optional kernel.
 
 ## How it works
 
-FastAPI saves processing intent in PostgreSQL. RQ/Redis delivers work to separate
-document, chat and history workers. Docling preserves text, tables and physical
-page references; its chunker prepares source-linked passages. Embeddings live in
-pgvector alongside the document metadata. Each chat searches one pinned index.
+```text
+PDF → Docling extraction → cited summary + source-linked chunks
+                                               ↓
+Question + conversation → pgvector retrieval → answer with page references
+```
 
-Answers, follow-up interpretation and history notes can independently use
-OpenRouter or direct OpenAI through the supported GPT-5.2 profile. Summaries use
-DeepSeek through OpenRouter; embeddings use `text-embedding-3-small` through
-OpenRouter. These routes have separate configuration. Long chats keep their full
-transcript and use shorter notes for older exchanges when needed.
+FastAPI stores work and results in PostgreSQL. Redis and RQ deliver jobs to
+separate document, chat and history workers. Docling preserves text, tables and
+physical-page references; pgvector stores embeddings. Long conversations retain
+their full transcript and use shorter notes for older exchanges when needed.
 
-The React/TypeScript interface uses Vite, shadcn/Radix controls and a local PDF
-renderer. The composer stays below a scrolling transcript; Enter sends and
-Shift+Enter adds a line. There are no seeded runtime documents or canned answers.
+The React/TypeScript interface uses Vite, shadcn/Radix and a local PDF renderer.
+Provider settings are independent by stage, and accepted work keeps its captured
+configuration. See [architecture](docs/architecture.md) for recovery, persistence
+and the source reading order.
 
-## What to expect
+## Scope and verification
 
-The latest [evaluation](docs/evaluation.md#november-14-retrieval-comparison) used
-a 39-page guide and ten questions: eight answers with supported claims, including
-three omissions, and two answer-validation failures. Wider retrieval improved
-evidence coverage; the default remains six passages. An earlier run exercised
-history compaction and found citation-attribution errors. These limitations are
-recorded with the results.
+Folio supports PDFs and one document per conversation. The latest
+[regression evaluation](docs/evaluation.md#november-15-caption-and-partial-answer-fix-verification)
+checked two public PDFs and ten questions across four retrieval methods: each
+retrieved all 18 required facts and produced eight complete supported answers
+plus two appropriate abstentions. All 40 responses passed validation after the
+caption and partial-answer fixes. This is a small regression set, not a general
+accuracy benchmark; the default remains six vector-selected passages.
 
-PDFs are the supported input; chats cover one document. Oversized summaries report
-their limit instead of silently using only the beginning. Streaming, other file
-formats and multi-document chat are deferred. Retrieval and citation quality need
-further evaluation. The working flow is ready for a recorded walkthrough, with
-these limits disclosed.
+Broader retrieval quality, summary citations and mixed conversation/document
+attribution still need work. Streaming, other file formats and multi-document
+chat are deferred. [Status](docs/status.md) records the current limits.
 
-Compose exposes the interface and API on localhost. It has no authentication or
-tenant isolation, and uses local credentials and named volumes. Public hosting
-needs access controls, backups and measured capacity. Removing volumes deletes
-documents, history and the usage ledger.
+Compose binds the UI and API to localhost. Authentication, tenant isolation and
+production capacity are outside the current scope. Named volumes retain documents,
+history and usage across restarts; removing volumes deletes that data.
 
-## Work on Folio
+## Documentation
 
-See [development](docs/development.md) for configuration, isolated tests and
-debugging, and [architecture](docs/architecture.md) for the data flow, recovery and
-source reading order. [Requirements](docs/requirements.md),
-[decisions](docs/decisions.md) and [status](docs/status.md) track scope and remaining
-work. [AGENTS.md](AGENTS.md), [AI use](AI_USAGE.md) and
-[pinned skills](docs/skills.md) describe how changes are made and reviewed.
+| Read | For |
+| --- | --- |
+| [Development](docs/development.md) | Configuration, isolated checks and debugging |
+| [Architecture](docs/architecture.md) | Data flow, workers, recovery and code navigation |
+| [Requirements](docs/requirements.md) · [Decisions](docs/decisions.md) | Accepted scope and design tradeoffs |
+| [Evaluation](docs/evaluation.md) · [Status](docs/status.md) | Measured results and remaining work |
+| [AI use](AI_USAGE.md) · [Agent guide](AGENTS.md) · [Skills](docs/skills.md) | AI-assisted development, review and provenance |

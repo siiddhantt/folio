@@ -1,7 +1,7 @@
 import { Link, NavLink } from 'react-router-dom';
 import { useState } from 'react';
 import { Dialog } from 'radix-ui';
-import { MessageSquarePlus, RefreshCw, X } from 'lucide-react';
+import { MessageSquarePlus, X } from 'lucide-react';
 import { Button } from '../components/ui';
 import { useConversationList } from './useConversationList';
 import type { Conversation } from './types';
@@ -32,18 +32,6 @@ export function ConversationSidebar({
           New conversation
         </Link>
       </Button>
-      <div className="sidebar-section-heading">
-        <h2>Conversations</h2>
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label="Refresh conversations"
-          onClick={history.reload}
-          disabled={history.loading}
-        >
-          <RefreshCw aria-hidden="true" />
-        </Button>
-      </div>
       <nav
         key={history.before || 'latest'}
         aria-label="Conversations"

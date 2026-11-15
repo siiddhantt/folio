@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Download } from 'lucide-react';
+import { useParams } from 'react-router-dom';
+import { Download } from 'lucide-react';
 import { originalUrl } from '../api';
 import { Button, Notice } from '../components/ui';
+import { BackButton } from '../components/BackButton';
 import type { Capabilities, RequestStatus } from '../types';
 import { useDocument } from './useDocument';
 import { DeveloperPanel } from '../development/DeveloperPanel';
@@ -37,48 +38,48 @@ function DocumentWorkspace({
   const latest = status?.attempts.at(-1);
   return (
     <div className="document-page">
+      <div className="document-heading">
+        <div className="document-title">
+          <BackButton />
+          <div className="document-title-copy">
+            <h1>{document?.display_name || 'Document'}</h1>
+            {document && (
+              <p
+                role="status"
+                className={`document-status ${status?.state === 'failed' ? 'text-destructive' : ''}`}
+              >
+                {status?.state === 'succeeded' &&
+                (partial || latest?.parser_status === 'partial_success')
+                  ? 'Partial extraction'
+                  : status
+                    ? processingLabel(status)
+                    : 'Loading…'}
+              </p>
+            )}
+          </div>
+        </div>
+        {document && (
+          <div className="document-actions">
+            {status?.revision_id && (
+              <DocumentChatAction key={status.revision_id} revisionId={status.revision_id} />
+            )}
+            <Button variant="outline" size="sm" asChild>
+              <a href={originalUrl(documentId)}>
+                <Download aria-hidden="true" />
+                Download PDF
+              </a>
+            </Button>
+            {capabilities.development_mode && status && (
+              <DeveloperPanel key={status.request_id} requestId={status.request_id} />
+            )}
+          </div>
+        )}
+      </div>
       {error && <Notice error>{error}</Notice>}
       {!document ? (
         !error && <p className="page-message">Loading document…</p>
       ) : (
         <>
-          <div className="document-heading">
-            <div className="document-title">
-              <Button variant="ghost" size="icon" asChild>
-                <Link to="/upload" aria-label="Open another document" title="Open another document">
-                  <ArrowLeft aria-hidden="true" />
-                </Link>
-              </Button>
-              <div className="document-title-copy">
-                <h1>{document.display_name}</h1>
-                <p
-                  role="status"
-                  className={`document-status ${status?.state === 'failed' ? 'text-destructive' : ''}`}
-                >
-                  {status?.state === 'succeeded' &&
-                  (partial || latest?.parser_status === 'partial_success')
-                    ? 'Partial extraction'
-                    : status
-                      ? processingLabel(status)
-                      : 'Loading…'}
-                </p>
-              </div>
-            </div>
-            <div className="document-actions">
-              {status?.revision_id && (
-                <DocumentChatAction key={status.revision_id} revisionId={status.revision_id} />
-              )}
-              <Button variant="outline" size="sm" asChild>
-                <a href={originalUrl(documentId)}>
-                  <Download aria-hidden="true" />
-                  Download PDF
-                </a>
-              </Button>
-              {capabilities.development_mode && status && (
-                <DeveloperPanel key={status.request_id} requestId={status.request_id} />
-              )}
-            </div>
-          </div>
           {status?.state === 'failed' && (
             <Notice error>
               {latest?.error_detail || 'No usable evidence could be recovered.'} Your original
