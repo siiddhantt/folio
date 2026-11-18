@@ -4,6 +4,13 @@ AI agents assist research, design, implementation, testing and review. Siddhant
 owns scope and architectural decisions. Research recommendations do not become
 product decisions without acceptance.
 
+On November 19 an agent prepared page-checked retrieval labels, ran the
+budgeted shortlist and chunk-size comparison, and implemented the local
+same-page grouping option. A deterministic source-link test and a comparison
+against the original experiment's 318 grouped passages verified the indexing
+change. Human review of the labels and broader generalization remain open.
+[Measured outcomes](docs/evaluation.md#november-19-shortlist-and-chunk-size-comparison).
+
 Work proceeds through small behaviors: agree the outcome, write a meaningful
 failing test, implement, verify and obtain an independent review. Delegated tasks
 have owned files and exclusions; one integrator checks contracts and scope.

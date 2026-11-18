@@ -1,6 +1,6 @@
 # Folio status
 
-Updated 2026-11-15. The local upload-to-conversation workflow is ready for a
+Updated 2026-11-19. The local upload-to-conversation workflow is ready for a
 recorded demonstration. [Requirements](requirements.md) define accepted scope;
 [decisions](decisions.md) record tradeoffs and [evaluation](evaluation.md) retains
 measured results, failures and costs.
@@ -23,6 +23,18 @@ measured results, failures and costs.
   [checkpointed notebook](development.md#notebook-walkthrough) for API exploration.
 
 ## Latest verification
+
+Same-page grouping is available for a local trial. On an 11-page PDF and a
+168-page book, grouped vector-six retrieved all required evidence for 12/12
+positive questions, generated 12 supported complete answers and abstained on
+both negative controls. Original vector-six missed one positive. Jev recovered
+it with a 493 ms paired median overhead on the short PDF and added 642 ms on
+the long one, where original vector-six already recovered all expected evidence.
+The [comparison](evaluation.md#november-19-shortlist-and-chunk-size-comparison)
+includes the 768-token and vector-twelve arms, generation failures and budget
+coverage. The shipped template retains the ungrouped baseline.
+
+### November 15 verification
 
 Index preparation 3 includes body text nested inside pictures while preserving
 provenance and excluding page furniture. Answer prompt/schema 4 allows citations

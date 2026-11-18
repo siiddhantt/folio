@@ -16,6 +16,7 @@ class IndexSettings(BaseSettings):
     provider: Literal["openai"] = "openai"
     dimensions: Literal[1536] = 1536
     chunk_tokens: int = Field(default=512, ge=32, le=8192)
+    group_same_page: bool = False
     batch_size: int = Field(default=32, ge=1, le=32)
     max_chunks: int = Field(default=4096, ge=1, le=10000)
     timeout_seconds: int = Field(default=60, ge=1)

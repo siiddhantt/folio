@@ -129,6 +129,11 @@ seconds + monitor interval. There are three ingestion attempts with persisted re
 [Settings](../src/folio/config.py) for the remaining validated bounds; changing parser versions also requires an
 image and code update. Old incompatible work fails explicitly.
 
+For admitted PDFs over 100 pages the worker buffers two pages between Docling
+stages and processes OCR, layout and table batches one page at a time. This
+limits the number of page images in flight. The parser manifest records the
+effective settings. Dense tables can still take substantial CPU time.
+
 ### Models and paid work
 
 The env template selects direct OpenAI for every new AI stage. `OPENAI_API_KEY` supplies those
@@ -385,6 +390,42 @@ generation: these exclude application queue, database and UI time. A conservativ
 input estimate rejects oversized Jev requests without dropping candidates; it is
 not TypeSafe's exact tokenizer. Source expectations absent from the index stay in
 the evaluation, rather than being replaced by easier questions.
+
+### Shortlist and chunk-size comparison
+
+Run `scripts/compare_shortlist.py` inside the document worker against a ready
+ungrouped 512-token direct OpenAI index. The private labels file contains the PDF
+`sha` (SHA-256) and a `questions` array. Each question has `question` text
+and `facts`; each fact has acceptable physical `pages` and text `anchors`
+that must occur together in a supplied passage. Use an empty facts array for
+an unanswerable control. Freeze labels against original pages before ranking.
+The automated check ignores case, spacing and punctuation. Inspect numeric
+values in their source rows because substring matches can overcount an answer.
+
+```sh
+docker compose run --rm --no-deps -T -v "$PWD:/workspace" --entrypoint python worker \
+  /workspace/scripts/compare_shortlist.py --labels /workspace/.local/trial/labels.json \
+  --output /workspace/.local/trial/run --budget 0.25 --repeats 3 --answers
+```
+
+This command makes paid calls within the existing global/document limits.
+It compares vector-six, vector-twelve and vector-30 followed by Jev returning
+six, using original chunks, same-page groups and fresh 768-token Docling chunks.
+Temporary SQL tables use the application ranking query. Embedding times are
+shared across methods for the same question. The first Jev sample supplies
+answer evidence. Inspect retrieved text and the claims behind each citation
+separately from automated anchor matches. The output contains document text and
+model responses and belongs in ignored storage. An explicit `--prior` can
+reuse exact completed calls from a closed comparison and carry forward its charges.
+If an answer exceeds the remaining envelope, the runner records a budget skip.
+To complete a specific arm, supply `--prior` with `--answers` and, for example,
+`--answer-arm group512/vector6`.
+
+To try the evaluated grouping in the application, set
+`FOLIO_INDEX_GROUP_SAME_PAGE=true`, keep the token limit at 512 and leave
+`FOLIO_CHAT_RETRIEVAL_CHUNKS=6`. Recreate the stack and upload a fresh PDF.
+The upload captures the grouping policy. Existing indexes retain their stored
+text, vectors and citations. Grouping adds no provider calls at question time.
 
 ## Backend checks
 

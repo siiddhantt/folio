@@ -1,14 +1,85 @@
 # Document-to-conversation evaluation
 
-Latest: [November 15 caption and partial-answer fix verification](#november-15-caption-and-partial-answer-fix-verification).
-The earlier run below remains unchanged as historical evidence.
+Latest: [November 19 shortlist and chunk-size comparison](#november-19-shortlist-and-chunk-size-comparison).
 
-November 13, 2026; application baseline `1c793a9`. One fresh frontend upload,
-one conversation, twelve sequential UI-submitted questions and one actual
-background history compression. No answer was replaced by a tuned retry.
-This is a development evaluation, not a general accuracy or load benchmark.
+## November 19 shortlist and chunk-size comparison
+
+The comparison used an 11-page private PDF and the 168-page December 2025
+[Federal Rules of Bankruptcy Procedure](https://www.uscourts.gov/forms-rules/current-rules-practice-procedure/federal-rules-bankruptcy-procedure).
+Each had six answerable questions and one unanswerable control. Expected facts,
+acceptable physical pages and matching text were selected from the original PDFs
+before ranking. The personal document included a previously observed retrieval
+miss. These are agent-curated examples with no independent human gold review.
+The 356-page NASA handbook initially selected for scale did not complete local
+ingestion and contributed no quality or latency samples.
+
+All arms used the same extraction, Docling 2.148.0, preparation 3, direct
+OpenAI text-embedding-3-small and exact pgvector cosine search. The three
+representations produced 46/394 original chunks, 27/318 same-page groups,
+and 40/328 chunks at the larger Docling limit (short/long document).
+Each cell below gives the number of answerable questions with all expected
+evidence in the selected passages, followed by median retrieval time in ms.
+
+| Representation | Selection | 11 pages (of 6) | 168 pages (of 6) |
+| --- | --- | ---: | ---: |
+| Original 512 | Vector 6 | 5 · 603 | 6 · 606 |
+| Original 512 | Vector 12 | 6 · 602 | 6 · 606 |
+| Original 512 | Vector 30 → Jev 6 | 6 · 1,070 | 6 · 1,301 |
+| Same-page 512 | Vector 6 | 6 · 602 | 6 · 608 |
+| Same-page 512 | Vector 12 | 6 · 602 | 6 · 608 |
+| Same-page 512 | Vector 30 → Jev 6 | 6 · 1,049 | 6 · 1,170 |
+| Docling 768 | Vector 6 | 5 · 603 | 6 · 609 |
+| Docling 768 | Vector 12 | 6 · 607 | 6 · 608 |
+| Docling 768 | Vector 30 → Jev 6 | 6 · 1,073 | 6 · 1,173 |
+
+Times include one shared query-embedding measurement per question, SQL on
+temporary tables using the application query, and Jev HTTP/validation where
+applicable. Each Jev latency used three requests with a warm connection. The
+first ranking supplied the six passages for generation. On original chunks,
+median paired overhead versus vector-six was 493 ms and 642 ms on the two
+documents. Queueing, frontend rendering and generation are outside these times.
+
+For the known miss the first supporting vector result moved from rank 9 to 3
+with grouping. Raising the token cap alone left it at 9. An offline comparison
+on the fresh extraction found that five of the six distinct passage texts
+containing the lookup value were identical at 512 and 768 tokens. The larger
+cap changed other parts of the index more than it changed this evidence.
+Jev promoted supporting
+text to rank 1 from the original shortlist. All six long-document questions
+already had supporting passages within the original vector-six. The test used
+up to 30 full passages per Jev request, including all 27 when the short index
+had only 27 groups. It did not test a thousand-chunk index.
+
+Direct GPT-5.2 used Folio's first-turn prompt/schema 4, reasoning off and
+a 512-token output cap. Grouped vector-six returned 12/12 complete positive
+answers with supporting citations and 2/2 valid abstentions. Original
+vector-six returned 11/12 and 2/2. Original vector-twelve returned 12/12
+and 1/2, with one correctly worded abstention rejected for a malformed citation
+ID. Original vector-30 → Jev-six returned 12/12 and 2/2. Grouping plus Jev
+omitted one required detail on the short document despite receiving supporting
+evidence. Grouped vector-six supplied an average of 2,496/2,297 evidence tokens
+per question versus 3,554/4,246 for original vector-twelve. Its median
+answer-provider times were 2.33/2.31 s.
+
+All 126 retrieval cases ran. The allowance covered 118 of 126 answer checks,
+including every case for the four primary comparisons above. Identical prompts
+could share a paid output. The remaining eight were ungraded. The evaluation
+ledger charged $0.74726 in token-priced estimates across both providers,
+excluding application ingestion. Private questions, traces and provider receipts
+were purged after grading. The [runner](../scripts/compare_shortlist.py) and
+[reproduction instructions](development.md#shortlist-and-chunk-size-comparison)
+remain available for new labeled PDFs.
+
+Same-page grouping at indexing time with six vector results is the local
+trial choice. It preserves a small passage with its neighbor and adds no
+query-time service call. Broader defaults need more difficult long-document
+queries, genuine unanswerable near-misses and conversational follow-ups.
 
 ## Source and method
+
+The November 13 baseline at `1c793a9` used one fresh frontend upload, one
+conversation, twelve sequential UI-submitted questions and one background
+history compression. No answer was replaced by a tuned retry.
 
 The US Department of Energy's July 2022
 [Energy Saver guide](https://www.energy.gov/sites/default/files/2022-08/energy-saver-guide-2022.pdf)

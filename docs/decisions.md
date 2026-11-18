@@ -61,6 +61,15 @@ reranking and approximate indexes remain options requiring measured benefit.
 The latest evaluation found top-six misses; increasing the count or changing
 retrieval still needs comparison on new questions.
 
+November 19 local trial: new uploads may opt into grouping adjacent complete
+chunks only when all linked sources occupy the same physical page and the
+combined text fits the existing token limit. This preserves source IDs and
+embeds the joined text once. Local manual testing uses grouped vector-six.
+The checked-in defaults retain the original baseline. A wider prompt recovered
+the known miss with more evidence tokens, and the Jev shortlist recovered it
+with an extra provider call. None recovered additional facts on the 168-page
+test. See the [comparison and its limits](evaluation.md#november-19-shortlist-and-chunk-size-comparison).
+
 ## D10–D11: Generation, limits and evaluation
 
 Summaries automatically use all prepared evidence in one bounded call per

@@ -63,31 +63,22 @@ def pack_chunks(chunks, token_count, limit=512):
     Freeze this query-independent rule before evaluating. Multi-page chunks stay
     intact. This tests grouping/context, without generated labels or exclusions.
     """
+    from folio.indexing.packing import same_page_groups
+
     packed = []
-    for chunk in chunks:
-        if token_count(chunk["text"]) > limit:
-            raise ValueError("An original chunk exceeds the packing limit")
-        previous = packed[-1] if packed else None
-        text = previous["text"] + "\n\n" + chunk["text"] if previous else ""
-        if (
-            previous
-            and len(chunk["pages"]) == 1
-            and previous["pages"] == chunk["pages"]
-            and token_count(text) <= limit
-        ):
-            previous["text"] = text
-            previous["source_ids"] = sorted(set(previous["source_ids"] + chunk["source_ids"]))
-            previous["original_ordinals"].append(chunk["ordinal"])
-        else:
-            packed.append(
-                {
-                    "ordinal": len(packed) + 1,
-                    "text": chunk["text"],
-                    "pages": chunk["pages"],
-                    "source_ids": chunk["source_ids"],
-                    "original_ordinals": [chunk["ordinal"]],
-                }
-            )
+    for text, members in same_page_groups(((c, c["pages"]) for c in chunks), token_count, limit):
+        sources = members[0]["source_ids"]
+        if len(members) > 1:
+            sources = sorted({s for member in members for s in member["source_ids"]})
+        packed.append(
+            {
+                "ordinal": len(packed) + 1,
+                "text": text,
+                "pages": members[0]["pages"],
+                "source_ids": sources,
+                "original_ordinals": [m["ordinal"] for m in members],
+            }
+        )
     return packed
 
 

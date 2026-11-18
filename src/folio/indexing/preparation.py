@@ -29,6 +29,7 @@ def prepare(database, claim, artifact_root):
         sources,
         token_limit=claim["policy"]["chunk_tokens"],
         preparation_version=claim["policy"].get("preparation_version", 2),
+        group_same_page=claim["policy"].get("group_same_page", False),
     )
     if not plan["chunks"] or len(plan["chunks"]) > claim["policy"]["max_chunks"]:
         raise ChunkingError("INDEX_CHUNK_LIMIT", "The chunk plan exceeds the configured limit.")

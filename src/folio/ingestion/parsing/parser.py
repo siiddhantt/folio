@@ -57,7 +57,7 @@ def _inspect_pdf(path, max_pages, diagnostics):
         return inventory
 
 
-def _converter(models_path: Path, timeout_seconds: float):
+def _converter(models_path: Path, timeout_seconds: float, *, large_document: bool = False):
     from docling.datamodel.accelerator_options import AcceleratorDevice, AcceleratorOptions
     from docling.datamodel.base_models import InputFormat
     from docling.datamodel.pipeline_options import (
@@ -79,6 +79,10 @@ def _converter(models_path: Path, timeout_seconds: float):
         ocr_options=TesseractCliOcrOptions(lang=["eng"], force_full_page_ocr=False),
         table_structure_options=TableStructureOptions(mode=TableFormerMode.ACCURATE),
     )
+    if large_document:
+        # Buffering up to 100 page images between stages can exhaust a local worker.
+        options.queue_max_size = 2
+        options.ocr_batch_size = options.layout_batch_size = options.table_batch_size = 1
     layout = LayoutObjectDetectionOptions.from_preset("layout_heron_default")
     layout.model_spec = layout.model_spec.model_copy(update={"revision": HERON_REVISION})
     options.layout_options = layout
@@ -195,7 +199,9 @@ def parse_pdf(path: Path, config: dict) -> Extraction:
         )
     diagnostics = []
     page_metadata = _inspect_pdf(path, max_pages, diagnostics)
-    converter, options = _converter(models_path, timeout_seconds)
+    converter, options = _converter(
+        models_path, timeout_seconds, large_document=len(page_metadata) > 100
+    )
     manifest = {
         "name": "docling",
         "version": actual_version,

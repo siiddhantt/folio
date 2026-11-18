@@ -4,6 +4,8 @@ import hashlib
 import warnings
 from importlib.metadata import version
 
+from .packing import same_page_groups
+
 
 class ChunkingError(ValueError):
     def __init__(self, code, detail):
@@ -12,7 +14,7 @@ class ChunkingError(ValueError):
         self.detail = detail
 
 
-def prepare_chunks(raw, sources, *, token_limit=512, preparation_version=3):
+def prepare_chunks(raw, sources, *, token_limit=512, preparation_version=3, group_same_page=False):
     import tiktoken
     from docling_core.transforms.chunker import HybridChunker
     from docling_core.transforms.chunker.hierarchical_chunker import ChunkingSerializerProvider
@@ -151,6 +153,35 @@ def prepare_chunks(raw, sources, *, token_limit=512, preparation_version=3):
         raise ChunkingError(
             "CHUNK_BODY_OMITTED", "The chunker omitted a located body source element."
         )
+    if group_same_page:
+        by_id = {s["element_id"]: {loc["page_no"] for loc in s["locations"]} for s in sources}
+        located = (
+            (chunk, set().union(*(by_id[s["element_id"]] for s in chunk["sources"])))
+            for chunk in chunks
+        )
+        grouped = []
+        for ordinal, (text, members) in enumerate(
+            same_page_groups(
+                located, lambda value: len(encoding.encode_ordinary(value)), token_limit
+            ),
+            start=1,
+        ):
+            # Keep first appearance order and retain body roles for shared sources.
+            links = {}
+            for member in members:
+                for link in member["sources"]:
+                    if link["element_id"] not in links or link["role"] == "body":
+                        links[link["element_id"]] = link
+            grouped.append(
+                {
+                    "ordinal": ordinal,
+                    "text": text,
+                    "tokens": len(encoding.encode_ordinary(text)),
+                    "sha256": hashlib.sha256(text.encode()).hexdigest(),
+                    "sources": list(links.values()),
+                }
+            )
+        chunks = grouped
     return {
         "chunks": chunks,
         "exclusions": [
@@ -168,5 +199,6 @@ def prepare_chunks(raw, sources, *, token_limit=512, preparation_version=3):
             "merge_peers": True,
             "always_emit_headings": True,
             "preparation_version": preparation_version,
+            **({"grouping": "adjacent_same_page_v1"} if group_same_page else {}),
         },
     }

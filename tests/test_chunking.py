@@ -36,6 +36,40 @@ def passage(doc, text, page, element_id, *, heading=False):
 
 
 class ChunkPreparation(unittest.TestCase):
+    def test_same_page_grouping_keeps_sections_and_their_source_links_together(self):
+        doc = document()
+        sources = [
+            passage(doc, "Inspection", 1, "h1", heading=True),
+            passage(doc, "Pump A", 1, "equipment"),
+            passage(doc, "Result", 1, "h2", heading=True),
+            passage(doc, "Passed", 1, "result"),
+            passage(doc, "Signoff", 2, "h3", heading=True),
+            passage(doc, "Monday", 2, "day"),
+        ]
+        raw = doc.export_to_dict()
+        self.assertEqual(len(prepare_chunks(raw, sources)["chunks"]), 3)
+        plan = prepare_chunks(raw, sources, group_same_page=True)
+        chunks = plan["chunks"]
+        self.assertEqual(
+            [c["text"] for c in chunks], ["Inspection\nPump A\n\nResult\nPassed", "Signoff\nMonday"]
+        )
+        self.assertEqual(
+            [s["element_id"] for s in chunks[0]["sources"]], ["h1", "equipment", "h2", "result"]
+        )
+        self.assertEqual([s["element_id"] for s in chunks[1]["sources"]], ["h3", "day"])
+
+    def test_same_page_sections_remain_separate_when_the_join_exceeds_the_token_limit(self):
+        doc = document()
+        sources = [
+            passage(doc, "Section A", 1, "h1", heading=True),
+            passage(doc, "blue " * 20, 1, "a"),
+            passage(doc, "Section B", 1, "h2", heading=True),
+            passage(doc, "green " * 20, 1, "b"),
+        ]
+        plan = prepare_chunks(doc.export_to_dict(), sources, token_limit=32, group_same_page=True)
+        self.assertEqual(len(plan["chunks"]), 2)
+        self.assertTrue(all(c["tokens"] <= 32 for c in plan["chunks"]))
+
     def test_picture_child_text_keeps_its_source_without_indexing_page_furniture(self):
         from docling_core.types.doc import (
             BoundingBox,
