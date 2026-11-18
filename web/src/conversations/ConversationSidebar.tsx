@@ -111,7 +111,11 @@ export function ConversationSidebar({
   );
   return (
     <>
-      <aside className="conversation-sidebar" aria-label="Conversation history">
+      <aside
+        id="conversation-sidebar"
+        className="conversation-sidebar"
+        aria-label="Conversation history"
+      >
         {content}
       </aside>
       <Dialog.Portal>

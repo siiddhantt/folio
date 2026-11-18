@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, Route, Routes, useLocation } from 'react-router-dom';
-import { History, PanelLeft, SlidersHorizontal } from 'lucide-react';
+import { ChevronLeft, ChevronRight, History, SlidersHorizontal } from 'lucide-react';
 import { Dialog } from 'radix-ui';
 import { request, errorMessage } from './api';
 import type { Capabilities } from './types';
@@ -22,6 +22,23 @@ export function App() {
   const [error, setError] = useState('');
   const [reload, setReload] = useState(0);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem('folio-sidebar-collapsed') === 'true';
+    } catch {
+      return false;
+    }
+  });
+  const sidebarLabel = sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar';
+  function toggleSidebar() {
+    const next = !sidebarCollapsed;
+    setSidebarCollapsed(next);
+    try {
+      localStorage.setItem('folio-sidebar-collapsed', String(next));
+    } catch {
+      /* Browser storage is optional. */
+    }
+  }
   const [historyRevision, setHistoryRevision] = useState(0);
   const [renamedConversation, setRenamedConversation] = useState<Conversation | null>(null);
   const refreshHistory = useCallback(() => setHistoryRevision((value) => value + 1), []);
@@ -69,23 +86,9 @@ export function App() {
         Skip to content
       </a>
       <header className="site-header">
-        <div className="header-brand">
-          {capabilities && (
-            <Dialog.Trigger asChild>
-              <Button
-                className="history-toggle"
-                variant="ghost"
-                size="icon"
-                aria-label="Open conversation history"
-              >
-                <PanelLeft aria-hidden="true" />
-              </Button>
-            </Dialog.Trigger>
-          )}
-          <Link className="wordmark" to="/" aria-label="Folio home">
-            Folio
-          </Link>
-        </div>
+        <Link className="wordmark" to="/" aria-label="Folio home">
+          Folio
+        </Link>
         <div className="header-actions">
           <Button variant="ghost" size="sm" asChild>
             <Link to="/runs" aria-current={location.pathname === '/runs' ? 'page' : undefined}>
@@ -107,14 +110,41 @@ export function App() {
           <ThemeToggle />
         </div>
       </header>
-      <div className={`app-workspace${capabilities ? ' has-history' : ''}`}>
+      <div className={`app-workspace${capabilities && !sidebarCollapsed ? ' has-history' : ''}`}>
         {capabilities && (
-          <ConversationSidebar
-            revision={historyRevision}
-            onChanged={refreshHistory}
-            onRenamed={setRenamedConversation}
-            onNavigate={() => setHistoryOpen(false)}
-          />
+          <>
+            <button
+              type="button"
+              className="sidebar-edge desktop-edge"
+              aria-label={sidebarLabel}
+              title={sidebarLabel}
+              aria-expanded={!sidebarCollapsed}
+              aria-controls="conversation-sidebar"
+              onClick={toggleSidebar}
+            >
+              {sidebarCollapsed ? (
+                <ChevronRight aria-hidden="true" />
+              ) : (
+                <ChevronLeft aria-hidden="true" />
+              )}
+            </button>
+            <Dialog.Trigger asChild>
+              <button
+                type="button"
+                className="sidebar-edge drawer-edge"
+                aria-label="Open conversation history"
+                title="Open conversation history"
+              >
+                <ChevronRight aria-hidden="true" />
+              </button>
+            </Dialog.Trigger>
+            <ConversationSidebar
+              revision={historyRevision}
+              onChanged={refreshHistory}
+              onRenamed={setRenamedConversation}
+              onNavigate={() => setHistoryOpen(false)}
+            />
+          </>
         )}
         <main id="main" tabIndex={-1}>
           {error && !capabilities ? (

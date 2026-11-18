@@ -16,6 +16,8 @@ measured results, failures and costs.
   history notes. Reload preserves the transcript and source references.
 - Document reader, original-page navigation, automatic conversation-list refresh,
   Back controls in page headings, Runs history and Activity inspection.
+- Click the conversation sidebar divider to collapse it or the left edge to
+  reopen it. On narrow screens the edge handle opens the history drawer.
 - Direct OpenAI or OpenRouter model routes with captured settings and persistent
   accounting. Provider-reported costs and token-priced estimates stay distinct.
 - Document statistics, aggregate processing metrics and typed public API schemas.

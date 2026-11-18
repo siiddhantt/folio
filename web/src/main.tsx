@@ -1,6 +1,7 @@
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import '@fontsource-variable/dm-sans';
+import '@fontsource/instrument-serif/latin-400.css';
 import './styles.css';
 import { App } from './App';
 
