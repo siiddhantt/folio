@@ -18,6 +18,8 @@ measured results, failures and costs.
   Back controls in page headings, Runs history and Activity inspection.
 - Click the conversation sidebar divider to collapse it or the left edge to
   reopen it. On narrow screens the edge handle opens the history drawer.
+  The original PDF fits the available pane while evidence scrolls independently.
+  Narrow screens use Content/Original tabs.
 - Direct OpenAI or OpenRouter model routes with captured settings and persistent
   accounting. Provider-reported costs and token-priced estimates stay distinct.
 - Document statistics, aggregate processing metrics and typed public API schemas.

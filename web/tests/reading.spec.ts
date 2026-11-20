@@ -165,6 +165,19 @@ test('the original renders one page and mobile citations switch views without lo
   const original = page.getByRole('region', { name: 'Original PDF' });
   await expect(original.getByLabel('PDF page number')).toHaveValue('1', { timeout: 10000 });
   await expect(original.getByText('Sample operating report', { exact: true })).toBeVisible();
+  await expect(original.locator('canvas')).toBeInViewport({ ratio: 1, timeout: 3000 });
+  const paper = original.getByRole('region', { name: 'Original page', exact: true });
+  await expect(paper).toBeInViewport({ ratio: 1 });
+  const beforeScroll = await paper.boundingBox();
+  await content.getByText('Revenue was 125,000.').scrollIntoViewIfNeeded();
+  expect((await paper.boundingBox())!.y).toBeCloseTo(beforeScroll!.y, 0);
+  const canvasWidth = () =>
+    original.locator('canvas').evaluate((canvas) => canvas.getBoundingClientRect().width);
+  const fittedWidth = await canvasWidth();
+  await original.getByRole('button', { name: 'Fit width', exact: true }).click();
+  await expect.poll(canvasWidth).toBeGreaterThan(fittedWidth);
+  await original.getByRole('button', { name: 'Fit page', exact: true }).click();
+  await expect.poll(canvasWidth).toBe(fittedWidth);
   const loadedRequests = originalRequests;
   expect(loadedRequests).toBeGreaterThan(0);
   await original.getByRole('button', { name: 'Next page', exact: true }).click();
@@ -196,7 +209,10 @@ test('the original renders one page and mobile citations switch views without lo
   await expect(page.getByRole('tab', { name: 'Original', exact: true })).toBeFocused({
     timeout: 3000,
   });
-  const paper = original.getByRole('region', { name: 'Original page', exact: true });
+  await expect(paper.locator('canvas')).toBeVisible();
+  await expect
+    .poll(() => paper.evaluate((node) => node.scrollHeight > node.clientHeight))
+    .toBe(true);
   await paper.focus();
   await page.keyboard.press('PageDown');
   await expect.poll(() => paper.evaluate((node) => node.scrollTop)).toBeGreaterThan(0);

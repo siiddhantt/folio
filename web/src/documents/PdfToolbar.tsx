@@ -7,12 +7,16 @@ export function PdfToolbar({
   page,
   total,
   zoom,
+  fitLabel,
+  onFit,
   onPageChange,
   onZoomChange,
 }: {
   page: number;
   total: number;
   zoom: number;
+  fitLabel: 'Fit page' | 'Fit width';
+  onFit: () => void;
   onPageChange: (page: number) => void;
   onZoomChange: (zoom: number) => void;
 }) {
@@ -71,8 +75,8 @@ export function PdfToolbar({
         >
           <Minus aria-hidden="true" />
         </Button>
-        <Button variant="ghost" size="sm" onClick={() => onZoomChange(1)}>
-          Fit width
+        <Button variant="ghost" size="sm" onClick={onFit}>
+          {fitLabel}
         </Button>
         <Button
           variant="ghost"

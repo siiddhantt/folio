@@ -250,6 +250,56 @@
     gap: 28px;
   }
 }
+@media (min-width: 761px) and (min-height: 480px) {
+  .document-page {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding-block-end: 16px;
+  }
+  .document-heading {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    padding-block: 16px;
+  }
+  .document-actions {
+    padding-inline-start: 0;
+  }
+  .reading-workspace {
+    flex: 1;
+    min-height: 12rem;
+  }
+  .reading-layout {
+    height: 100%;
+    grid-template-rows: minmax(0, 1fr);
+    align-items: stretch;
+    padding-block-start: 4px;
+  }
+  .evidence-column {
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+  }
+  .source-column {
+    position: static;
+    min-height: 0;
+  }
+  .source-column > section {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+  .source-heading {
+    min-height: 32px;
+    margin-bottom: 4px;
+  }
+  .source-column .pdf-page-viewport {
+    flex: 1;
+    min-height: 0;
+    max-height: none;
+  }
+}
 @media (max-width: 760px) {
   .document-page {
     padding-bottom: 40px;

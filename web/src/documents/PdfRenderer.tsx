@@ -25,14 +25,21 @@ const failure = (
 
 export default function PdfRenderer({ documentId, page, onPageChange }: PdfPreviewProps) {
   const container = useRef<HTMLDivElement>(null);
-  const [width, setWidth] = useState(0);
+  const [size, setSize] = useState({ width: 0, height: 0 });
   const [total, setTotal] = useState(0);
   const [zoom, setZoom] = useState(1);
+  const [fitWidth, setFitWidth] = useState(false);
   useEffect(() => {
     const node = container.current;
     if (!node) return;
+    const splitView = window.matchMedia('(min-width: 761px) and (min-height: 480px)');
     const observer = new ResizeObserver(([entry]) => {
-      if (entry.contentRect.width > 0) setWidth(Math.floor(entry.contentRect.width));
+      const width = Math.floor(entry.contentRect.width);
+      const height = splitView.matches ? Math.floor(entry.contentRect.height) : 0;
+      if (width > 0)
+        setSize((previous) =>
+          previous.width === width && previous.height === height ? previous : { width, height },
+        );
     });
     observer.observe(node);
     return () => observer.disconnect();
@@ -47,6 +54,11 @@ export default function PdfRenderer({ documentId, page, onPageChange }: PdfPrevi
           page={page}
           total={total}
           zoom={zoom}
+          fitLabel={fitWidth && size.height > 0 ? 'Fit page' : 'Fit width'}
+          onFit={() => {
+            setFitWidth(size.height > 0 && !fitWidth);
+            setZoom(1);
+          }}
           onPageChange={onPageChange}
           onZoomChange={setZoom}
         />
@@ -72,7 +84,13 @@ export default function PdfRenderer({ documentId, page, onPageChange }: PdfPrevi
           loading={<p className="preview-message">Loading original…</p>}
           error={failure}
         >
-          <PdfPage key={page} page={page} width={width} zoom={zoom} />
+          <PdfPage
+            key={page}
+            page={page}
+            width={size.width}
+            fitHeight={fitWidth ? 0 : size.height}
+            zoom={zoom}
+          />
         </Document>
       </div>
       {total > 0 && (
@@ -84,7 +102,17 @@ export default function PdfRenderer({ documentId, page, onPageChange }: PdfPrevi
   );
 }
 
-function PdfPage({ page, width, zoom }: { page: number; width: number; zoom: number }) {
+function PdfPage({
+  page,
+  width,
+  fitHeight,
+  zoom,
+}: {
+  page: number;
+  width: number;
+  fitHeight: number;
+  zoom: number;
+}) {
   const [failed, setFailed] = useState(false);
   const [dimensions, setDimensions] = useState<{ width: number; height: number } | null>(null);
   const loadedPage = useCallback((source: pdfjs.PDFPageProxy) => {
@@ -93,10 +121,16 @@ function PdfPage({ page, width, zoom }: { page: number; width: number; zoom: num
   }, []);
   if (failed) return failure;
   const ready = dimensions !== null && width > 0;
+  const fittedWidth =
+    ready && fitHeight > 0
+      ? Math.min(width, (fitHeight * dimensions.width) / dimensions.height)
+      : width;
   const renderWidth = ready
     ? Math.max(
         1,
-        Math.floor(Math.min(width * zoom, 1600, (2400 * dimensions.width) / dimensions.height)),
+        Math.floor(
+          Math.min(fittedWidth * zoom, 1600, (2400 * dimensions.width) / dimensions.height),
+        ),
       )
     : 1;
   return (
